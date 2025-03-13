@@ -43,20 +43,33 @@ func (s *GitLangSeeker) checkFiles(langRelPaths []string) []FileInfo {
 		langFilePath := repoLangFilePath(langRelPath)
 
 		fileInfo.LangRelPath = langRelPath
-		langLastCommit := s.gitRepo.FindFileLastCommit(langFilePath)
+		langLastCommit, err := s.gitRepo.FindFileLastCommit(langFilePath)
+		if err != nil {
+			log.Fatal(err)
+		}
 		fileInfo.LangCommit = langLastCommit
 
-		if !s.gitRepo.FileExists(originFilePath) {
+		exists, err := s.gitRepo.FileExists(originFilePath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if !exists {
 			fileInfo.OriginFileStatus = "NOT_EXIST"
 		}
 
-		originCommitsAfter := s.gitRepo.FindFileCommitsAfter(originFilePath, langLastCommit.CommitId)
+		originCommitsAfter, err := s.gitRepo.FindFileCommitsAfter(originFilePath, langLastCommit.CommitId)
+		if err != nil {
+			log.Fatal(err)
+		}
 		if len(originCommitsAfter) > 0 {
 			fileInfo.OriginFileStatus = "MODIFIED"
 		}
 
 		for _, originCommitAfter := range originCommitsAfter {
-			mergePoints := s.gitRepo.FindMergePoints(originCommitAfter.CommitId)
+			mergePoints, err := s.gitRepo.FindMergePoints(originCommitAfter.CommitId)
+			if err != nil {
+				log.Fatal(err)
+			}
 
 			var originUpdate OriginUpdate
 			originUpdate.Commit = originCommitAfter

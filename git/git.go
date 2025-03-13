@@ -2,6 +2,7 @@ package git
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -15,10 +16,10 @@ type CommitInfo struct {
 }
 
 type Repo interface {
-	FileExists(path string) bool
-	FindFileLastCommit(path string) CommitInfo
-	FindFileCommitsAfter(path string, commitIdFrom string) []CommitInfo
-	FindMergePoints(commitId string) []CommitInfo
+	FileExists(path string) (bool, error)
+	FindFileLastCommit(path string) (CommitInfo, error)
+	FindFileCommitsAfter(path string, commitIdFrom string) ([]CommitInfo, error)
+	FindMergePoints(commitId string) ([]CommitInfo, error)
 }
 
 func NewRepo(path string) Repo {
@@ -29,19 +30,19 @@ type LocalRepo struct {
 	path string
 }
 
-func (lr *LocalRepo) FileExists(path string) bool {
+func (lr *LocalRepo) FileExists(path string) (bool, error) {
 	_, err := os.Stat(lr.path + "/" + path)
 	if os.IsNotExist(err) {
-		return false
+		return false, nil
 	}
 	if err != nil {
-		log.Fatal(err)
+		return false, err
 	}
-	return true
+	return true, nil
 }
 
-func (lr *LocalRepo) FindFileLastCommit(path string) CommitInfo {
-	out := runCommand(lr.path,
+func (lr *LocalRepo) FindFileLastCommit(path string) (CommitInfo, error) {
+	out, err := runCommand(lr.path,
 		"git",
 		"log",
 		"-1",
@@ -50,15 +51,18 @@ func (lr *LocalRepo) FindFileLastCommit(path string) CommitInfo {
 		"--",
 		path,
 	)
+	if err != nil {
+		return CommitInfo{}, fmt.Errorf("git command failed: %w", err)
+	}
 	if len(strings.TrimSpace(out)) == 0 {
-		return CommitInfo{}
+		return CommitInfo{}, nil
 	}
 
-	return lineToCommitInfo(out)
+	return lineToCommitInfo(out), nil
 }
 
-func (lr *LocalRepo) FindFileCommitsAfter(path string, commitIdFrom string) []CommitInfo {
-	out := runCommand(lr.path,
+func (lr *LocalRepo) FindFileCommitsAfter(path string, commitIdFrom string) ([]CommitInfo, error) {
+	out, err := runCommand(lr.path,
 		"git",
 		"log",
 		"--pretty=format:%H %cd %s",
@@ -67,8 +71,11 @@ func (lr *LocalRepo) FindFileCommitsAfter(path string, commitIdFrom string) []Co
 		"--",
 		path,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("git command failed: %w", err)
+	}
 	if len(strings.TrimSpace(out)) == 0 {
-		return []CommitInfo{}
+		return []CommitInfo{}, nil
 	}
 
 	var commits []CommitInfo
@@ -78,11 +85,11 @@ func (lr *LocalRepo) FindFileCommitsAfter(path string, commitIdFrom string) []Co
 		commits = append(commits, lineToCommitInfo(line))
 	}
 
-	return commits
+	return commits, nil
 }
 
-func (lr *LocalRepo) FindMergePoints(commitId string) []CommitInfo {
-	out := runCommand(lr.path,
+func (lr *LocalRepo) FindMergePoints(commitId string) ([]CommitInfo, error) {
+	out, err := runCommand(lr.path,
 		"git",
 		"--no-pager",
 		"log",
@@ -92,8 +99,11 @@ func (lr *LocalRepo) FindMergePoints(commitId string) []CommitInfo {
 		"--date=iso-strict",
 		commitId+"..main",
 	)
+	if err != nil {
+		return nil, fmt.Errorf("git command failed: %w", err)
+	}
 	if len(strings.TrimSpace(out)) == 0 {
-		return []CommitInfo{}
+		return []CommitInfo{}, nil
 	}
 
 	var commits []CommitInfo
@@ -103,9 +113,9 @@ func (lr *LocalRepo) FindMergePoints(commitId string) []CommitInfo {
 		commits = append(commits, lineToCommitInfo(line))
 	}
 
-	return commits
+	return commits, nil
 }
-func runCommand(cwd string, command string, args ...string) string {
+func runCommand(cwd string, command string, args ...string) (string, error) {
 	cmd := exec.Command(command, args...)
 	cmd.Dir = cwd
 
@@ -116,10 +126,10 @@ func runCommand(cwd string, command string, args ...string) string {
 
 	err := cmd.Run()
 	if err != nil {
-		log.Fatal(err, stderr.String())
+		return "", fmt.Errorf("%s: %w", stderr.String(), err)
 	}
 
-	return out.String()
+	return out.String(), nil
 }
 
 func lineToCommitInfo(line string) CommitInfo {
