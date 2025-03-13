@@ -37,7 +37,7 @@ func NewRepo(path string, opts ...func(config *NewRepoConfig)) Repo {
 		opt(&config)
 	}
 
-	return &LocalRepo{
+	return &localRepo{
 		path:   path,
 		runner: config.Runner,
 	}
@@ -47,12 +47,12 @@ type CommandRunner interface {
 	Exec(workingDir string, cmd string, args ...string) (string, error)
 }
 
-type LocalRepo struct {
+type localRepo struct {
 	path   string
 	runner CommandRunner
 }
 
-func (lr *LocalRepo) FileExists(path string) (bool, error) {
+func (lr *localRepo) FileExists(path string) (bool, error) {
 	_, err := os.Stat(lr.path + "/" + path)
 	if os.IsNotExist(err) {
 		return false, nil
@@ -63,7 +63,7 @@ func (lr *LocalRepo) FileExists(path string) (bool, error) {
 	return true, nil
 }
 
-func (lr *LocalRepo) FindFileLastCommit(path string) (CommitInfo, error) {
+func (lr *localRepo) FindFileLastCommit(path string) (CommitInfo, error) {
 	out, err := lr.runner.Exec(lr.path,
 		"git",
 		"log",
@@ -83,7 +83,7 @@ func (lr *LocalRepo) FindFileLastCommit(path string) (CommitInfo, error) {
 	return lineToCommitInfo(out), nil
 }
 
-func (lr *LocalRepo) FindFileCommitsAfter(path string, commitIdFrom string) ([]CommitInfo, error) {
+func (lr *localRepo) FindFileCommitsAfter(path string, commitIdFrom string) ([]CommitInfo, error) {
 	out, err := lr.runner.Exec(lr.path,
 		"git",
 		"log",
@@ -110,7 +110,7 @@ func (lr *LocalRepo) FindFileCommitsAfter(path string, commitIdFrom string) ([]C
 	return commits, nil
 }
 
-func (lr *LocalRepo) FindMergePoints(commitId string) ([]CommitInfo, error) {
+func (lr *localRepo) FindMergePoints(commitId string) ([]CommitInfo, error) {
 	// todo: probably we can do it better, to list only necessary merging point to the main branch
 	// todo: return result in reverse order?
 	out, err := lr.runner.Exec(lr.path,
