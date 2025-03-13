@@ -1,153 +1,28 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
+	"go-kweb-lang/git"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 )
-
-type CommitInfo struct {
-	CommitId string
-	DateTime string
-	Comment  string
-}
-
-type GitRepo interface {
-	FileExists(path string) bool
-	FindFileLastCommit(path string) CommitInfo
-	FindFileCommitsAfter(path string, commitIdFrom string) []CommitInfo
-	FindMergePoints(commitId string) []CommitInfo
-}
-
-type LocalGitRepo struct {
-	path string
-}
-
-func (gr *LocalGitRepo) FileExists(path string) bool {
-	_, err := os.Stat(gr.path + "/" + path)
-	if os.IsNotExist(err) {
-		return false
-	}
-	if err != nil {
-		log.Fatal(err)
-	}
-	return true
-}
-
-func (gr *LocalGitRepo) FindFileLastCommit(path string) CommitInfo {
-	out := runCommand(gr.path,
-		"git",
-		"log",
-		"-1",
-		"--format=%H %cd %s",
-		"--date=iso-strict",
-		"--",
-		path,
-	)
-	if len(strings.TrimSpace(out)) == 0 {
-		return CommitInfo{}
-	}
-
-	return lineToCommitInfo(out)
-}
-
-func (gr *LocalGitRepo) FindFileCommitsAfter(path string, commitIdFrom string) []CommitInfo {
-	out := runCommand(gr.path,
-		"git",
-		"log",
-		"--pretty=format:%H %cd %s",
-		"--date=iso-strict",
-		commitIdFrom+"..",
-		"--",
-		path,
-	)
-	if len(strings.TrimSpace(out)) == 0 {
-		return []CommitInfo{}
-	}
-
-	var commits []CommitInfo
-
-	lines := strings.Split(out, "\n")
-	for _, line := range lines {
-		commits = append(commits, lineToCommitInfo(line))
-	}
-
-	return commits
-}
-
-func (gr *LocalGitRepo) FindMergePoints(commitId string) []CommitInfo {
-	out := runCommand(gr.path,
-		"git",
-		"--no-pager",
-		"log",
-		"--ancestry-path",
-		"--merges",
-		"--pretty=format:%H %cd %s",
-		"--date=iso-strict",
-		commitId+"..main",
-	)
-	if len(strings.TrimSpace(out)) == 0 {
-		return []CommitInfo{}
-	}
-
-	var commits []CommitInfo
-
-	lines := strings.Split(out, "\n")
-	for _, line := range lines {
-		commits = append(commits, lineToCommitInfo(line))
-	}
-
-	return commits
-}
-
-func runCommand(cwd string, command string, args ...string) string {
-	cmd := exec.Command(command, args...)
-	cmd.Dir = cwd
-
-	var out bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	if err != nil {
-		log.Fatal(err, stderr.String())
-	}
-
-	return out.String()
-}
-
-func lineToCommitInfo(line string) CommitInfo {
-	segs := strings.SplitN(line, " ", 3)
-	if len(segs) != 3 {
-		log.Fatalf("line syntax error: %s", line)
-	}
-	return CommitInfo{
-		CommitId: segs[0],
-		DateTime: segs[1],
-		Comment:  strings.TrimRight(segs[2], "\n"),
-	}
-}
 
 type FileInfo struct {
 	LangRelPath      string
-	LangCommit       CommitInfo
+	LangCommit       git.CommitInfo
 	OriginFileStatus string
 	OriginUpdates    []OriginUpdate
 }
 
 type OriginUpdate struct {
-	Commit     CommitInfo
-	MergePoint CommitInfo
+	Commit     git.CommitInfo
+	MergePoint git.CommitInfo
 }
 
 type GitLangSeeker struct {
-	gitRepo GitRepo
+	gitRepo git.Repo
 }
 
 func repoOriginFilePath(relPath string) string {
@@ -233,9 +108,7 @@ func Run() {
 		log.Fatal(err)
 	}
 
-	gitRepo := &LocalGitRepo{
-		path: repoDirPath,
-	}
+	gitRepo := git.NewRepo(repoDirPath)
 
 	seeker := &GitLangSeeker{
 		gitRepo: gitRepo,
