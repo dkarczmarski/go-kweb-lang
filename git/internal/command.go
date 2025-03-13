@@ -1,4 +1,4 @@
-package git
+package internal
 
 import (
 	"bytes"
@@ -6,9 +6,12 @@ import (
 	"os/exec"
 )
 
-func runCommand(cwd string, command string, args ...string) (string, error) {
+type StdCommandRunner struct {
+}
+
+func (cr *StdCommandRunner) Exec(workingDir string, command string, args ...string) (string, error) {
 	cmd := exec.Command(command, args...)
-	cmd.Dir = cwd
+	cmd.Dir = workingDir
 
 	var out bytes.Buffer
 	var stderr bytes.Buffer

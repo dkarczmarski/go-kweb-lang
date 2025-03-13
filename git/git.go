@@ -2,6 +2,7 @@ package git
 
 import (
 	"fmt"
+	"go-kweb-lang/git/internal"
 	"log"
 	"os"
 	"strings"
@@ -21,11 +22,19 @@ type Repo interface {
 }
 
 func NewRepo(path string) Repo {
-	return &LocalRepo{path: path}
+	return &LocalRepo{
+		path:   path,
+		runner: &internal.StdCommandRunner{},
+	}
+}
+
+type CommandRunner interface {
+	Exec(workingDir string, cmd string, args ...string) (string, error)
 }
 
 type LocalRepo struct {
-	path string
+	path   string
+	runner CommandRunner
 }
 
 func (lr *LocalRepo) FileExists(path string) (bool, error) {
@@ -40,7 +49,7 @@ func (lr *LocalRepo) FileExists(path string) (bool, error) {
 }
 
 func (lr *LocalRepo) FindFileLastCommit(path string) (CommitInfo, error) {
-	out, err := runCommand(lr.path,
+	out, err := lr.runner.Exec(lr.path,
 		"git",
 		"log",
 		"-1",
@@ -60,7 +69,7 @@ func (lr *LocalRepo) FindFileLastCommit(path string) (CommitInfo, error) {
 }
 
 func (lr *LocalRepo) FindFileCommitsAfter(path string, commitIdFrom string) ([]CommitInfo, error) {
-	out, err := runCommand(lr.path,
+	out, err := lr.runner.Exec(lr.path,
 		"git",
 		"log",
 		"--pretty=format:%H %cd %s",
@@ -87,7 +96,7 @@ func (lr *LocalRepo) FindFileCommitsAfter(path string, commitIdFrom string) ([]C
 }
 
 func (lr *LocalRepo) FindMergePoints(commitId string) ([]CommitInfo, error) {
-	out, err := runCommand(lr.path,
+	out, err := lr.runner.Exec(lr.path,
 		"git",
 		"--no-pager",
 		"log",
