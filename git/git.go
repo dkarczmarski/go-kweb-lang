@@ -8,10 +8,14 @@ import (
 	"strings"
 )
 
+// CommitInfo represents commit details
 type CommitInfo struct {
+	// CommitId is a commit hash
 	CommitId string
+	// DateTime is a commit timestamp
 	DateTime string
-	Comment  string
+	// Comment is a commit comment
+	Comment string
 }
 
 type Repo interface {
@@ -21,10 +25,21 @@ type Repo interface {
 	FindMergePoints(commitId string) ([]CommitInfo, error)
 }
 
-func NewRepo(path string) Repo {
+type NewRepoConfig struct {
+	Runner CommandRunner
+}
+
+func NewRepo(path string, opts ...func(config *NewRepoConfig)) Repo {
+	config := NewRepoConfig{
+		Runner: &internal.StdCommandRunner{},
+	}
+	for _, opt := range opts {
+		opt(&config)
+	}
+
 	return &LocalRepo{
 		path:   path,
-		runner: &internal.StdCommandRunner{},
+		runner: config.Runner,
 	}
 }
 
@@ -82,12 +97,12 @@ func (lr *LocalRepo) FindFileCommitsAfter(path string, commitIdFrom string) ([]C
 		return nil, fmt.Errorf("git command failed: %w", err)
 	}
 	if len(strings.TrimSpace(out)) == 0 {
-		return []CommitInfo{}, nil
+		return nil, nil
 	}
 
 	var commits []CommitInfo
 
-	lines := strings.Split(out, "\n")
+	lines := outputToLines(out)
 	for _, line := range lines {
 		commits = append(commits, lineToCommitInfo(line))
 	}
@@ -96,6 +111,8 @@ func (lr *LocalRepo) FindFileCommitsAfter(path string, commitIdFrom string) ([]C
 }
 
 func (lr *LocalRepo) FindMergePoints(commitId string) ([]CommitInfo, error) {
+	// todo: probably we can do it better, to list only necessary merging point to the main branch
+	// todo: return result in reverse order?
 	out, err := lr.runner.Exec(lr.path,
 		"git",
 		"--no-pager",
@@ -110,17 +127,21 @@ func (lr *LocalRepo) FindMergePoints(commitId string) ([]CommitInfo, error) {
 		return nil, fmt.Errorf("git command failed: %w", err)
 	}
 	if len(strings.TrimSpace(out)) == 0 {
-		return []CommitInfo{}, nil
+		return nil, nil
 	}
 
 	var commits []CommitInfo
 
-	lines := strings.Split(out, "\n")
+	lines := outputToLines(out)
 	for _, line := range lines {
 		commits = append(commits, lineToCommitInfo(line))
 	}
 
 	return commits, nil
+}
+
+func outputToLines(out string) []string {
+	return strings.Split(strings.TrimSuffix(out, "\n"), "\n")
 }
 
 func lineToCommitInfo(line string) CommitInfo {
