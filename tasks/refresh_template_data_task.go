@@ -28,15 +28,13 @@ func (t *RefreshTemplateDataTask) Run() error {
 		return fmt.Errorf("git cache pull refresh error: %w", err)
 	}
 
-	langRelPaths, err := t.gitRepoCache.ListFiles("/content/pl")
+	seeker := seek.NewGitLangSeeker(t.gitRepoCache)
+	fileInfos, err := seeker.CheckLang("pl")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	seeker := seek.NewGitLangSeeker(t.gitRepoCache)
-	fileInfos := seeker.CheckFiles(langRelPaths)
 	model := web.BuildTableModel(fileInfos)
-
 	t.templateData.Set(model)
 
 	return nil

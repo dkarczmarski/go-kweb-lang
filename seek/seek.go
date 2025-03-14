@@ -1,10 +1,11 @@
-// Package seek seeks for differences between EN and PL content
+// Package seek seeks for differences between the EN and other languages content
 package seek
 
 import (
 	"fmt"
 	"go-kweb-lang/git"
 	"log"
+	"path/filepath"
 )
 
 type FileInfo struct {
@@ -29,14 +30,23 @@ func NewGitLangSeeker(gitRepo git.Repo) *GitLangSeeker {
 	}
 }
 
-func (s *GitLangSeeker) CheckFiles(langRelPaths []string) []FileInfo {
+func (s *GitLangSeeker) CheckLang(langCode string) ([]FileInfo, error) {
+	langRelPaths, err := s.gitRepo.ListFiles("/content/" + langCode)
+	if err != nil {
+		return nil, fmt.Errorf("error while listing content files for the language code %s: %w", langCode, err)
+	}
+
+	return s.CheckFiles(langRelPaths, langCode), nil
+}
+
+func (s *GitLangSeeker) CheckFiles(langRelPaths []string, langCode string) []FileInfo {
 	fileInfoList := make([]FileInfo, len(langRelPaths))
 
 	for i, langRelPath := range langRelPaths {
 		var fileInfo FileInfo
 
 		originFilePath := repoOriginFilePath(langRelPath)
-		langFilePath := repoLangFilePath(langRelPath)
+		langFilePath := repoLangFilePath(langRelPath, langCode)
 
 		fileInfo.LangRelPath = langRelPath
 		langLastCommit, err := s.gitRepo.FindFileLastCommit(langFilePath)
@@ -86,9 +96,9 @@ func (s *GitLangSeeker) CheckFiles(langRelPaths []string) []FileInfo {
 }
 
 func repoOriginFilePath(relPath string) string {
-	return "content/en/" + relPath
+	return repoLangFilePath(relPath, "en")
 }
 
-func repoLangFilePath(relPath string) string {
-	return "content/pl/" + relPath
+func repoLangFilePath(relPath string, langCode string) string {
+	return filepath.Join("content", langCode, relPath)
 }
