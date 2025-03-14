@@ -25,6 +25,10 @@ type Repo interface {
 	FindFileLastCommit(path string) (CommitInfo, error)
 	FindFileCommitsAfter(path string, commitIdFrom string) ([]CommitInfo, error)
 	FindMergePoints(commitId string) ([]CommitInfo, error)
+	Fetch() error
+	FreshCommits() ([]CommitInfo, error)
+	Pull() error
+	CommitFiles(commitId string) ([]string, error)
 }
 
 type NewRepoConfig struct {
@@ -140,6 +144,75 @@ func (lr *localRepo) FindMergePoints(commitId string) ([]CommitInfo, error) {
 	}
 
 	return commits, nil
+}
+
+func (lr *localRepo) Fetch() error {
+	_, err := lr.runner.Exec(lr.path,
+		"git",
+		"fetch",
+	)
+	if err != nil {
+		return fmt.Errorf("git command failed: %w", err)
+	}
+
+	return nil
+}
+
+func (lr *localRepo) FreshCommits() ([]CommitInfo, error) {
+	out, err := lr.runner.Exec(lr.path,
+		"git",
+		"--no-pager",
+		"log",
+		"--pretty=format:%H %cd %s",
+		"--date=iso-strict",
+		"main..origin/main",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("git command failed: %w", err)
+	}
+	if len(strings.TrimSpace(out)) == 0 {
+		return nil, nil
+	}
+
+	var commits []CommitInfo
+
+	lines := outputToLines(out)
+	for _, line := range lines {
+		commits = append(commits, lineToCommitInfo(line))
+	}
+
+	return commits, nil
+}
+
+func (lr *localRepo) Pull() error {
+	_, err := lr.runner.Exec(lr.path,
+		"git",
+		"pull",
+	)
+	if err != nil {
+		return fmt.Errorf("git command failed: %w", err)
+	}
+
+	return nil
+}
+
+func (lr *localRepo) CommitFiles(commitId string) ([]string, error) {
+	out, err := lr.runner.Exec(lr.path,
+		"git",
+		"diff-tree",
+		"--no-commit-id",
+		"--name-only",
+		"-r",
+		commitId,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("git command failed: %w", err)
+	}
+	if len(strings.TrimSpace(out)) == 0 {
+		return nil, nil
+	}
+
+	return outputToLines(out), nil
 }
 
 func outputToLines(out string) []string {

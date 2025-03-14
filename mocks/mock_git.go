@@ -40,6 +40,83 @@ func (m *MockRepo) EXPECT() *MockRepoMockRecorder {
 	return m.recorder
 }
 
+// CommitFiles mocks base method.
+func (m *MockRepo) CommitFiles(commitId string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CommitFiles", commitId)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CommitFiles indicates an expected call of CommitFiles.
+func (mr *MockRepoMockRecorder) CommitFiles(commitId any) *MockRepoCommitFilesCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitFiles", reflect.TypeOf((*MockRepo)(nil).CommitFiles), commitId)
+	return &MockRepoCommitFilesCall{Call: call}
+}
+
+// MockRepoCommitFilesCall wrap *gomock.Call
+type MockRepoCommitFilesCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoCommitFilesCall) Return(arg0 []string, arg1 error) *MockRepoCommitFilesCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoCommitFilesCall) Do(f func(string) ([]string, error)) *MockRepoCommitFilesCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoCommitFilesCall) DoAndReturn(f func(string) ([]string, error)) *MockRepoCommitFilesCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// Fetch mocks base method.
+func (m *MockRepo) Fetch() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Fetch")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Fetch indicates an expected call of Fetch.
+func (mr *MockRepoMockRecorder) Fetch() *MockRepoFetchCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockRepo)(nil).Fetch))
+	return &MockRepoFetchCall{Call: call}
+}
+
+// MockRepoFetchCall wrap *gomock.Call
+type MockRepoFetchCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoFetchCall) Return(arg0 error) *MockRepoFetchCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoFetchCall) Do(f func() error) *MockRepoFetchCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoFetchCall) DoAndReturn(f func() error) *MockRepoFetchCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // FileExists mocks base method.
 func (m *MockRepo) FileExists(path string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -192,6 +269,83 @@ func (c *MockRepoFindMergePointsCall) Do(f func(string) ([]git.CommitInfo, error
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockRepoFindMergePointsCall) DoAndReturn(f func(string) ([]git.CommitInfo, error)) *MockRepoFindMergePointsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// FreshCommits mocks base method.
+func (m *MockRepo) FreshCommits() ([]git.CommitInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FreshCommits")
+	ret0, _ := ret[0].([]git.CommitInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FreshCommits indicates an expected call of FreshCommits.
+func (mr *MockRepoMockRecorder) FreshCommits() *MockRepoFreshCommitsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FreshCommits", reflect.TypeOf((*MockRepo)(nil).FreshCommits))
+	return &MockRepoFreshCommitsCall{Call: call}
+}
+
+// MockRepoFreshCommitsCall wrap *gomock.Call
+type MockRepoFreshCommitsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoFreshCommitsCall) Return(arg0 []git.CommitInfo, arg1 error) *MockRepoFreshCommitsCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoFreshCommitsCall) Do(f func() ([]git.CommitInfo, error)) *MockRepoFreshCommitsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoFreshCommitsCall) DoAndReturn(f func() ([]git.CommitInfo, error)) *MockRepoFreshCommitsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// Pull mocks base method.
+func (m *MockRepo) Pull() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Pull")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Pull indicates an expected call of Pull.
+func (mr *MockRepoMockRecorder) Pull() *MockRepoPullCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pull", reflect.TypeOf((*MockRepo)(nil).Pull))
+	return &MockRepoPullCall{Call: call}
+}
+
+// MockRepoPullCall wrap *gomock.Call
+type MockRepoPullCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoPullCall) Return(arg0 error) *MockRepoPullCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoPullCall) Do(f func() error) *MockRepoPullCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoPullCall) DoAndReturn(f func() error) *MockRepoPullCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

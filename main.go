@@ -47,6 +47,28 @@ func Run() {
 	gitRepoCache := gitcache.New(gitRepo, "cache")
 	seeker := seek.NewGitLangSeeker(gitRepoCache)
 
+	if err := gitRepo.Fetch(); err != nil {
+		log.Fatal(err)
+	}
+	freshCommits, err := gitRepo.FreshCommits()
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, fc := range freshCommits {
+		commitFiles, err := gitRepoCache.CommitFiles(fc.CommitId)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, f := range commitFiles {
+			if err := gitRepoCache.InvalidatePath(f); err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+	if err := gitRepo.Pull(); err != nil {
+		log.Fatal(err)
+	}
+
 	result := seeker.CheckFiles(langRelPaths)
 	b, err := json.MarshalIndent(&result, "", "\t")
 	if err != nil {

@@ -45,6 +45,23 @@ func (c *GitRepoCache) FindMergePoints(commitId string) ([]git.CommitInfo, error
 	})
 }
 
+func (c *GitRepoCache) Fetch() error {
+	return c.gitRepo.Fetch()
+}
+
+func (c *GitRepoCache) FreshCommits() ([]git.CommitInfo, error) {
+	return c.gitRepo.FreshCommits()
+}
+
+func (c *GitRepoCache) Pull() error {
+	return c.gitRepo.Pull()
+}
+
+func (c *GitRepoCache) CommitFiles(commitId string) ([]string, error) {
+	// todo: do we need to cache it? probably not
+	return c.gitRepo.CommitFiles(commitId)
+}
+
 func (c *GitRepoCache) InvalidatePath(path string) error {
 	for _, cacheFile := range []string{
 		filepath.Join(internal.FileLastCommitDir(c.cacheDir), internal.KeyFile(internal.KeyHash(path))),
