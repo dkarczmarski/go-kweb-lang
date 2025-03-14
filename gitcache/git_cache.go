@@ -75,6 +75,31 @@ func (c *GitRepoCache) InvalidatePath(path string) error {
 	return nil
 }
 
+func (c *GitRepoCache) PullRefresh() error {
+	if err := c.gitRepo.Fetch(); err != nil {
+		return fmt.Errorf("git fetch error: %w", err)
+	}
+	freshCommits, err := c.gitRepo.FreshCommits()
+	if err != nil {
+		return fmt.Errorf("git list fresh commits error: %w", err)
+	}
+	for _, fc := range freshCommits {
+		commitFiles, err := c.gitRepo.CommitFiles(fc.CommitId)
+		if err != nil {
+			return fmt.Errorf("git list files of commit %s error: %w", fc.CommitId, err)
+		}
+		for _, f := range commitFiles {
+			if err := c.InvalidatePath(f); err != nil {
+				return fmt.Errorf("git cache invalidate path %s error: %w", f, err)
+			}
+		}
+	}
+	if err := c.gitRepo.Pull(); err != nil {
+		return fmt.Errorf("git pull error: %w", err)
+	}
+	return nil
+}
+
 func cacheWrapper[T any](cacheDir string, key string, block func() (T, error)) (T, error) {
 	if err := internal.EnsureDir(cacheDir); err != nil {
 		var zero T
