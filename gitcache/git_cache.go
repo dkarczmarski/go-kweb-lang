@@ -24,6 +24,10 @@ func (c *GitRepoCache) FileExists(path string) (bool, error) {
 	return c.gitRepo.FileExists(path)
 }
 
+func (c *GitRepoCache) ListFiles(path string) ([]string, error) {
+	return c.gitRepo.ListFiles(path)
+}
+
 func (c *GitRepoCache) FindFileLastCommit(path string) (git.CommitInfo, error) {
 	key := path
 	return cacheWrapper(internal.FileLastCommitDir(c.cacheDir), key, func() (git.CommitInfo, error) {

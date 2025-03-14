@@ -7,6 +7,7 @@ import (
 	"go-kweb-lang/git/internal"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -22,6 +23,7 @@ type CommitInfo struct {
 
 type Repo interface {
 	FileExists(path string) (bool, error)
+	ListFiles(path string) ([]string, error)
 	FindFileLastCommit(path string) (CommitInfo, error)
 	FindFileCommitsAfter(path string, commitIdFrom string) ([]CommitInfo, error)
 	FindMergePoints(commitId string) ([]CommitInfo, error)
@@ -67,6 +69,31 @@ func (lr *localRepo) FileExists(path string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func (lr *localRepo) ListFiles(path string) ([]string, error) {
+	var files []string
+
+	fullPath := filepath.Join(lr.path, path)
+	err := filepath.WalkDir(fullPath, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			relPath, err := filepath.Rel(fullPath, path)
+			if err != nil {
+				return err
+			}
+			files = append(files, relPath)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return files, nil
 }
 
 func (lr *localRepo) FindFileLastCommit(path string) (CommitInfo, error) {

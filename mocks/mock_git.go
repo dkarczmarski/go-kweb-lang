@@ -312,6 +312,45 @@ func (c *MockRepoFreshCommitsCall) DoAndReturn(f func() ([]git.CommitInfo, error
 	return c
 }
 
+// ListFiles mocks base method.
+func (m *MockRepo) ListFiles(path string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFiles", path)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListFiles indicates an expected call of ListFiles.
+func (mr *MockRepoMockRecorder) ListFiles(path any) *MockRepoListFilesCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFiles", reflect.TypeOf((*MockRepo)(nil).ListFiles), path)
+	return &MockRepoListFilesCall{Call: call}
+}
+
+// MockRepoListFilesCall wrap *gomock.Call
+type MockRepoListFilesCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoListFilesCall) Return(arg0 []string, arg1 error) *MockRepoListFilesCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoListFilesCall) Do(f func(string) ([]string, error)) *MockRepoListFilesCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoListFilesCall) DoAndReturn(f func(string) ([]string, error)) *MockRepoListFilesCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // Pull mocks base method.
 func (m *MockRepo) Pull() error {
 	m.ctrl.T.Helper()
