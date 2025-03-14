@@ -44,9 +44,14 @@ func BuildTableModel(fileInfos []seek.FileInfo) *TableModel {
 		fileModel.LangLastCommit = fileInfo.LangCommit
 		fileModel.OriginStatus = fileInfo.OriginFileStatus
 
-		// todo: more than one commit can have the same merge point. show only one
+		mergePoints := make(map[string]interface{})
 		for _, originUpdate := range fileInfo.OriginUpdates {
+			if _, ok := mergePoints[originUpdate.MergePoint.CommitId]; ok {
+				continue
+			}
+
 			fileModel.OriginUpdates = append(fileModel.OriginUpdates, toCommitLinkModel(originUpdate.MergePoint))
+			mergePoints[originUpdate.MergePoint.CommitId] = struct{}{}
 		}
 
 		table.Files = append(table.Files, fileModel)
