@@ -5,18 +5,23 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"sync"
 )
 
 type TemplateData struct {
-	// todo: sync
+	mu   sync.RWMutex
 	data any
 }
 
 func (td *TemplateData) Set(data any) {
+	td.mu.Lock()
+	defer td.mu.Unlock()
 	td.data = data
 }
 
 func (td *TemplateData) Get() any {
+	td.mu.RLock()
+	defer td.mu.RUnlock()
 	return td.data
 }
 
