@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go-kweb-lang/git"
+	"go-kweb-lang/gitcache"
 	"go-kweb-lang/seek"
 	"log"
 	"os"
@@ -43,8 +44,8 @@ func Run() {
 	}
 
 	gitRepo := git.NewRepo(repoDirPath)
-
-	seeker := seek.NewGitLangSeeker(gitRepo)
+	gitRepoCache := gitcache.New(gitRepo, "cache")
+	seeker := seek.NewGitLangSeeker(gitRepoCache)
 
 	result := seeker.CheckFiles(langRelPaths)
 	b, err := json.MarshalIndent(&result, "", "\t")
