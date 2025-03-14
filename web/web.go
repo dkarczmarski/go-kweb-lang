@@ -53,6 +53,20 @@ func NewServer(templateData *TemplateData) *Server {
 			log.Fatal(err)
 		}
 	})
+	mux.HandleFunc("/lang/{code}", func(w http.ResponseWriter, r *http.Request) {
+		code := r.PathValue("code")
+
+		model := templateData.Get(code)
+		if model == nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		if err := tmpl.Execute(w, model); err != nil {
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+	})
 
 	httpServer := &http.Server{
 		Addr:    ":8080",

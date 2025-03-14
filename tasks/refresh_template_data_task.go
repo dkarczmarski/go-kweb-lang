@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"fmt"
+
 	"go-kweb-lang/gitcache"
 	"go-kweb-lang/seek"
 	"go-kweb-lang/web"
@@ -27,7 +28,11 @@ func (t *RefreshTemplateDataTask) Run() error {
 		return fmt.Errorf("git cache pull refresh error: %w", err)
 	}
 
-	return t.refreshModel("pl")
+	if err := t.refreshModel("pl"); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (t *RefreshTemplateDataTask) refreshModel(langCode string) error {

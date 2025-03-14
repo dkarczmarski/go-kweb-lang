@@ -30,6 +30,8 @@ func Run() {
 	monitor := github.NewMonitor(gitHub, []github.OnUpdateTask{refreshRepoTask, refreshTemplateDataTask})
 	_ = monitor // todo
 
+	log.Println("starting web server")
+
 	server := web.NewServer(templateData)
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatal(err)
