@@ -1,5 +1,7 @@
 package git
 
+//go:generate mockgen -typed -source=git.go -destination=../mocks/mock_git.go -package=mocks
+
 import (
 	"fmt"
 	"go-kweb-lang/git/internal"
