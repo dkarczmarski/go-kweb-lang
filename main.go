@@ -6,6 +6,7 @@ import (
 	"go-kweb-lang/git"
 	"go-kweb-lang/gitcache"
 	"go-kweb-lang/seek"
+	"go-kweb-lang/web"
 	"log"
 	"os"
 	"path/filepath"
@@ -51,13 +52,23 @@ func Run() {
 		log.Fatal(err)
 	}
 
-	result := seeker.CheckFiles(langRelPaths)
-	b, err := json.MarshalIndent(&result, "", "\t")
+	fileInfos := seeker.CheckFiles(langRelPaths)
+
+	b, err := json.MarshalIndent(&fileInfos, "", "\t")
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	fmt.Println(string(b))
+
+	model := web.BuildTableModel(fileInfos)
+
+	templateData := &web.TemplateData{}
+	templateData.Set(model)
+
+	server := web.NewServer(templateData)
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
