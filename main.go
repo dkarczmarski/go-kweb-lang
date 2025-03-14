@@ -1,11 +1,10 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"go-kweb-lang/git"
 	"go-kweb-lang/gitcache"
-	"go-kweb-lang/seek"
+	"go-kweb-lang/github"
+	"go-kweb-lang/tasks"
 	"go-kweb-lang/web"
 	"log"
 )
@@ -13,31 +12,23 @@ import (
 var repoDirPath = "../kubernetes-website"
 
 func Run() {
-	gitRepo := git.NewRepo(repoDirPath)
-	gitRepoCache := gitcache.New(gitRepo, "cache")
-	seeker := seek.NewGitLangSeeker(gitRepoCache)
-
-	if err := gitRepoCache.PullRefresh(); err != nil {
-		log.Fatal(err)
-	}
-
-	langRelPaths, err := gitRepoCache.ListFiles("/content/pl")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fileInfos := seeker.CheckFiles(langRelPaths)
-
-	b, err := json.MarshalIndent(&fileInfos, "", "\t")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(b))
-
-	model := web.BuildTableModel(fileInfos)
+	gitRepoCache := gitcache.New(git.NewRepo(repoDirPath), "cache")
+	gitHub := github.New()
 
 	templateData := &web.TemplateData{}
-	templateData.Set(model)
+
+	refreshRepoTask := tasks.NewRefreshRepoTask(gitRepoCache)
+	refreshTemplateDataTask := tasks.NewRefreshTemplateDataTask(gitRepoCache, templateData)
+
+	if err := refreshRepoTask.Run(); err != nil {
+		log.Fatal(err)
+	}
+	if err := refreshTemplateDataTask.Run(); err != nil {
+		log.Fatal(err)
+	}
+
+	monitor := github.NewMonitor(gitHub, []github.OnUpdateTask{refreshRepoTask, refreshTemplateDataTask})
+	_ = monitor // todo
 
 	server := web.NewServer(templateData)
 	if err := server.ListenAndServe(); err != nil {
