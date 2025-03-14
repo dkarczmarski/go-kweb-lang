@@ -10,19 +10,25 @@ import (
 
 type TemplateData struct {
 	mu   sync.RWMutex
-	data any
+	data map[string]any
 }
 
-func (td *TemplateData) Set(data any) {
+func NewTemplateData() *TemplateData {
+	return &TemplateData{
+		data: make(map[string]any),
+	}
+}
+
+func (td *TemplateData) Set(key string, data any) {
 	td.mu.Lock()
 	defer td.mu.Unlock()
-	td.data = data
+	td.data[key] = data
 }
 
-func (td *TemplateData) Get() any {
+func (td *TemplateData) Get(key string) any {
 	td.mu.RLock()
 	defer td.mu.RUnlock()
-	return td.data
+	return td.data[key]
 }
 
 type Server struct {
@@ -42,7 +48,7 @@ func NewServer(templateData *TemplateData) *Server {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("GET /")
 
-		model := templateData.Get()
+		model := templateData.Get("pl")
 		if err := tmpl.Execute(w, model); err != nil {
 			log.Fatal(err)
 		}

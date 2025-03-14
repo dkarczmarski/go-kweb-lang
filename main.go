@@ -15,7 +15,7 @@ func Run() {
 	gitRepoCache := gitcache.New(git.NewRepo(repoDirPath), "cache")
 	gitHub := github.New()
 
-	templateData := &web.TemplateData{}
+	templateData := web.NewTemplateData()
 
 	refreshRepoTask := tasks.NewRefreshRepoTask(gitRepoCache)
 	refreshTemplateDataTask := tasks.NewRefreshTemplateDataTask(gitRepoCache, templateData)

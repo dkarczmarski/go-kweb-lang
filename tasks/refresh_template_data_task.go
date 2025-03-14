@@ -5,7 +5,6 @@ import (
 	"go-kweb-lang/gitcache"
 	"go-kweb-lang/seek"
 	"go-kweb-lang/web"
-	"log"
 )
 
 type RefreshTemplateDataTask struct {
@@ -28,14 +27,18 @@ func (t *RefreshTemplateDataTask) Run() error {
 		return fmt.Errorf("git cache pull refresh error: %w", err)
 	}
 
+	return t.refreshModel("pl")
+}
+
+func (t *RefreshTemplateDataTask) refreshModel(langCode string) error {
 	seeker := seek.NewGitLangSeeker(t.gitRepoCache)
-	fileInfos, err := seeker.CheckLang("pl")
+	fileInfos, err := seeker.CheckLang(langCode)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("error while checking the content directory for the language code %s: %w", langCode, err)
 	}
 
 	model := web.BuildTableModel(fileInfos)
-	t.templateData.Set(model)
+	t.templateData.Set(langCode, model)
 
 	return nil
 }
