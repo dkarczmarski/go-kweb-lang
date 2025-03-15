@@ -5,7 +5,7 @@ import (
 	"go-kweb-lang/seek"
 )
 
-type TableModel struct {
+type LangModel struct {
 	Files []FileModel
 }
 
@@ -26,13 +26,8 @@ type CommitLinkModel struct {
 	Commit git.CommitInfo
 }
 
-type LinkModel struct {
-	Text string
-	Url  string
-}
-
-func BuildTableModel(fileInfos []seek.FileInfo) *TableModel {
-	var table TableModel
+func BuildLangModel(fileInfos []seek.FileInfo) *LangModel {
+	var table LangModel
 
 	for _, fileInfo := range fileInfos {
 		var fileModel FileModel
@@ -58,13 +53,6 @@ func BuildTableModel(fileInfos []seek.FileInfo) *TableModel {
 	}
 
 	return &table
-}
-
-func toLinkModel(commitId string) LinkModel {
-	return LinkModel{
-		Text: commitId,
-		Url:  "https://github.com/kubernetes/website/commit/" + commitId,
-	}
 }
 
 func toLangFileLinkModel(langRelPath string) LinkModel {

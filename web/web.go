@@ -5,31 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"sync"
 )
-
-type TemplateData struct {
-	mu   sync.RWMutex
-	data map[string]any
-}
-
-func NewTemplateData() *TemplateData {
-	return &TemplateData{
-		data: make(map[string]any),
-	}
-}
-
-func (td *TemplateData) Set(key string, data any) {
-	td.mu.Lock()
-	defer td.mu.Unlock()
-	td.data[key] = data
-}
-
-func (td *TemplateData) Get(key string) any {
-	td.mu.RLock()
-	defer td.mu.RUnlock()
-	return td.data[key]
-}
 
 type Server struct {
 	httpServer *http.Server
@@ -38,31 +14,36 @@ type Server struct {
 //go:embed index.html
 var indexHTML string
 
+//go:embed lang.html
+var langHTML string
+
 func NewServer(templateData *TemplateData) *Server {
 	funcMap := template.FuncMap{
 		"truncate": truncate,
 	}
-	tmpl := template.Must(template.New("index.html").Funcs(funcMap).Parse(indexHTML))
+	indexTmpl := template.Must(template.New("index.html").Funcs(funcMap).Parse(indexHTML))
+	langTmpl := template.Must(template.New("lang.html").Funcs(funcMap).Parse(langHTML))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("GET /")
-
-		model := templateData.Get("pl")
-		if err := tmpl.Execute(w, model); err != nil {
-			log.Fatal(err)
+		model := templateData.GetIndex()
+		if err := indexTmpl.Execute(w, model); err != nil {
+			log.Println(err)
+			http.Error(w, "", http.StatusInternalServerError)
+			return
 		}
 	})
 	mux.HandleFunc("/lang/{code}", func(w http.ResponseWriter, r *http.Request) {
 		code := r.PathValue("code")
 
-		model := templateData.Get(code)
+		model := templateData.GetLang(code)
 		if model == nil {
 			http.NotFound(w, r)
 			return
 		}
 
-		if err := tmpl.Execute(w, model); err != nil {
+		if err := langTmpl.Execute(w, model); err != nil {
+			log.Println(err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}

@@ -4,14 +4,22 @@ import (
 	"go-kweb-lang/git"
 	"go-kweb-lang/gitcache"
 	"go-kweb-lang/github"
+	"go-kweb-lang/langcnt"
 	"go-kweb-lang/tasks"
 	"go-kweb-lang/web"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
-var repoDirPath = "../kubernetes-website"
+func getEnvOrDefault(key, defaultValue string) string {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return defaultValue
+	}
+	return value
+}
 
 func fileExists(path string) (bool, error) {
 	_, err := os.Stat(path)
@@ -25,6 +33,17 @@ func fileExists(path string) (bool, error) {
 }
 
 func Run() {
+	repoDirPath := getEnvOrDefault("REPO_DIR", "../kubernetes-website")
+	cacheDirPath := getEnvOrDefault("CACHE_DIR", "./cache")
+	allowedLangs := getEnvOrDefault("ALLOWED_LANGS", "")
+
+	log.Printf("REPO_DIR: %s", repoDirPath)
+	log.Printf("CACHE_DIR: %s", cacheDirPath)
+	log.Printf("ALLOWED_LANGS: %s", cacheDirPath)
+
+	content := &langcnt.Content{RepoDir: repoDirPath}
+	content.SetAllowedLang(strings.Split(allowedLangs, ","))
+
 	gitRepo := git.NewRepo(repoDirPath)
 
 	exists, err := fileExists(filepath.Join(repoDirPath, ".git"))
@@ -39,13 +58,13 @@ func Run() {
 		log.Println("repository was created")
 	}
 
-	gitRepoCache := gitcache.New(gitRepo, "cache")
+	gitRepoCache := gitcache.New(gitRepo, cacheDirPath)
 	gitHub := github.New()
 
 	templateData := web.NewTemplateData()
 
 	refreshRepoTask := tasks.NewRefreshRepoTask(gitRepoCache)
-	refreshTemplateDataTask := tasks.NewRefreshTemplateDataTask(gitRepoCache, templateData)
+	refreshTemplateDataTask := tasks.NewRefreshTemplateDataTask(content, gitRepoCache, templateData)
 
 	if err := refreshRepoTask.Run(); err != nil {
 		log.Fatal(err)

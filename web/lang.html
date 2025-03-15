@@ -12,14 +12,27 @@
 <table class="table table-hover table-striped table-bordered small">
     <thead>
     <tr>
-        <th scope="col">Lang</th>
+        <th scope="col">Lang<br/>RelPath</th>
+        <th scope="col">Origin<br/>Status</th>
+        <th scope="col">Origin<br/>Updates</th>
     </tr>
     </thead>
     <tbody>
-    {{range .}}
+    {{range .Files}}
     <tr>
         <td>
-            <a href="{{ .Url }}">{{ .Text }}</a>
+            <a href="{{ .LangRelPath.Url }}">{{ .LangRelPath.Text }}</a><br/>
+            {{ truncate .LangLastCommit.DateTime 10 }}
+        </td>
+        <td>{{ .OriginStatus }}</td>
+        <td>
+            <ul>
+                {{range .OriginUpdates}}
+                <li>
+                    <a href="{{ .Link.Url }}">{{ .Commit.Comment }}</a> {{ truncate .Commit.DateTime 10 }}
+                </li>
+                {{end}}
+            </ul>
         </td>
     </tr>
     {{end}}
