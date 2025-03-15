@@ -2,14 +2,16 @@ FROM golang:1.23.4 AS builder
 
 WORKDIR /app
 
-COPY . .
+COPY go.mod go.sum ./
+RUN go mod download
 
-RUN go mod tidy
+COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main .
 
 FROM alpine:latest
 
-RUN apk update && apk add git
+RUN apk update &&\
+    apk add --no-cache git
 
 WORKDIR /app
 
