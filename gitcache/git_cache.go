@@ -20,6 +20,10 @@ func New(gitRepo git.Repo, cacheDir string) *GitRepoCache {
 	}
 }
 
+func (c *GitRepoCache) Create(url string) error {
+	return c.gitRepo.Create(url)
+}
+
 func (c *GitRepoCache) FileExists(path string) (bool, error) {
 	return c.gitRepo.FileExists(path)
 }

@@ -79,6 +79,44 @@ func (c *MockRepoCommitFilesCall) DoAndReturn(f func(string) ([]string, error)) 
 	return c
 }
 
+// Create mocks base method.
+func (m *MockRepo) Create(url string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", url)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockRepoMockRecorder) Create(url any) *MockRepoCreateCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRepo)(nil).Create), url)
+	return &MockRepoCreateCall{Call: call}
+}
+
+// MockRepoCreateCall wrap *gomock.Call
+type MockRepoCreateCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoCreateCall) Return(arg0 error) *MockRepoCreateCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoCreateCall) Do(f func(string) error) *MockRepoCreateCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoCreateCall) DoAndReturn(f func(string) error) *MockRepoCreateCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // Fetch mocks base method.
 func (m *MockRepo) Fetch() error {
 	m.ctrl.T.Helper()

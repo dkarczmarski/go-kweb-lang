@@ -22,6 +22,7 @@ type CommitInfo struct {
 }
 
 type Repo interface {
+	Create(url string) error
 	FileExists(path string) (bool, error)
 	ListFiles(path string) ([]string, error)
 	FindFileLastCommit(path string) (CommitInfo, error)
@@ -58,6 +59,20 @@ type CommandRunner interface {
 type localRepo struct {
 	path   string
 	runner CommandRunner
+}
+
+func (lr *localRepo) Create(url string) error {
+	_, err := lr.runner.Exec(lr.path,
+		"git",
+		"clone",
+		url,
+		".",
+	)
+	if err != nil {
+		return fmt.Errorf("git command failed: %w", err)
+	}
+
+	return nil
 }
 
 func (lr *localRepo) FileExists(path string) (bool, error) {

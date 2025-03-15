@@ -7,12 +7,39 @@ import (
 	"go-kweb-lang/tasks"
 	"go-kweb-lang/web"
 	"log"
+	"os"
+	"path/filepath"
 )
 
 var repoDirPath = "../kubernetes-website"
 
+func fileExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func Run() {
-	gitRepoCache := gitcache.New(git.NewRepo(repoDirPath), "cache")
+	gitRepo := git.NewRepo(repoDirPath)
+
+	exists, err := fileExists(filepath.Join(repoDirPath, ".git"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !exists {
+		log.Println("repository doest not exist yet")
+		if err := gitRepo.Create("https://github.com/kubernetes/website"); err != nil {
+			log.Fatal("error while creating kubernetes repository")
+		}
+		log.Println("repository was created")
+	}
+
+	gitRepoCache := gitcache.New(gitRepo, "cache")
 	gitHub := github.New()
 
 	templateData := web.NewTemplateData()
