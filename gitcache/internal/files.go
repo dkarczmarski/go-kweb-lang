@@ -8,15 +8,15 @@ import (
 )
 
 func FileLastCommitDir(parentDir string) string {
-	return filepath.Join(parentDir, "file-last-commit")
+	return filepath.Join(parentDir, "git", "file-last-commit")
 }
 
 func FileUpdatesDir(parentDir string) string {
-	return filepath.Join(parentDir, "file-updates")
+	return filepath.Join(parentDir, "git", "file-updates")
 }
 
 func MergePointsDir(parentDir string) string {
-	return filepath.Join(parentDir, "merge-points")
+	return filepath.Join(parentDir, "git", "merge-points")
 }
 
 func FileExists(path string) bool {
