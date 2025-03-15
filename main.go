@@ -36,6 +36,21 @@ func fileExists(path string) (bool, error) {
 	return true, nil
 }
 
+func parseAllowedLangs(s string) []string {
+	if len(strings.TrimSpace(s)) == 0 {
+		return nil
+	}
+
+	subs := strings.Split(s, ",")
+	allowedLangs := make([]string, 0, len(subs))
+
+	for _, sub := range subs {
+		allowedLangs = append(allowedLangs, strings.TrimSpace(sub))
+	}
+
+	return allowedLangs
+}
+
 func Run() {
 	repoDirPath := getEnvOrDefault("REPO_DIR", "../kubernetes-website")
 	cacheDirPath := getEnvOrDefault("CACHE_DIR", "./cache")
@@ -43,10 +58,10 @@ func Run() {
 
 	log.Printf("REPO_DIR: %s", repoDirPath)
 	log.Printf("CACHE_DIR: %s", cacheDirPath)
-	log.Printf("ALLOWED_LANGS: %s", cacheDirPath)
+	log.Printf("ALLOWED_LANGS: %s", allowedLangs)
 
 	content := &langcnt.Content{RepoDir: repoDirPath}
-	content.SetAllowedLang(strings.Split(allowedLangs, ","))
+	content.SetAllowedLang(parseAllowedLangs(allowedLangs))
 
 	gitRepo := git.NewRepo(repoDirPath)
 
