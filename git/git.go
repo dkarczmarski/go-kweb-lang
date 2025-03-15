@@ -1,3 +1,4 @@
+// Package git provides an interface to work with a git repository.
 package git
 
 //go:generate mockgen -typed -source=git.go -destination=../mocks/mock_git.go -package=mocks
@@ -11,27 +12,49 @@ import (
 	"strings"
 )
 
-// CommitInfo represents commit details
+// CommitInfo represents commit details.
 type CommitInfo struct {
-	// CommitId is a commit hash
-	CommitId string
+	// CommitID is a commit hash
+	CommitID string
 	// DateTime is a commit timestamp
 	DateTime string
 	// Comment is a commit comment
 	Comment string
 }
 
+// Repo is an interface with methods to update a repository and get information about changes.
 type Repo interface {
+	// Create method do git clone with given url.
 	Create(url string) error
+
+	// FileExists checks whether file exists in a repository.
 	FileExists(path string) (bool, error)
+
+	// ListFiles list all files for given path and all subdirectories.
 	ListFiles(path string) ([]string, error)
+
+	// FindFileLastCommit provides information about the last commit for given file.
 	FindFileLastCommit(path string) (CommitInfo, error)
-	FindFileCommitsAfter(path string, commitIdFrom string) ([]CommitInfo, error)
-	FindMergePoints(commitId string) ([]CommitInfo, error)
+
+	// FindFileCommitsAfter lists all commits that contain the given file
+	// and that are newer than then commitIDFrom parameter.
+	FindFileCommitsAfter(path string, commitIDFrom string) ([]CommitInfo, error)
+
+	// todo: it may require some refinement
+	// FindMergePoints list all commits that are merge points starting from the commitID parameter.
+	FindMergePoints(commitID string) ([]CommitInfo, error)
+
+	// Fetch method do git fetch.
 	Fetch() error
+
+	// FreshCommits list all commits for the main branch that are at origin/main and are not merged yet.
 	FreshCommits() ([]CommitInfo, error)
+
+	// Pull method do git pull.
 	Pull() error
-	CommitFiles(commitId string) ([]string, error)
+
+	// CommitFiles list all files that are in the commit with the commitID parameter.
+	CommitFiles(commitID string) ([]string, error)
 }
 
 type NewRepoConfig struct {
@@ -81,8 +104,9 @@ func (lr *localRepo) FileExists(path string) (bool, error) {
 		return false, nil
 	}
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to stat file: %w", err)
 	}
+
 	return true, nil
 }
 
@@ -97,15 +121,17 @@ func (lr *localRepo) ListFiles(path string) ([]string, error) {
 		if !d.IsDir() {
 			relPath, err := filepath.Rel(fullPath, path)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to compute relative path: %w", err)
 			}
+
 			files = append(files, relPath)
 		}
+
 		return nil
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to walk directory: %w", err)
 	}
 
 	return files, nil
@@ -131,26 +157,27 @@ func (lr *localRepo) FindFileLastCommit(path string) (CommitInfo, error) {
 	return lineToCommitInfo(out), nil
 }
 
-func (lr *localRepo) FindFileCommitsAfter(path string, commitIdFrom string) ([]CommitInfo, error) {
+func (lr *localRepo) FindFileCommitsAfter(path string, commitIDFrom string) ([]CommitInfo, error) {
 	out, err := lr.runner.Exec(lr.path,
 		"git",
 		"log",
 		"--pretty=format:%H %cd %s",
 		"--date=iso-strict",
-		commitIdFrom+"..",
+		commitIDFrom+"..",
 		"--",
 		path,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("git command failed: %w", err)
 	}
+
 	if len(strings.TrimSpace(out)) == 0 {
 		return nil, nil
 	}
 
-	var commits []CommitInfo
-
 	lines := outputToLines(out)
+	commits := make([]CommitInfo, 0, len(lines))
+
 	for _, line := range lines {
 		commits = append(commits, lineToCommitInfo(line))
 	}
@@ -158,7 +185,7 @@ func (lr *localRepo) FindFileCommitsAfter(path string, commitIdFrom string) ([]C
 	return commits, nil
 }
 
-func (lr *localRepo) FindMergePoints(commitId string) ([]CommitInfo, error) {
+func (lr *localRepo) FindMergePoints(commitID string) ([]CommitInfo, error) {
 	// todo: probably we can do it better, to list only necessary merging point to the main branch
 	// todo: return result in reverse order?
 	out, err := lr.runner.Exec(lr.path,
@@ -169,7 +196,7 @@ func (lr *localRepo) FindMergePoints(commitId string) ([]CommitInfo, error) {
 		"--merges",
 		"--pretty=format:%H %cd %s",
 		"--date=iso-strict",
-		commitId+"..main",
+		commitID+"..main",
 	)
 	if err != nil {
 		return nil, fmt.Errorf("git command failed: %w", err)
@@ -178,9 +205,9 @@ func (lr *localRepo) FindMergePoints(commitId string) ([]CommitInfo, error) {
 		return nil, nil
 	}
 
-	var commits []CommitInfo
-
 	lines := outputToLines(out)
+	commits := make([]CommitInfo, 0, len(lines))
+
 	for _, line := range lines {
 		commits = append(commits, lineToCommitInfo(line))
 	}
@@ -212,13 +239,14 @@ func (lr *localRepo) FreshCommits() ([]CommitInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("git command failed: %w", err)
 	}
+
 	if len(strings.TrimSpace(out)) == 0 {
 		return nil, nil
 	}
 
-	var commits []CommitInfo
-
 	lines := outputToLines(out)
+	commits := make([]CommitInfo, 0, len(lines))
+
 	for _, line := range lines {
 		commits = append(commits, lineToCommitInfo(line))
 	}
@@ -238,18 +266,19 @@ func (lr *localRepo) Pull() error {
 	return nil
 }
 
-func (lr *localRepo) CommitFiles(commitId string) ([]string, error) {
+func (lr *localRepo) CommitFiles(commitID string) ([]string, error) {
 	out, err := lr.runner.Exec(lr.path,
 		"git",
 		"diff-tree",
 		"--no-commit-id",
 		"--name-only",
 		"-r",
-		commitId,
+		commitID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("git command failed: %w", err)
 	}
+
 	if len(strings.TrimSpace(out)) == 0 {
 		return nil, nil
 	}
@@ -266,8 +295,9 @@ func lineToCommitInfo(line string) CommitInfo {
 	if len(segs) != 3 {
 		log.Fatalf("line syntax error: %s", line)
 	}
+
 	return CommitInfo{
-		CommitId: segs[0],
+		CommitID: segs[0],
 		DateTime: segs[1],
 		Comment:  strings.TrimRight(segs[2], "\n"),
 	}

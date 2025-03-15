@@ -21,7 +21,7 @@
     {{range .Files}}
     <tr>
         <td>
-            <a href="{{ .LangRelPath.Url }}">{{ .LangRelPath.Text }}</a><br/>
+            <a href="{{ .LangRelPath.URL }}">{{ .LangRelPath.Text }}</a><br/>
             {{ truncate .LangLastCommit.DateTime 10 }}
         </td>
         <td>{{ .OriginStatus }}</td>
@@ -29,7 +29,7 @@
             <ul>
                 {{range .OriginUpdates}}
                 <li>
-                    <a href="{{ .Link.Url }}">{{ .Commit.Comment }}</a> {{ truncate .Commit.DateTime 10 }}
+                    <a href="{{ .Link.URL }}">{{ .Commit.Comment }}</a> {{ truncate .Commit.DateTime 10 }}
                 </li>
                 {{end}}
             </ul>

@@ -40,9 +40,9 @@ func (s *GitLangSeeker) CheckLang(langCode string) ([]FileInfo, error) {
 }
 
 func (s *GitLangSeeker) CheckFiles(langRelPaths []string, langCode string) []FileInfo {
-	fileInfoList := make([]FileInfo, len(langRelPaths))
+	fileInfoList := make([]FileInfo, 0, len(langRelPaths))
 
-	for i, langRelPath := range langRelPaths {
+	for _, langRelPath := range langRelPaths {
 		var fileInfo FileInfo
 
 		originFilePath := repoOriginFilePath(langRelPath)
@@ -63,7 +63,7 @@ func (s *GitLangSeeker) CheckFiles(langRelPaths []string, langCode string) []Fil
 			fileInfo.OriginFileStatus = "NOT_EXIST"
 		}
 
-		originCommitsAfter, err := s.gitRepo.FindFileCommitsAfter(originFilePath, langLastCommit.CommitId)
+		originCommitsAfter, err := s.gitRepo.FindFileCommitsAfter(originFilePath, langLastCommit.CommitID)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -72,7 +72,7 @@ func (s *GitLangSeeker) CheckFiles(langRelPaths []string, langCode string) []Fil
 		}
 
 		for _, originCommitAfter := range originCommitsAfter {
-			mergePoints, err := s.gitRepo.FindMergePoints(originCommitAfter.CommitId)
+			mergePoints, err := s.gitRepo.FindMergePoints(originCommitAfter.CommitID)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -87,7 +87,7 @@ func (s *GitLangSeeker) CheckFiles(langRelPaths []string, langCode string) []Fil
 			fileInfo.OriginUpdates = append(fileInfo.OriginUpdates, originUpdate)
 		}
 
-		fileInfoList[i] = fileInfo
+		fileInfoList = append(fileInfoList, fileInfo)
 
 		fmt.Printf("%+v\n", &fileInfo)
 	}

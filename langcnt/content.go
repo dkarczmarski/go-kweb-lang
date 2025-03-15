@@ -1,6 +1,8 @@
+// Package langcnt provides information about the 'content' directory in the kubernetes repository.
 package langcnt
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,11 +23,12 @@ func (c *Content) Langs() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if len(c.allowedLang) == 0 {
 		return allLangs, nil
 	}
 
-	var langs []string
+	langs := make([]string, 0, len(allLangs))
 	for _, lang := range allLangs {
 		if !slices.Contains(c.allowedLang, lang) {
 			continue
@@ -42,7 +45,7 @@ func listDirectories(path string) ([]string, error) {
 
 	files, err := os.ReadDir(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while listing directory %s: %w", path, err)
 	}
 
 	for _, file := range files {

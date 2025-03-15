@@ -24,6 +24,7 @@ func FileExists(path string) bool {
 	if os.IsNotExist(err) {
 		return false
 	}
+
 	return err == nil
 }
 
@@ -34,13 +35,13 @@ func EnsureDir(path string) error {
 			return fmt.Errorf("failed to check directory: %w", err)
 		}
 
-		err = os.MkdirAll(path, 0755)
-		if err != nil {
+		if err := os.MkdirAll(path, 0755); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", path, err)
 		}
 
 		return nil
 	}
+
 	if !info.IsDir() {
 		return fmt.Errorf("%s already exists but is not a directory", path)
 	}
@@ -48,7 +49,7 @@ func EnsureDir(path string) error {
 	return nil
 }
 
-func ReadJsonFromFile(path string, v any) error {
+func ReadJSONFromFile(path string, v any) error {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -57,7 +58,7 @@ func ReadJsonFromFile(path string, v any) error {
 	return json.Unmarshal(b, v)
 }
 
-func WriteJsonToFile(path string, v any) error {
+func WriteJSONToFile(path string, v any) error {
 	b, err := json.MarshalIndent(v, "", "\t")
 	if err != nil {
 		return fmt.Errorf("json marshal error: %w", err)
@@ -65,5 +66,6 @@ func WriteJsonToFile(path string, v any) error {
 	if err := os.WriteFile(path, b, 0644); err != nil {
 		return fmt.Errorf("write file %s error: %w", path, err)
 	}
+
 	return nil
 }

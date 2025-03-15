@@ -1,3 +1,4 @@
+// Package gitcache is a cached wrapper for git repository.
 package gitcache
 
 import (
@@ -39,17 +40,17 @@ func (c *GitRepoCache) FindFileLastCommit(path string) (git.CommitInfo, error) {
 	})
 }
 
-func (c *GitRepoCache) FindFileCommitsAfter(path string, commitIdFrom string) ([]git.CommitInfo, error) {
+func (c *GitRepoCache) FindFileCommitsAfter(path string, commitIDFrom string) ([]git.CommitInfo, error) {
 	key := path
 	return cacheWrapper(internal.FileUpdatesDir(c.cacheDir), key, func() ([]git.CommitInfo, error) {
-		return c.gitRepo.FindFileCommitsAfter(path, commitIdFrom)
+		return c.gitRepo.FindFileCommitsAfter(path, commitIDFrom)
 	})
 }
 
-func (c *GitRepoCache) FindMergePoints(commitId string) ([]git.CommitInfo, error) {
-	key := commitId
+func (c *GitRepoCache) FindMergePoints(commitID string) ([]git.CommitInfo, error) {
+	key := commitID
 	return cacheWrapper(internal.MergePointsDir(c.cacheDir), key, func() ([]git.CommitInfo, error) {
-		return c.gitRepo.FindMergePoints(commitId)
+		return c.gitRepo.FindMergePoints(commitID)
 	})
 }
 
@@ -65,9 +66,9 @@ func (c *GitRepoCache) Pull() error {
 	return c.gitRepo.Pull()
 }
 
-func (c *GitRepoCache) CommitFiles(commitId string) ([]string, error) {
+func (c *GitRepoCache) CommitFiles(commitID string) ([]string, error) {
 	// todo: do we need to cache it? probably not
-	return c.gitRepo.CommitFiles(commitId)
+	return c.gitRepo.CommitFiles(commitID)
 }
 
 func (c *GitRepoCache) InvalidatePath(path string) error {
@@ -87,15 +88,18 @@ func (c *GitRepoCache) PullRefresh() error {
 	if err := c.gitRepo.Fetch(); err != nil {
 		return fmt.Errorf("git fetch error: %w", err)
 	}
+
 	freshCommits, err := c.gitRepo.FreshCommits()
 	if err != nil {
 		return fmt.Errorf("git list fresh commits error: %w", err)
 	}
+
 	for _, fc := range freshCommits {
-		commitFiles, err := c.gitRepo.CommitFiles(fc.CommitId)
+		commitFiles, err := c.gitRepo.CommitFiles(fc.CommitID)
 		if err != nil {
-			return fmt.Errorf("git list files of commit %s error: %w", fc.CommitId, err)
+			return fmt.Errorf("git list files of commit %s error: %w", fc.CommitID, err)
 		}
+
 		for _, f := range commitFiles {
 			if err := c.InvalidatePath(f); err != nil {
 				return fmt.Errorf("git cache invalidate path %s error: %w", f, err)
@@ -118,7 +122,7 @@ func cacheWrapper[T any](cacheDir string, key string, block func() (T, error)) (
 	cachePath := filepath.Join(cacheDir, internal.KeyFile(hash))
 	if internal.FileExists(cachePath) {
 		var buff T
-		if err := internal.ReadJsonFromFile(cachePath, &buff); err != nil {
+		if err := internal.ReadJSONFromFile(cachePath, &buff); err != nil {
 			return buff, err
 		}
 
@@ -130,7 +134,7 @@ func cacheWrapper[T any](cacheDir string, key string, block func() (T, error)) (
 		return result, err
 	}
 
-	if err := internal.WriteJsonToFile(cachePath, result); err != nil {
+	if err := internal.WriteJSONToFile(cachePath, result); err != nil {
 		var zero T
 		return zero, err
 	}

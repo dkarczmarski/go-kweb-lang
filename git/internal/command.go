@@ -10,11 +10,11 @@ type StdCommandRunner struct {
 }
 
 func (cr *StdCommandRunner) Exec(workingDir string, command string, args ...string) (string, error) {
-	cmd := exec.Command(command, args...)
-	cmd.Dir = workingDir
-
 	var out bytes.Buffer
 	var stderr bytes.Buffer
+
+	cmd := exec.Command(command, args...)
+	cmd.Dir = workingDir
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 

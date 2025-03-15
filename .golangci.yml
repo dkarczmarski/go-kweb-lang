@@ -1,0 +1,16 @@
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - gofmt
+    - goimports
+    - gosimple
+    - unused
+    - dupl
+    - gocyclo
+    - stylecheck
+
+output:
+  formats:
+    - format: tab

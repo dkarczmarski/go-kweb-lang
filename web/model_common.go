@@ -2,12 +2,12 @@ package web
 
 type LinkModel struct {
 	Text string
-	Url  string
+	URL  string
 }
 
-func toLinkModel(commitId string) LinkModel {
+func toLinkModel(commitID string) LinkModel {
 	return LinkModel{
-		Text: commitId,
-		Url:  "https://github.com/kubernetes/website/commit/" + commitId,
+		Text: commitID,
+		URL:  "https://github.com/kubernetes/website/commit/" + commitID,
 	}
 }

@@ -21,6 +21,7 @@ type testCommandRunner struct {
 func (r *testCommandRunner) Exec(workingDir string, cmd string, args ...string) (string, error) {
 	r.WorkingDir = workingDir
 	r.Command = cmd
+
 	if len(args) > 0 {
 		r.Command += " " + strings.Join(args, " ")
 	}
@@ -64,13 +65,15 @@ func TestRepo_FindFileLastCommit(t *testing.T) {
 				return err == nil
 			},
 			expectedResult: git.CommitInfo{
-				CommitId: "d026267274d476357eee48df866fbba9e8875bb6",
+				CommitID: "d026267274d476357eee48df866fbba9e8875bb6",
 				DateTime: "2024-05-18T02:04:55+09:00",
 				Comment:  "update: OWNERS",
 			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			testRunner := &testCommandRunner{
 				output: tc.runnerOutput, err: tc.runnerErr,
 			}
@@ -104,7 +107,7 @@ func TestRepo_FindFileCommitsAfter(t *testing.T) {
 		name               string
 		repoDir            string
 		path               string
-		commitIdAfter      string
+		commitIDAfter      string
 		runnerOutput       string
 		runnerErr          error
 		expectedWorkingDir string
@@ -116,7 +119,7 @@ func TestRepo_FindFileCommitsAfter(t *testing.T) {
 			name:               "no result",
 			repoDir:            "/repo-dir",
 			path:               "content/en/OWNERS",
-			commitIdAfter:      "d026267274d476357eee48df866fbba9e8875bb6",
+			commitIDAfter:      "d026267274d476357eee48df866fbba9e8875bb6",
 			runnerOutput:       "\n",
 			runnerErr:          nil,
 			expectedWorkingDir: "/repo-dir",
@@ -130,7 +133,7 @@ func TestRepo_FindFileCommitsAfter(t *testing.T) {
 			name:               "single line result",
 			repoDir:            "/repo-dir",
 			path:               "content/en/_index.html",
-			commitIdAfter:      "f9120a9e5d2322cd3fc82db6417eb2fb77669a88",
+			commitIDAfter:      "f9120a9e5d2322cd3fc82db6417eb2fb77669a88",
 			runnerOutput:       "e49c25cc17e83927498b1a7cbaa832e9100b5f36 2025-01-08T16:49:50+07:00 Redesign KubeCon links on the main page\n",
 			expectedWorkingDir: "/repo-dir",
 			expectedCommand:    "git log --pretty=format:%H %cd %s --date=iso-strict f9120a9e5d2322cd3fc82db6417eb2fb77669a88.. -- content/en/_index.html",
@@ -140,7 +143,7 @@ func TestRepo_FindFileCommitsAfter(t *testing.T) {
 			},
 			expectedResult: []git.CommitInfo{
 				{
-					CommitId: "e49c25cc17e83927498b1a7cbaa832e9100b5f36",
+					CommitID: "e49c25cc17e83927498b1a7cbaa832e9100b5f36",
 					DateTime: "2025-01-08T16:49:50+07:00",
 					Comment:  "Redesign KubeCon links on the main page",
 				},
@@ -150,7 +153,7 @@ func TestRepo_FindFileCommitsAfter(t *testing.T) {
 			name:          "multiple lines result",
 			repoDir:       "/repo-dir",
 			path:          "content/en/docs/concepts/overview/_index.md",
-			commitIdAfter: "f9120a9e5d2322cd3fc82db6417eb2fb77669a88",
+			commitIDAfter: "f9120a9e5d2322cd3fc82db6417eb2fb77669a88",
 			runnerOutput: "7e71096044ece8631e56439ea6ad3b6c456fb8a1 2024-09-11T15:17:51+03:00 Removed duplicated paragraph\n" +
 				"f79eee0d92bda7b3f05931738b31de1f968efcc5 2024-08-26T06:58:06+08:00 Update _index.md\n",
 			runnerErr:          nil,
@@ -161,12 +164,12 @@ func TestRepo_FindFileCommitsAfter(t *testing.T) {
 			},
 			expectedResult: []git.CommitInfo{
 				{
-					CommitId: "7e71096044ece8631e56439ea6ad3b6c456fb8a1",
+					CommitID: "7e71096044ece8631e56439ea6ad3b6c456fb8a1",
 					DateTime: "2024-09-11T15:17:51+03:00",
 					Comment:  "Removed duplicated paragraph",
 				},
 				{
-					CommitId: "f79eee0d92bda7b3f05931738b31de1f968efcc5",
+					CommitID: "f79eee0d92bda7b3f05931738b31de1f968efcc5",
 					DateTime: "2024-08-26T06:58:06+08:00",
 					Comment:  "Update _index.md",
 				},
@@ -174,6 +177,8 @@ func TestRepo_FindFileCommitsAfter(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			testRunner := &testCommandRunner{
 				output: tc.runnerOutput, err: tc.runnerErr,
 			}
@@ -182,7 +187,7 @@ func TestRepo_FindFileCommitsAfter(t *testing.T) {
 				config.Runner = testRunner
 			})
 
-			commits, err := repo.FindFileCommitsAfter(tc.path, tc.commitIdAfter)
+			commits, err := repo.FindFileCommitsAfter(tc.path, tc.commitIDAfter)
 
 			if tc.expectedWorkingDir != testRunner.WorkingDir {
 				t.Errorf("unexpected working dir\nactual   : %+v\nexptected: %+v",
@@ -206,7 +211,7 @@ func TestLocalRepo_FindMergePoints(t *testing.T) {
 	for _, tc := range []struct {
 		name               string
 		repoDir            string
-		commitId           string
+		commitID           string
 		runnerOutput       string
 		runnerErr          error
 		expectedWorkingDir string
@@ -217,7 +222,7 @@ func TestLocalRepo_FindMergePoints(t *testing.T) {
 		{
 			name:               "no result",
 			repoDir:            "/repo-dir",
-			commitId:           "e49c25cc17e83927498b1a7cbaa832e9100b5f36",
+			commitID:           "e49c25cc17e83927498b1a7cbaa832e9100b5f36",
 			runnerOutput:       "\n",
 			runnerErr:          nil,
 			expectedWorkingDir: "/repo-dir",
@@ -228,7 +233,7 @@ func TestLocalRepo_FindMergePoints(t *testing.T) {
 		{
 			name:               "single line result",
 			repoDir:            "/repo-dir",
-			commitId:           "e49c25cc17e83927498b1a7cbaa832e9100b5f36",
+			commitID:           "e49c25cc17e83927498b1a7cbaa832e9100b5f36",
 			runnerOutput:       "0e3a062280a55be00b533b258ee0e4c5e1f99f9d 2025-01-13T02:32:33-08:00 Merge pull request #49167 from shurup/upgrade-kubecon-section\n",
 			expectedWorkingDir: "/repo-dir",
 			expectedCommand:    "git --no-pager log --ancestry-path --merges --pretty=format:%H %cd %s --date=iso-strict e49c25cc17e83927498b1a7cbaa832e9100b5f36..main",
@@ -236,7 +241,7 @@ func TestLocalRepo_FindMergePoints(t *testing.T) {
 			expectedErr:        noError,
 			expectedResult: []git.CommitInfo{
 				{
-					CommitId: "0e3a062280a55be00b533b258ee0e4c5e1f99f9d",
+					CommitID: "0e3a062280a55be00b533b258ee0e4c5e1f99f9d",
 					DateTime: "2025-01-13T02:32:33-08:00",
 					Comment:  "Merge pull request #49167 from shurup/upgrade-kubecon-section",
 				},
@@ -245,7 +250,7 @@ func TestLocalRepo_FindMergePoints(t *testing.T) {
 		{
 			name:     "multiple lines result",
 			repoDir:  "/repo-dir",
-			commitId: "e49c25cc17e83927498b1a7cbaa832e9100b5f36",
+			commitID: "e49c25cc17e83927498b1a7cbaa832e9100b5f36",
 			runnerOutput: "620d7f276c96789938869c67660d2f2aed42db49 2025-01-13T02:36:32-08:00 Merge pull request #48756 from sftim/20241118_localize_sidebar_tree_text\n" +
 				"d4ecebf3699b126405953b47ccfea43caba72a0b 2025-01-13T02:34:32-08:00 Merge pull request #49171 from yuto-kimura-g/fix/49116\n" +
 				"0e3a062280a55be00b533b258ee0e4c5e1f99f9d 2025-01-13T02:32:33-08:00 Merge pull request #49167 from shurup/upgrade-kubecon-section\n",
@@ -255,17 +260,17 @@ func TestLocalRepo_FindMergePoints(t *testing.T) {
 			expectedErr:        noError,
 			expectedResult: []git.CommitInfo{
 				{
-					CommitId: "620d7f276c96789938869c67660d2f2aed42db49",
+					CommitID: "620d7f276c96789938869c67660d2f2aed42db49",
 					DateTime: "2025-01-13T02:36:32-08:00",
 					Comment:  "Merge pull request #48756 from sftim/20241118_localize_sidebar_tree_text",
 				},
 				{
-					CommitId: "d4ecebf3699b126405953b47ccfea43caba72a0b",
+					CommitID: "d4ecebf3699b126405953b47ccfea43caba72a0b",
 					DateTime: "2025-01-13T02:34:32-08:00",
 					Comment:  "Merge pull request #49171 from yuto-kimura-g/fix/49116",
 				},
 				{
-					CommitId: "0e3a062280a55be00b533b258ee0e4c5e1f99f9d",
+					CommitID: "0e3a062280a55be00b533b258ee0e4c5e1f99f9d",
 					DateTime: "2025-01-13T02:32:33-08:00",
 					Comment:  "Merge pull request #49167 from shurup/upgrade-kubecon-section",
 				},
@@ -273,6 +278,8 @@ func TestLocalRepo_FindMergePoints(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			testRunner := &testCommandRunner{
 				output: tc.runnerOutput, err: tc.runnerErr,
 			}
@@ -281,7 +288,7 @@ func TestLocalRepo_FindMergePoints(t *testing.T) {
 				config.Runner = testRunner
 			})
 
-			commits, err := repo.FindMergePoints(tc.commitId)
+			commits, err := repo.FindMergePoints(tc.commitID)
 
 			if tc.expectedWorkingDir != testRunner.WorkingDir {
 				t.Errorf("unexpected working dir\nactual   : %+v\nexptected: %+v",
@@ -299,7 +306,6 @@ func TestLocalRepo_FindMergePoints(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func noError(err error) bool {

@@ -14,7 +14,7 @@ type GitHub struct {
 
 func New() *GitHub {
 	httpClient := &http.Client{
-		Timeout: 60 * time.Second,
+		Timeout: time.Minute,
 	}
 
 	return &GitHub{
@@ -23,7 +23,7 @@ func New() *GitHub {
 }
 
 type CommitInfo struct {
-	CommitId string
+	CommitID string
 	DateTime string
 }
 
@@ -52,16 +52,16 @@ func (gh *GitHub) getCommit(ctx context.Context, url string) (*CommitInfo, error
 	}
 
 	var commits []commitResponse
-	err = json.NewDecoder(resp.Body).Decode(&commits)
-	if err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&commits); err != nil {
 		return nil, fmt.Errorf("json error: %w", err)
 	}
+
 	if len(commits) == 0 {
 		return nil, nil
 	}
 
 	commitInfo := CommitInfo{
-		CommitId: commits[0].SHA,
+		CommitID: commits[0].SHA,
 		DateTime: commits[0].Commit.Committer.Date,
 	}
 

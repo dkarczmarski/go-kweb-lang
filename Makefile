@@ -9,6 +9,18 @@ go-generate:
 test:
 	go test -v ./...
 
+dev-install-lint:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+dev-lint:
+	golangci-lint run
+
+dev-lint-all:
+	golangci-lint run --enable-all --config=/dev/null
+
+dev-goimports:
+	goimports -w .
+
 dev-test-docker:
 	docker build -t kweb-test .
 

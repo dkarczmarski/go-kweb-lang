@@ -31,6 +31,7 @@ func BuildLangModel(fileInfos []seek.FileInfo) *LangModel {
 
 	for _, fileInfo := range fileInfos {
 		var fileModel FileModel
+
 		if len(fileInfo.OriginFileStatus) == 0 && len(fileInfo.OriginUpdates) == 0 {
 			continue
 		}
@@ -41,12 +42,12 @@ func BuildLangModel(fileInfos []seek.FileInfo) *LangModel {
 
 		mergePoints := make(map[string]interface{})
 		for _, originUpdate := range fileInfo.OriginUpdates {
-			if _, ok := mergePoints[originUpdate.MergePoint.CommitId]; ok {
+			if _, ok := mergePoints[originUpdate.MergePoint.CommitID]; ok {
 				continue
 			}
 
 			fileModel.OriginUpdates = append(fileModel.OriginUpdates, toCommitLinkModel(originUpdate.MergePoint))
-			mergePoints[originUpdate.MergePoint.CommitId] = struct{}{}
+			mergePoints[originUpdate.MergePoint.CommitID] = struct{}{}
 		}
 
 		table.Files = append(table.Files, fileModel)
@@ -58,13 +59,13 @@ func BuildLangModel(fileInfos []seek.FileInfo) *LangModel {
 func toLangFileLinkModel(langRelPath string) LinkModel {
 	return LinkModel{
 		Text: langRelPath,
-		Url:  "https://github.com/kubernetes/website/blob/main/content/pl/" + langRelPath,
+		URL:  "https://github.com/kubernetes/website/blob/main/content/pl/" + langRelPath,
 	}
 }
 
 func toCommitLinkModel(commit git.CommitInfo) CommitLinkModel {
 	return CommitLinkModel{
-		Link:   toLinkModel(commit.CommitId),
+		Link:   toLinkModel(commit.CommitID),
 		Commit: commit,
 	}
 }

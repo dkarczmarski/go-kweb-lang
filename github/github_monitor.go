@@ -11,7 +11,7 @@ type Monitor struct {
 	tasks []OnUpdateTask
 
 	// todo: sync
-	lastCommitId string
+	lastCommitID string
 }
 
 func NewMonitor(gh *GitHub, tasks []OnUpdateTask) *Monitor {
@@ -31,8 +31,8 @@ func (mon *Monitor) Check() error {
 		return fmt.Errorf("GitHub get latest commit error: %w", err)
 	}
 
-	if len(mon.lastCommitId) == 0 || commitInfo.CommitId != mon.lastCommitId {
-		mon.lastCommitId = commitInfo.CommitId
+	if len(mon.lastCommitID) == 0 || commitInfo.CommitID != mon.lastCommitID {
+		mon.lastCommitID = commitInfo.CommitID
 
 		for _, task := range mon.tasks {
 			if err := task.Run(); err != nil {

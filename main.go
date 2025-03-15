@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"go-kweb-lang/git"
 	"go-kweb-lang/gitcache"
 	"go-kweb-lang/github"
@@ -8,6 +10,7 @@ import (
 	"go-kweb-lang/tasks"
 	"go-kweb-lang/web"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,8 +30,9 @@ func fileExists(path string) (bool, error) {
 		return false, nil
 	}
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("error while checking whether file exists: %w", err)
 	}
+
 	return true, nil
 }
 
@@ -79,8 +83,8 @@ func Run() {
 	log.Println("starting web server")
 
 	server := web.NewServer(templateData)
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatal(err)
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("HTTP server failed: %v", err)
 	}
 }
 

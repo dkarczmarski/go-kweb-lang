@@ -5,16 +5,16 @@ import (
 	"go-kweb-lang/gitcache"
 	"go-kweb-lang/gitcache/internal"
 	"go-kweb-lang/mocks"
-	"go.uber.org/mock/gomock"
-	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"go.uber.org/mock/gomock"
 )
 
 func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 	path := "/path1"
-	expectedCommit := git.CommitInfo{CommitId: "ID1", DateTime: "DT1", Comment: "TEXT1"}
+	expectedCommit := git.CommitInfo{CommitID: "ID1", DateTime: "DT1", Comment: "TEXT1"}
 
 	for _, tc := range []struct {
 		name     string
@@ -31,11 +31,13 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 					Times(1)
 			},
 			before: func(t *testing.T, cachePath string) {
+				t.Helper()
 				if internal.FileExists(cachePath) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cachePath string) {
+				t.Helper()
 				if !internal.FileExists(cachePath) {
 					t.Errorf("cache file %s should exist", cachePath)
 				}
@@ -43,33 +45,29 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 		},
 		{
 			name: "hit cache",
-			initMock: func(m *mocks.MockRepo) {
-			},
 			before: func(t *testing.T, cachePath string) {
+				t.Helper()
 				if err := internal.EnsureDir(filepath.Dir(cachePath)); err != nil {
 					t.Fatal(err)
 				}
-				if err := internal.WriteJsonToFile(cachePath, &expectedCommit); err != nil {
+				if err := internal.WriteJSONToFile(cachePath, &expectedCommit); err != nil {
 					t.Fatal(err)
 				}
-			},
-			after: func(t *testing.T, cachePath string) {
 			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			ctrl := gomock.NewController(t)
-			m := mocks.NewMockRepo(ctrl)
+			mock := mocks.NewMockRepo(ctrl)
 
-			tc.initMock(m)
-
-			cacheDir, err := os.MkdirTemp("", "testdir_")
-			if err != nil {
-				t.Fatal(err)
+			if tc.initMock != nil {
+				tc.initMock(mock)
 			}
-			defer os.RemoveAll(cacheDir)
 
-			gc := gitcache.New(m, cacheDir)
+			cacheDir := t.TempDir()
+			gc := gitcache.New(mock, cacheDir)
 			cachePath := filepath.Join(internal.FileLastCommitDir(cacheDir), internal.KeyFile(internal.KeyHash(path)))
 
 			tc.before(t, cachePath)
@@ -78,21 +76,24 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
+
 			if !reflect.DeepEqual(commit, expectedCommit) {
 				t.Errorf("unexpected outcome\nactual   : %+v\nexpected: %+v", commit, expectedCommit)
 			}
 
-			tc.after(t, cachePath)
+			if tc.after != nil {
+				tc.after(t, cachePath)
+			}
 		})
 	}
 }
 
 func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 	path := "path1"
-	commitId := "ID"
+	commitID := "ID"
 	expectedCommits := []git.CommitInfo{
-		{CommitId: "ID1", DateTime: "DT1", Comment: "TEXT1"},
-		{CommitId: "ID2", DateTime: "DT2", Comment: "TEXT2"},
+		{CommitID: "ID1", DateTime: "DT1", Comment: "TEXT1"},
+		{CommitID: "ID2", DateTime: "DT2", Comment: "TEXT2"},
 	}
 
 	for _, tc := range []struct {
@@ -105,16 +106,18 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 			name: "miss cache",
 			initMock: func(m *mocks.MockRepo) {
 				m.EXPECT().
-					FindFileCommitsAfter(path, commitId).
+					FindFileCommitsAfter(path, commitID).
 					Return(expectedCommits, nil).
 					Times(1)
 			},
 			before: func(t *testing.T, cachePath string) {
+				t.Helper()
 				if internal.FileExists(cachePath) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cachePath string) {
+				t.Helper()
 				if !internal.FileExists(cachePath) {
 					t.Errorf("cache file %s should exist", cachePath)
 				}
@@ -122,38 +125,35 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 		},
 		{
 			name: "hit cache",
-			initMock: func(m *mocks.MockRepo) {
-			},
 			before: func(t *testing.T, cachePath string) {
+				t.Helper()
 				if err := internal.EnsureDir(filepath.Dir(cachePath)); err != nil {
 					t.Fatal(err)
 				}
-				if err := internal.WriteJsonToFile(cachePath, &expectedCommits); err != nil {
+				if err := internal.WriteJSONToFile(cachePath, &expectedCommits); err != nil {
 					t.Fatal(err)
 				}
-			},
-			after: func(t *testing.T, cachePath string) {
 			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			ctrl := gomock.NewController(t)
-			m := mocks.NewMockRepo(ctrl)
+			mock := mocks.NewMockRepo(ctrl)
 
-			tc.initMock(m)
-
-			cacheDir, err := os.MkdirTemp("", "testdir_")
-			if err != nil {
-				t.Fatal(err)
+			if tc.initMock != nil {
+				tc.initMock(mock)
 			}
-			defer os.RemoveAll(cacheDir)
 
-			gc := gitcache.New(m, cacheDir)
+			cacheDir := t.TempDir()
+
+			gc := gitcache.New(mock, cacheDir)
 			cachePath := filepath.Join(internal.FileUpdatesDir(cacheDir), internal.KeyFile(internal.KeyHash(path)))
 
 			tc.before(t, cachePath)
 
-			commits, err := gc.FindFileCommitsAfter(path, commitId)
+			commits, err := gc.FindFileCommitsAfter(path, commitID)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
@@ -161,16 +161,18 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 				t.Errorf("unexpected outcome\nactual   : %+v\nexpected: %+v", commits, expectedCommits)
 			}
 
-			tc.after(t, cachePath)
+			if tc.after != nil {
+				tc.after(t, cachePath)
+			}
 		})
 	}
 }
 
 func TestGitRepoCache_FindMergePoints(t *testing.T) {
-	commitId := "ID"
+	commitID := "ID"
 	expectedCommits := []git.CommitInfo{
-		{CommitId: "ID1", DateTime: "DT1", Comment: "TEXT1"},
-		{CommitId: "ID2", DateTime: "DT2", Comment: "TEXT2"},
+		{CommitID: "ID1", DateTime: "DT1", Comment: "TEXT1"},
+		{CommitID: "ID2", DateTime: "DT2", Comment: "TEXT2"},
 	}
 
 	for _, tc := range []struct {
@@ -183,11 +185,12 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 			name: "miss cache",
 			initMock: func(m *mocks.MockRepo) {
 				m.EXPECT().
-					FindMergePoints(commitId).
+					FindMergePoints(commitID).
 					Return(expectedCommits, nil).
 					Times(1)
 			},
 			before: func(t *testing.T, cachePath string) {
+				t.Helper()
 				if internal.FileExists(cachePath) {
 					t.Fatal("should be impossible")
 				}
@@ -200,38 +203,34 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 		},
 		{
 			name: "hit cache",
-			initMock: func(m *mocks.MockRepo) {
-			},
 			before: func(t *testing.T, cachePath string) {
+				t.Helper()
 				if err := internal.EnsureDir(filepath.Dir(cachePath)); err != nil {
 					t.Fatal(err)
 				}
-				if err := internal.WriteJsonToFile(cachePath, &expectedCommits); err != nil {
+				if err := internal.WriteJSONToFile(cachePath, &expectedCommits); err != nil {
 					t.Fatal(err)
 				}
-			},
-			after: func(t *testing.T, cachePath string) {
 			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			ctrl := gomock.NewController(t)
-			m := mocks.NewMockRepo(ctrl)
+			mock := mocks.NewMockRepo(ctrl)
 
-			tc.initMock(m)
-
-			cacheDir, err := os.MkdirTemp("", "testdir_")
-			if err != nil {
-				t.Fatal(err)
+			if tc.initMock != nil {
+				tc.initMock(mock)
 			}
-			defer os.RemoveAll(cacheDir)
 
-			gc := gitcache.New(m, cacheDir)
-			cachePath := filepath.Join(internal.MergePointsDir(cacheDir), internal.KeyFile(internal.KeyHash(commitId)))
+			cacheDir := t.TempDir()
+			gc := gitcache.New(mock, cacheDir)
+			cachePath := filepath.Join(internal.MergePointsDir(cacheDir), internal.KeyFile(internal.KeyHash(commitID)))
 
 			tc.before(t, cachePath)
 
-			commits, err := gc.FindMergePoints(commitId)
+			commits, err := gc.FindMergePoints(commitID)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
@@ -239,7 +238,9 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 				t.Errorf("unexpected outcome\nactual   : %+v\nexpected: %+v", commits, expectedCommits)
 			}
 
-			tc.after(t, cachePath)
+			if tc.after != nil {
+				tc.after(t, cachePath)
+			}
 		})
 	}
 }
@@ -257,6 +258,8 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 		{
 			name: "when 'file-last-commit' cache file exists, it removes it",
 			before: func(t *testing.T, prop map[string]any) {
+				t.Helper()
+
 				cacheDir := prop["cacheDir"].(string)
 
 				cacheFile := filepath.Join(internal.FileLastCommitDir(cacheDir), internal.KeyFile(internal.KeyHash(path)))
@@ -265,11 +268,13 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 				if err := internal.EnsureDir(filepath.Dir(cacheFile)); err != nil {
 					t.Fatal(err)
 				}
-				if err := internal.WriteJsonToFile(cacheFile, struct{}{}); err != nil {
+				if err := internal.WriteJSONToFile(cacheFile, struct{}{}); err != nil {
 					t.Fatal(err)
 				}
 			},
 			after: func(t *testing.T, prop map[string]any) {
+				t.Helper()
+
 				cacheFile := prop["cacheFile"].(string)
 
 				if internal.FileExists(cacheFile) {
@@ -280,6 +285,8 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 		{
 			name: "when 'file-updates' cache file exists, it removes it",
 			before: func(t *testing.T, prop map[string]any) {
+				t.Helper()
+
 				cacheDir := prop["cacheDir"].(string)
 
 				cacheFile := filepath.Join(internal.FileUpdatesDir(cacheDir), internal.KeyFile(internal.KeyHash(path)))
@@ -288,11 +295,13 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 				if err := internal.EnsureDir(filepath.Dir(cacheFile)); err != nil {
 					t.Fatal(err)
 				}
-				if err := internal.WriteJsonToFile(cacheFile, struct{}{}); err != nil {
+				if err := internal.WriteJSONToFile(cacheFile, struct{}{}); err != nil {
 					t.Fatal(err)
 				}
 			},
 			after: func(t *testing.T, prop map[string]any) {
+				t.Helper()
+
 				cacheFile := prop["cacheFile"].(string)
 
 				if internal.FileExists(cacheFile) {
@@ -302,25 +311,23 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			ctrl := gomock.NewController(t)
-			m := mocks.NewMockRepo(ctrl)
+			mock := mocks.NewMockRepo(ctrl)
 
 			prop := make(map[string]any)
 
-			cacheDir, err := os.MkdirTemp("", "testdir_")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(cacheDir)
+			cacheDir := t.TempDir()
 			prop["cacheDir"] = cacheDir
 
-			gc := gitcache.New(m, cacheDir)
+			gitCache := gitcache.New(mock, cacheDir)
 
 			if tc.before != nil {
 				tc.before(t, prop)
 			}
 
-			if err := gc.InvalidatePath(path); err != nil {
+			if err := gitCache.InvalidatePath(path); err != nil {
 				t.Fatal(err)
 			}
 
