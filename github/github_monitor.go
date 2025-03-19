@@ -22,10 +22,10 @@ func NewMonitor(gh *GitHub, tasks []OnUpdateTask) *Monitor {
 }
 
 type OnUpdateTask interface {
-	Run() error
+	Run(ctx context.Context) error
 }
 
-func (mon *Monitor) Check() error {
+func (mon *Monitor) Check(ctx context.Context) error {
 	commitInfo, err := mon.gh.GetLatestCommit(context.TODO())
 	if err != nil {
 		return fmt.Errorf("GitHub get latest commit error: %w", err)
@@ -35,7 +35,7 @@ func (mon *Monitor) Check() error {
 		mon.lastCommitID = commitInfo.CommitID
 
 		for _, task := range mon.tasks {
-			if err := task.Run(); err != nil {
+			if err := task.Run(ctx); err != nil {
 				log.Printf("task error: %v", err)
 			}
 		}

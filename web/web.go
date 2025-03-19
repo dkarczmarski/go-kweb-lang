@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	_ "embed"
 	"html/template"
 	"log"
@@ -67,6 +68,10 @@ func NewServer(templateData *TemplateData) *Server {
 
 func (srv *Server) ListenAndServe() error {
 	return srv.httpServer.ListenAndServe()
+}
+
+func (srv *Server) Shutdown(ctx context.Context) error {
+	return srv.httpServer.Shutdown(ctx)
 }
 
 func truncate(s string, length int) string {

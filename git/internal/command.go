@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 )
@@ -9,11 +10,11 @@ import (
 type StdCommandRunner struct {
 }
 
-func (cr *StdCommandRunner) Exec(workingDir string, command string, args ...string) (string, error) {
+func (cr *StdCommandRunner) Exec(ctx context.Context, workingDir string, command string, args ...string) (string, error) {
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 
-	cmd := exec.Command(command, args...)
+	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Dir = workingDir
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr

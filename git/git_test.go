@@ -1,6 +1,7 @@
 package git_test
 
 import (
+	"context"
 	"go-kweb-lang/git"
 	"reflect"
 	"strings"
@@ -18,7 +19,7 @@ type testCommandRunner struct {
 	Command string
 }
 
-func (r *testCommandRunner) Exec(workingDir string, cmd string, args ...string) (string, error) {
+func (r *testCommandRunner) Exec(_ context.Context, workingDir string, cmd string, args ...string) (string, error) {
 	r.WorkingDir = workingDir
 	r.Command = cmd
 
@@ -82,7 +83,7 @@ func TestRepo_FindFileLastCommit(t *testing.T) {
 				config.Runner = testRunner
 			})
 
-			commitInfo, err := repo.FindFileLastCommit(tc.path)
+			commitInfo, err := repo.FindFileLastCommit(context.Background(), tc.path)
 
 			if tc.expectedWorkingDir != testRunner.WorkingDir {
 				t.Errorf("unexpected working dir\nactual   : %+v\nexptected: %+v",
@@ -187,7 +188,7 @@ func TestRepo_FindFileCommitsAfter(t *testing.T) {
 				config.Runner = testRunner
 			})
 
-			commits, err := repo.FindFileCommitsAfter(tc.path, tc.commitIDAfter)
+			commits, err := repo.FindFileCommitsAfter(context.Background(), tc.path, tc.commitIDAfter)
 
 			if tc.expectedWorkingDir != testRunner.WorkingDir {
 				t.Errorf("unexpected working dir\nactual   : %+v\nexptected: %+v",
@@ -288,7 +289,7 @@ func TestLocalRepo_FindMergePoints(t *testing.T) {
 				config.Runner = testRunner
 			})
 
-			commits, err := repo.FindMergePoints(tc.commitID)
+			commits, err := repo.FindMergePoints(context.Background(), tc.commitID)
 
 			if tc.expectedWorkingDir != testRunner.WorkingDir {
 				t.Errorf("unexpected working dir\nactual   : %+v\nexptected: %+v",

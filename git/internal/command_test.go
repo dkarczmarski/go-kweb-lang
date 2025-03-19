@@ -1,6 +1,7 @@
 package internal_test
 
 import (
+	"context"
 	"go-kweb-lang/git/internal"
 	"strings"
 	"testing"
@@ -64,7 +65,7 @@ func TestStdCommandRunner_Exec(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := runner.Exec(tc.workingDir, tc.command, tc.args...)
+			out, err := runner.Exec(context.Background(), tc.workingDir, tc.command, tc.args...)
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)
 			}

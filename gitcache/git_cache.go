@@ -2,6 +2,7 @@
 package gitcache
 
 import (
+	"context"
 	"fmt"
 	"go-kweb-lang/git"
 	"go-kweb-lang/gitcache/internal"
@@ -21,8 +22,8 @@ func New(gitRepo git.Repo, cacheDir string) *GitRepoCache {
 	}
 }
 
-func (c *GitRepoCache) Create(url string) error {
-	return c.gitRepo.Create(url)
+func (c *GitRepoCache) Create(ctx context.Context, url string) error {
+	return c.gitRepo.Create(ctx, url)
 }
 
 func (c *GitRepoCache) FileExists(path string) (bool, error) {
@@ -33,42 +34,42 @@ func (c *GitRepoCache) ListFiles(path string) ([]string, error) {
 	return c.gitRepo.ListFiles(path)
 }
 
-func (c *GitRepoCache) FindFileLastCommit(path string) (git.CommitInfo, error) {
+func (c *GitRepoCache) FindFileLastCommit(ctx context.Context, path string) (git.CommitInfo, error) {
 	key := path
-	return cacheWrapper(internal.FileLastCommitDir(c.cacheDir), key, func() (git.CommitInfo, error) {
-		return c.gitRepo.FindFileLastCommit(path)
+	return cacheWrapperCtx(ctx, internal.FileLastCommitDir(c.cacheDir), key, func() (git.CommitInfo, error) {
+		return c.gitRepo.FindFileLastCommit(ctx, path)
 	})
 }
 
-func (c *GitRepoCache) FindFileCommitsAfter(path string, commitIDFrom string) ([]git.CommitInfo, error) {
+func (c *GitRepoCache) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]git.CommitInfo, error) {
 	key := path
-	return cacheWrapper(internal.FileUpdatesDir(c.cacheDir), key, func() ([]git.CommitInfo, error) {
-		return c.gitRepo.FindFileCommitsAfter(path, commitIDFrom)
+	return cacheWrapperCtx(ctx, internal.FileUpdatesDir(c.cacheDir), key, func() ([]git.CommitInfo, error) {
+		return c.gitRepo.FindFileCommitsAfter(ctx, path, commitIDFrom)
 	})
 }
 
-func (c *GitRepoCache) FindMergePoints(commitID string) ([]git.CommitInfo, error) {
+func (c *GitRepoCache) FindMergePoints(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
 	key := commitID
-	return cacheWrapper(internal.MergePointsDir(c.cacheDir), key, func() ([]git.CommitInfo, error) {
-		return c.gitRepo.FindMergePoints(commitID)
+	return cacheWrapperCtx(ctx, internal.MergePointsDir(c.cacheDir), key, func() ([]git.CommitInfo, error) {
+		return c.gitRepo.FindMergePoints(ctx, commitID)
 	})
 }
 
-func (c *GitRepoCache) Fetch() error {
-	return c.gitRepo.Fetch()
+func (c *GitRepoCache) Fetch(ctx context.Context) error {
+	return c.gitRepo.Fetch(ctx)
 }
 
-func (c *GitRepoCache) FreshCommits() ([]git.CommitInfo, error) {
-	return c.gitRepo.FreshCommits()
+func (c *GitRepoCache) FreshCommits(ctx context.Context) ([]git.CommitInfo, error) {
+	return c.gitRepo.FreshCommits(ctx)
 }
 
-func (c *GitRepoCache) Pull() error {
-	return c.gitRepo.Pull()
+func (c *GitRepoCache) Pull(ctx context.Context) error {
+	return c.gitRepo.Pull(ctx)
 }
 
-func (c *GitRepoCache) CommitFiles(commitID string) ([]string, error) {
+func (c *GitRepoCache) CommitFiles(ctx context.Context, commitID string) ([]string, error) {
 	// todo: do we need to cache it? probably not
-	return c.gitRepo.CommitFiles(commitID)
+	return c.gitRepo.CommitFiles(ctx, commitID)
 }
 
 func (c *GitRepoCache) InvalidatePath(path string) error {
@@ -84,18 +85,18 @@ func (c *GitRepoCache) InvalidatePath(path string) error {
 	return nil
 }
 
-func (c *GitRepoCache) PullRefresh() error {
-	if err := c.gitRepo.Fetch(); err != nil {
+func (c *GitRepoCache) PullRefresh(ctx context.Context) error {
+	if err := c.gitRepo.Fetch(ctx); err != nil {
 		return fmt.Errorf("git fetch error: %w", err)
 	}
 
-	freshCommits, err := c.gitRepo.FreshCommits()
+	freshCommits, err := c.gitRepo.FreshCommits(ctx)
 	if err != nil {
 		return fmt.Errorf("git list fresh commits error: %w", err)
 	}
 
 	for _, fc := range freshCommits {
-		commitFiles, err := c.gitRepo.CommitFiles(fc.CommitID)
+		commitFiles, err := c.gitRepo.CommitFiles(ctx, fc.CommitID)
 		if err != nil {
 			return fmt.Errorf("git list files of commit %s error: %w", fc.CommitID, err)
 		}
@@ -106,10 +107,21 @@ func (c *GitRepoCache) PullRefresh() error {
 			}
 		}
 	}
-	if err := c.gitRepo.Pull(); err != nil {
+	if err := c.gitRepo.Pull(ctx); err != nil {
 		return fmt.Errorf("git pull error: %w", err)
 	}
 	return nil
+}
+
+func cacheWrapperCtx[T any](ctx context.Context, cacheDir string, key string, block func() (T, error)) (T, error) {
+	select {
+	case <-ctx.Done():
+		var zero T
+		return zero, ctx.Err()
+	default:
+	}
+
+	return cacheWrapper(cacheDir, key, block)
 }
 
 func cacheWrapper[T any](cacheDir string, key string, block func() (T, error)) (T, error) {

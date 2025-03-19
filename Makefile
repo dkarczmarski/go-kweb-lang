@@ -21,10 +21,16 @@ dev-lint-all:
 dev-goimports:
 	goimports -w .
 
-dev-test-docker:
-	docker build -t kweb-test .
+dev-test-build:
+	go build -o go-kweb-lang .
 
 dev-test-run:
+	./go-kweb-lang
+
+dev-test-docker-build:
+	docker build -t kweb-test .
+
+dev-test-docker-run:
 	docker run --rm -it -v ./cache:/app/cache \
 		-v kweb-repo:/app/kubernetes-website \
 		-e CACHE_DIR=/app/cache \

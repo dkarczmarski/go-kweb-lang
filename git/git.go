@@ -4,6 +4,7 @@ package git
 //go:generate mockgen -typed -source=git.go -destination=../mocks/mock_git.go -package=mocks
 
 import (
+	"context"
 	"fmt"
 	"go-kweb-lang/git/internal"
 	"log"
@@ -25,7 +26,7 @@ type CommitInfo struct {
 // Repo is an interface with methods to update a repository and get information about changes.
 type Repo interface {
 	// Create method do git clone with given url.
-	Create(url string) error
+	Create(ctx context.Context, url string) error
 
 	// FileExists checks whether file exists in a repository.
 	FileExists(path string) (bool, error)
@@ -34,27 +35,27 @@ type Repo interface {
 	ListFiles(path string) ([]string, error)
 
 	// FindFileLastCommit provides information about the last commit for given file.
-	FindFileLastCommit(path string) (CommitInfo, error)
+	FindFileLastCommit(ctx context.Context, path string) (CommitInfo, error)
 
 	// FindFileCommitsAfter lists all commits that contain the given file
 	// and that are newer than then commitIDFrom parameter.
-	FindFileCommitsAfter(path string, commitIDFrom string) ([]CommitInfo, error)
+	FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]CommitInfo, error)
 
 	// todo: it may require some refinement
 	// FindMergePoints list all commits that are merge points starting from the commitID parameter.
-	FindMergePoints(commitID string) ([]CommitInfo, error)
+	FindMergePoints(ctx context.Context, commitID string) ([]CommitInfo, error)
 
 	// Fetch method do git fetch.
-	Fetch() error
+	Fetch(ctx context.Context) error
 
 	// FreshCommits list all commits for the main branch that are at origin/main and are not merged yet.
-	FreshCommits() ([]CommitInfo, error)
+	FreshCommits(ctx context.Context) ([]CommitInfo, error)
 
 	// Pull method do git pull.
-	Pull() error
+	Pull(ctx context.Context) error
 
 	// CommitFiles list all files that are in the commit with the commitID parameter.
-	CommitFiles(commitID string) ([]string, error)
+	CommitFiles(ctx context.Context, commitID string) ([]string, error)
 }
 
 type NewRepoConfig struct {
@@ -76,7 +77,7 @@ func NewRepo(path string, opts ...func(config *NewRepoConfig)) Repo {
 }
 
 type CommandRunner interface {
-	Exec(workingDir string, cmd string, args ...string) (string, error)
+	Exec(ctx context.Context, workingDir string, cmd string, args ...string) (string, error)
 }
 
 type localRepo struct {
@@ -84,8 +85,8 @@ type localRepo struct {
 	runner CommandRunner
 }
 
-func (lr *localRepo) Create(url string) error {
-	_, err := lr.runner.Exec(lr.path,
+func (lr *localRepo) Create(ctx context.Context, url string) error {
+	_, err := lr.runner.Exec(ctx, lr.path,
 		"git",
 		"clone",
 		url,
@@ -137,8 +138,8 @@ func (lr *localRepo) ListFiles(path string) ([]string, error) {
 	return files, nil
 }
 
-func (lr *localRepo) FindFileLastCommit(path string) (CommitInfo, error) {
-	out, err := lr.runner.Exec(lr.path,
+func (lr *localRepo) FindFileLastCommit(ctx context.Context, path string) (CommitInfo, error) {
+	out, err := lr.runner.Exec(ctx, lr.path,
 		"git",
 		"log",
 		"-1",
@@ -157,8 +158,8 @@ func (lr *localRepo) FindFileLastCommit(path string) (CommitInfo, error) {
 	return lineToCommitInfo(out), nil
 }
 
-func (lr *localRepo) FindFileCommitsAfter(path string, commitIDFrom string) ([]CommitInfo, error) {
-	out, err := lr.runner.Exec(lr.path,
+func (lr *localRepo) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]CommitInfo, error) {
+	out, err := lr.runner.Exec(ctx, lr.path,
 		"git",
 		"log",
 		"--pretty=format:%H %cd %s",
@@ -185,10 +186,10 @@ func (lr *localRepo) FindFileCommitsAfter(path string, commitIDFrom string) ([]C
 	return commits, nil
 }
 
-func (lr *localRepo) FindMergePoints(commitID string) ([]CommitInfo, error) {
+func (lr *localRepo) FindMergePoints(ctx context.Context, commitID string) ([]CommitInfo, error) {
 	// todo: probably we can do it better, to list only necessary merging point to the main branch
 	// todo: return result in reverse order?
-	out, err := lr.runner.Exec(lr.path,
+	out, err := lr.runner.Exec(ctx, lr.path,
 		"git",
 		"--no-pager",
 		"log",
@@ -215,8 +216,8 @@ func (lr *localRepo) FindMergePoints(commitID string) ([]CommitInfo, error) {
 	return commits, nil
 }
 
-func (lr *localRepo) Fetch() error {
-	_, err := lr.runner.Exec(lr.path,
+func (lr *localRepo) Fetch(ctx context.Context) error {
+	_, err := lr.runner.Exec(ctx, lr.path,
 		"git",
 		"fetch",
 	)
@@ -227,8 +228,8 @@ func (lr *localRepo) Fetch() error {
 	return nil
 }
 
-func (lr *localRepo) FreshCommits() ([]CommitInfo, error) {
-	out, err := lr.runner.Exec(lr.path,
+func (lr *localRepo) FreshCommits(ctx context.Context) ([]CommitInfo, error) {
+	out, err := lr.runner.Exec(ctx, lr.path,
 		"git",
 		"--no-pager",
 		"log",
@@ -254,8 +255,8 @@ func (lr *localRepo) FreshCommits() ([]CommitInfo, error) {
 	return commits, nil
 }
 
-func (lr *localRepo) Pull() error {
-	_, err := lr.runner.Exec(lr.path,
+func (lr *localRepo) Pull(ctx context.Context) error {
+	_, err := lr.runner.Exec(ctx, lr.path,
 		"git",
 		"pull",
 	)
@@ -266,8 +267,8 @@ func (lr *localRepo) Pull() error {
 	return nil
 }
 
-func (lr *localRepo) CommitFiles(commitID string) ([]string, error) {
-	out, err := lr.runner.Exec(lr.path,
+func (lr *localRepo) CommitFiles(ctx context.Context, commitID string) ([]string, error) {
+	out, err := lr.runner.Exec(ctx, lr.path,
 		"git",
 		"diff-tree",
 		"--no-commit-id",

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"go-kweb-lang/git"
@@ -12,8 +13,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
+	"time"
 )
 
 func getEnvOrDefault(key, defaultValue string) string {
@@ -51,7 +55,7 @@ func parseAllowedLangs(s string) []string {
 	return allowedLangs
 }
 
-func Run() {
+func CreateWebServer(ctx context.Context) (*web.Server, error) {
 	repoDirPath := getEnvOrDefault("REPO_DIR", "../kubernetes-website")
 	cacheDirPath := getEnvOrDefault("CACHE_DIR", "./cache")
 	allowedLangs := getEnvOrDefault("ALLOWED_LANGS", "")
@@ -67,12 +71,12 @@ func Run() {
 
 	exists, err := fileExists(filepath.Join(repoDirPath, ".git"))
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("error while checking if a git repository exists: %w", err)
 	}
 	if !exists {
 		log.Println("repository doest not exist yet")
-		if err := gitRepo.Create("https://github.com/kubernetes/website"); err != nil {
-			log.Fatal("error while creating kubernetes repository")
+		if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
+			return nil, fmt.Errorf("error while creating kubernetes repository: %w", err)
 		}
 		log.Println("repository was created")
 	}
@@ -82,27 +86,43 @@ func Run() {
 
 	templateData := web.NewTemplateData()
 
+	// todo: refactor
 	refreshRepoTask := tasks.NewRefreshRepoTask(gitRepoCache)
 	refreshTemplateDataTask := tasks.NewRefreshTemplateDataTask(content, gitRepoCache, templateData)
 
-	if err := refreshRepoTask.Run(); err != nil {
-		log.Fatal(err)
+	if err := refreshRepoTask.Run(ctx); err != nil {
+		return nil, fmt.Errorf("error while running the refresh repository task: %w", err)
 	}
-	if err := refreshTemplateDataTask.Run(); err != nil {
-		log.Fatal(err)
+	if err := refreshTemplateDataTask.Run(ctx); err != nil {
+		return nil, fmt.Errorf("error while running the refresh template data task: %w", err)
 	}
 
 	monitor := github.NewMonitor(gitHub, []github.OnUpdateTask{refreshRepoTask, refreshTemplateDataTask})
 	_ = monitor // todo
 
-	log.Println("starting web server")
-
 	server := web.NewServer(templateData)
-	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("HTTP server failed: %v", err)
-	}
+
+	return server, nil
 }
 
 func main() {
-	Run()
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+
+	server, err := CreateWebServer(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go func() {
+		<-ctx.Done()
+		log.Println("server is shutting down")
+		ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancelCtx()
+		_ = server.Shutdown(ctx)
+	}()
+
+	log.Println("starting web server")
+	if err := server.ListenAndServe(); err != nil && errors.Is(err, http.ErrServerClosed) {
+		log.Fatal(err)
+	}
 }

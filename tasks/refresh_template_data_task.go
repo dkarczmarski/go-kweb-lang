@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"context"
 	"fmt"
 	"go-kweb-lang/gitcache"
 	"go-kweb-lang/langcnt"
@@ -26,8 +27,8 @@ func NewRefreshTemplateDataTask(
 	}
 }
 
-func (t *RefreshTemplateDataTask) Run() error {
-	if err := t.gitRepoCache.PullRefresh(); err != nil {
+func (t *RefreshTemplateDataTask) Run(ctx context.Context) error {
+	if err := t.gitRepoCache.PullRefresh(ctx); err != nil {
 		return fmt.Errorf("git cache pull refresh error: %w", err)
 	}
 
@@ -44,7 +45,7 @@ func (t *RefreshTemplateDataTask) Run() error {
 	t.templateData.SetIndex(indexModel)
 
 	for _, lang := range langs {
-		if err := t.refreshModel(lang); err != nil {
+		if err := t.refreshModel(ctx, lang); err != nil {
 			return err
 		}
 	}
@@ -52,9 +53,9 @@ func (t *RefreshTemplateDataTask) Run() error {
 	return nil
 }
 
-func (t *RefreshTemplateDataTask) refreshModel(langCode string) error {
+func (t *RefreshTemplateDataTask) refreshModel(ctx context.Context, langCode string) error {
 	seeker := seek.NewGitLangSeeker(t.gitRepoCache)
-	fileInfos, err := seeker.CheckLang(langCode)
+	fileInfos, err := seeker.CheckLang(ctx, langCode)
 	if err != nil {
 		return fmt.Errorf("error while checking the content directory for the language code %s: %w", langCode, err)
 	}

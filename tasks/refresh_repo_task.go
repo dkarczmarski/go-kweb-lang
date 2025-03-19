@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"context"
 	"fmt"
 	"go-kweb-lang/gitcache"
 )
@@ -15,8 +16,8 @@ func NewRefreshRepoTask(gitRepoCache *gitcache.GitRepoCache) *RefreshRepoTask {
 	}
 }
 
-func (t *RefreshRepoTask) Run() error {
-	if err := t.gitRepoCache.PullRefresh(); err != nil {
+func (t *RefreshRepoTask) Run(ctx context.Context) error {
+	if err := t.gitRepoCache.PullRefresh(ctx); err != nil {
 		return fmt.Errorf("git cache pull refresh error: %w", err)
 	}
 

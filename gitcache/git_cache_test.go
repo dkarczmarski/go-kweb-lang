@@ -1,6 +1,7 @@
 package gitcache_test
 
 import (
+	"context"
 	"go-kweb-lang/git"
 	"go-kweb-lang/gitcache"
 	"go-kweb-lang/gitcache/internal"
@@ -26,7 +27,7 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 			name: "miss cache",
 			initMock: func(m *mocks.MockRepo) {
 				m.EXPECT().
-					FindFileLastCommit(path).
+					FindFileLastCommit(gomock.Any(), path).
 					Return(expectedCommit, nil).
 					Times(1)
 			},
@@ -72,7 +73,7 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 
 			tc.before(t, cachePath)
 
-			commit, err := gc.FindFileLastCommit(path)
+			commit, err := gc.FindFileLastCommit(context.Background(), path)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
@@ -106,7 +107,7 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 			name: "miss cache",
 			initMock: func(m *mocks.MockRepo) {
 				m.EXPECT().
-					FindFileCommitsAfter(path, commitID).
+					FindFileCommitsAfter(context.Background(), path, commitID).
 					Return(expectedCommits, nil).
 					Times(1)
 			},
@@ -153,7 +154,7 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 
 			tc.before(t, cachePath)
 
-			commits, err := gc.FindFileCommitsAfter(path, commitID)
+			commits, err := gc.FindFileCommitsAfter(context.Background(), path, commitID)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
@@ -185,7 +186,7 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 			name: "miss cache",
 			initMock: func(m *mocks.MockRepo) {
 				m.EXPECT().
-					FindMergePoints(commitID).
+					FindMergePoints(context.Background(), commitID).
 					Return(expectedCommits, nil).
 					Times(1)
 			},
@@ -230,7 +231,7 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 
 			tc.before(t, cachePath)
 
-			commits, err := gc.FindMergePoints(commitID)
+			commits, err := gc.FindMergePoints(context.Background(), commitID)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
