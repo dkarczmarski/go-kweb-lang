@@ -63,8 +63,12 @@ func WriteJSONToFile(path string, v any) error {
 	if err != nil {
 		return fmt.Errorf("json marshal error: %w", err)
 	}
-	if err := os.WriteFile(path, b, 0644); err != nil {
-		return fmt.Errorf("write file %s error: %w", path, err)
+	tmpPath := path + ".tmp"
+	if err := os.WriteFile(tmpPath, b, 0644); err != nil {
+		return fmt.Errorf("write file %s error: %w", tmpPath, err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		return fmt.Errorf("rename file %s error: %w", tmpPath, err)
 	}
 
 	return nil
