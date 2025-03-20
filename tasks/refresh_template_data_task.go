@@ -28,10 +28,6 @@ func NewRefreshTemplateDataTask(
 }
 
 func (t *RefreshTemplateDataTask) Run(ctx context.Context) error {
-	if err := t.gitRepoCache.PullRefresh(ctx); err != nil {
-		return fmt.Errorf("git cache pull refresh error: %w", err)
-	}
-
 	langs, err := t.content.Langs()
 	if err != nil {
 		return fmt.Errorf("error while getting available languages: %w", err)
