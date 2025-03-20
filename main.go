@@ -4,28 +4,32 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go-kweb-lang/appinit"
 	"go-kweb-lang/git"
-	"go-kweb-lang/gitcache"
-	"go-kweb-lang/github"
-	"go-kweb-lang/langcnt"
 	"go-kweb-lang/tasks"
-	"go-kweb-lang/web"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 )
 
-func getEnvOrDefault(key, defaultValue string) string {
-	value, ok := os.LookupEnv(key)
-	if !ok {
-		return defaultValue
+func createRepoIfNotExists(ctx context.Context, repoDirPath string, gitRepo git.Repo) error {
+	exists, err := fileExists(filepath.Join(repoDirPath, ".git"))
+	if err != nil {
+		return fmt.Errorf("error while checking if a git repository exists: %w", err)
 	}
-	return value
+	if !exists {
+		log.Println("repository doest not exist yet")
+		if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
+			return fmt.Errorf("error while creating kubernetes repository: %w", err)
+		}
+		log.Println("repository was created")
+	}
+
+	return nil
 }
 
 func fileExists(path string) (bool, error) {
@@ -40,78 +44,58 @@ func fileExists(path string) (bool, error) {
 	return true, nil
 }
 
-func parseAllowedLangs(s string) []string {
-	if len(strings.TrimSpace(s)) == 0 {
-		return nil
-	}
-
-	subs := strings.Split(s, ",")
-	allowedLangs := make([]string, 0, len(subs))
-
-	for _, sub := range subs {
-		allowedLangs = append(allowedLangs, strings.TrimSpace(sub))
-	}
-
-	return allowedLangs
-}
-
-func CreateWebServer(ctx context.Context) (*web.Server, error) {
-	repoDirPath := getEnvOrDefault("REPO_DIR", "../kubernetes-website")
-	cacheDirPath := getEnvOrDefault("CACHE_DIR", "./cache")
-	allowedLangs := getEnvOrDefault("ALLOWED_LANGS", "")
-
-	log.Printf("REPO_DIR: %s", repoDirPath)
-	log.Printf("CACHE_DIR: %s", cacheDirPath)
-	log.Printf("ALLOWED_LANGS: %s", allowedLangs)
-
-	content := &langcnt.Content{RepoDir: repoDirPath}
-	content.SetAllowedLang(parseAllowedLangs(allowedLangs))
-
-	gitRepo := git.NewRepo(repoDirPath)
-
-	exists, err := fileExists(filepath.Join(repoDirPath, ".git"))
-	if err != nil {
-		return nil, fmt.Errorf("error while checking if a git repository exists: %w", err)
-	}
-	if !exists {
-		log.Println("repository doest not exist yet")
-		if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
-			return nil, fmt.Errorf("error while creating kubernetes repository: %w", err)
-		}
-		log.Println("repository was created")
-	}
-
-	gitRepoCache := gitcache.New(gitRepo, cacheDirPath)
-	gitHub := github.New()
-
-	templateData := web.NewTemplateData()
-
-	// todo: refactor
-	refreshRepoTask := tasks.NewRefreshRepoTask(gitRepoCache)
-	refreshTemplateDataTask := tasks.NewRefreshTemplateDataTask(content, gitRepoCache, templateData)
-
+func runTasks(
+	ctx context.Context,
+	refreshRepoTask *tasks.RefreshRepoTask,
+	refreshTemplateDataTask *tasks.RefreshTemplateDataTask,
+) error {
 	if err := refreshRepoTask.Run(ctx); err != nil {
-		return nil, fmt.Errorf("error while running the refresh repository task: %w", err)
+		return fmt.Errorf("error while running the refresh repository task: %w", err)
 	}
 	if err := refreshTemplateDataTask.Run(ctx); err != nil {
-		return nil, fmt.Errorf("error while running the refresh template data task: %w", err)
+		return fmt.Errorf("error while running the refresh template data task: %w", err)
 	}
 
-	monitor := github.NewMonitor(gitHub, []github.OnUpdateTask{refreshRepoTask, refreshTemplateDataTask})
-	_ = monitor // todo
-
-	server := web.NewServer(templateData)
-
-	return server, nil
+	return nil
 }
 
 func main() {
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
-	server, err := CreateWebServer(ctx)
+	cfg, err := appinit.Init(
+		appinit.GetEnv(true),
+		appinit.NewContent(),
+		appinit.NewRepo(),
+		appinit.NewRepoCache(),
+		appinit.NewGitHub(),
+		appinit.NewTemplateData(),
+		appinit.NewRefreshRepoTask(),
+		appinit.NewRefreshTemplateDataTask(),
+		appinit.NewMonitor(),
+		appinit.NewServer(),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	repoDirPath := cfg.RepoDirPath
+	gitRepo := cfg.GitRepo
+	if err := createRepoIfNotExists(ctx, repoDirPath, gitRepo); err != nil {
+		log.Fatal(err)
+	}
+
+	// todo: command line param condition
+	refreshRepoTask := cfg.RefreshRepoTask
+	refreshTemplateDataTask := cfg.RefreshTemplateDataTask
+	if err := runTasks(ctx, refreshRepoTask, refreshTemplateDataTask); err != nil {
+		log.Fatal(err)
+	}
+
+	// todo: command line param condition
+	monitor := cfg.Monitor
+	_ = monitor // todo
+
+	server := cfg.Server
 
 	go func() {
 		<-ctx.Done()

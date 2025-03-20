@@ -30,6 +30,9 @@ dev-test-run:
 dev-test-docker-build:
 	docker build -t kweb-test .
 
+dev-test-docker-rm-vol:
+	docker volume rm kweb-repo
+
 dev-test-docker-run:
 	docker run --rm -it -v ./cache:/app/cache \
 		-v kweb-repo:/app/kubernetes-website \
