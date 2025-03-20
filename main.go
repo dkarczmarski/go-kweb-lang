@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"go-kweb-lang/appinit"
 	"go-kweb-lang/git"
@@ -59,7 +60,14 @@ func runTasks(
 	return nil
 }
 
+var flagOnce = flag.Bool("once", false, "run synchronization once at startup")
+var flagInterval = flag.Int("interval", 0, "run repeatedly with delay of N minutes between runs")
+
 func main() {
+	flag.Parse()
+
+	log.Printf("run once: %v, interval: %v", *flagOnce, *flagInterval)
+
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
 	cfg, err := appinit.Init(
@@ -84,16 +92,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// todo: command line param condition
-	refreshRepoTask := cfg.RefreshRepoTask
-	refreshTemplateDataTask := cfg.RefreshTemplateDataTask
-	if err := runTasks(ctx, refreshRepoTask, refreshTemplateDataTask); err != nil {
-		log.Fatal(err)
+	if *flagOnce {
+		refreshRepoTask := cfg.RefreshRepoTask
+		refreshTemplateDataTask := cfg.RefreshTemplateDataTask
+		if err := runTasks(ctx, refreshRepoTask, refreshTemplateDataTask); err != nil {
+			log.Fatal(err)
+		}
 	}
 
-	// todo: command line param condition
-	monitor := cfg.Monitor
-	_ = monitor // todo
+	if *flagInterval > 0 {
+		monitor := cfg.Monitor
+		go monitor.RepeatCheck(ctx, time.Minute*time.Duration(*flagInterval))
+	}
 
 	server := cfg.Server
 

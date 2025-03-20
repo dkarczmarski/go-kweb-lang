@@ -6,7 +6,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o go-kweb-lang .
 
 FROM alpine:latest
 
@@ -15,8 +15,8 @@ RUN apk update &&\
 
 WORKDIR /app
 
-COPY --from=builder /app/main .
+COPY --from=builder /app/go-kweb-lang .
 
 EXPOSE 8080
 
-CMD ["/app/main"]
+CMD ["/app/go-kweb-lang"]

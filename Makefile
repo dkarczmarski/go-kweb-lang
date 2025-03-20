@@ -27,6 +27,12 @@ dev-test-build:
 dev-test-run:
 	./go-kweb-lang
 
+dev-test-run-once:
+	./go-kweb-lang --once
+
+dev-test-run-interval:
+	./go-kweb-lang --interval 1
+
 dev-test-docker-build:
 	docker build -t kweb-test .
 
@@ -40,4 +46,5 @@ dev-test-docker-run:
 		-e REPO_DIR=/app/kubernetes-website \
 		-e ALLOWED_LANGS=pl \
 		-p 127.0.0.1:8080:8080 \
-		kweb-test
+		kweb-test \
+		/app/go-kweb-lang --once
