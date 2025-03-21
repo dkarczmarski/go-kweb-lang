@@ -25,7 +25,7 @@ type Config struct {
 	GitHub                  *github.GitHub
 	RefreshRepoTask         *tasks.RefreshRepoTask
 	RefreshTemplateDataTask *tasks.RefreshTemplateDataTask
-	Monitor                 *github.Monitor
+	RepoMonitor             *github.RepoMonitor
 	Server                  *web.Server
 }
 
@@ -189,7 +189,7 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 	}
 }
 
-func NewMonitor() func(*Config) error {
+func NewRepoMonitor() func(*Config) error {
 	return func(config *Config) error {
 		gitHub := config.GitHub
 		if gitHub == nil {
@@ -206,7 +206,7 @@ func NewMonitor() func(*Config) error {
 			return fmt.Errorf("param RefreshTemplateDataTask is not set: %w", ErrBadConfiguration)
 		}
 
-		config.Monitor = github.NewMonitor(
+		config.RepoMonitor = github.NewRepoMonitor(
 			gitHub,
 			[]github.OnUpdateTask{
 				refreshRepoTask,

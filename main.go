@@ -79,7 +79,7 @@ func main() {
 		appinit.NewTemplateData(),
 		appinit.NewRefreshRepoTask(),
 		appinit.NewRefreshTemplateDataTask(),
-		appinit.NewMonitor(),
+		appinit.NewRepoMonitor(),
 		appinit.NewServer(),
 	)
 	if err != nil {
@@ -101,8 +101,8 @@ func main() {
 	}
 
 	if *flagInterval > 0 {
-		monitor := cfg.Monitor
-		go monitor.RepeatCheck(ctx, time.Minute*time.Duration(*flagInterval))
+		monitor := cfg.RepoMonitor
+		go monitor.RepeatCheckRepo(ctx, time.Minute*time.Duration(*flagInterval))
 	}
 
 	server := cfg.Server

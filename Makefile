@@ -25,7 +25,7 @@ dev-test-build:
 	go build -o go-kweb-lang .
 
 dev-test-run:
-	./go-kweb-lang
+	ALLOWED_LANGS=pl ./go-kweb-lang --once
 
 dev-test-run-once:
 	./go-kweb-lang --once
@@ -36,11 +36,19 @@ dev-test-run-interval:
 dev-test-docker-build:
 	docker build -t kweb-test .
 
-dev-test-docker-rm-vol:
+dev-test-docker-vol-create:
+	docker volume create kweb-repo
+	docker volume create kweb-cache
+
+dev-test-docker-vol-rm-repo:
 	docker volume rm kweb-repo
 
+dev-test-docker-vol-rm-cache:
+	docker volume rm kweb-cache
+
 dev-test-docker-run:
-	docker run --rm -it -v ./cache:/app/cache \
+	docker run --rm -it \
+		-v kweb-cache:/app/cache \
 		-v kweb-repo:/app/kubernetes-website \
 		-e CACHE_DIR=/app/cache \
 		-e REPO_DIR=/app/kubernetes-website \

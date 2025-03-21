@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type Monitor struct {
+type RepoMonitor struct {
 	gh    *GitHub
 	tasks []OnUpdateTask
 
@@ -15,8 +15,8 @@ type Monitor struct {
 	lastCommitID string
 }
 
-func NewMonitor(gh *GitHub, tasks []OnUpdateTask) *Monitor {
-	return &Monitor{
+func NewRepoMonitor(gh *GitHub, tasks []OnUpdateTask) *RepoMonitor {
+	return &RepoMonitor{
 		gh:    gh,
 		tasks: tasks,
 	}
@@ -26,7 +26,7 @@ type OnUpdateTask interface {
 	Run(ctx context.Context) error
 }
 
-func (mon *Monitor) Check(ctx context.Context) error {
+func (mon *RepoMonitor) CheckRepo(ctx context.Context) error {
 	commitInfo, err := mon.gh.GetLatestCommit(ctx)
 	if err != nil {
 		return fmt.Errorf("GitHub get latest commit error: %w", err)
@@ -45,9 +45,9 @@ func (mon *Monitor) Check(ctx context.Context) error {
 	return nil
 }
 
-func (mon *Monitor) RepeatCheck(ctx context.Context, delay time.Duration) {
+func (mon *RepoMonitor) RepeatCheckRepo(ctx context.Context, delay time.Duration) {
 	for {
-		if err := mon.Check(ctx); err != nil {
+		if err := mon.CheckRepo(ctx); err != nil {
 			log.Printf("error while checking github for changes: %v", err)
 		}
 
