@@ -1,23 +1,10 @@
-package internal
+package filecache
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 )
-
-func FileLastCommitDir(parentDir string) string {
-	return filepath.Join(parentDir, "git", "file-last-commit")
-}
-
-func FileUpdatesDir(parentDir string) string {
-	return filepath.Join(parentDir, "git", "file-updates")
-}
-
-func MergePointsDir(parentDir string) string {
-	return filepath.Join(parentDir, "git", "merge-points")
-}
 
 func FileExists(path string) bool {
 	_, err := os.Stat(path)

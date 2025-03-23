@@ -2,9 +2,9 @@ package gitcache_test
 
 import (
 	"context"
+	"go-kweb-lang/filecache"
 	"go-kweb-lang/git"
 	"go-kweb-lang/gitcache"
-	"go-kweb-lang/gitcache/internal"
 	"go-kweb-lang/mocks"
 	"path/filepath"
 	"reflect"
@@ -33,13 +33,13 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 			},
 			before: func(t *testing.T, cachePath string) {
 				t.Helper()
-				if internal.FileExists(cachePath) {
+				if filecache.FileExists(cachePath) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cachePath string) {
 				t.Helper()
-				if !internal.FileExists(cachePath) {
+				if !filecache.FileExists(cachePath) {
 					t.Errorf("cache file %s should exist", cachePath)
 				}
 			},
@@ -48,10 +48,10 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 			name: "hit cache",
 			before: func(t *testing.T, cachePath string) {
 				t.Helper()
-				if err := internal.EnsureDir(filepath.Dir(cachePath)); err != nil {
+				if err := filecache.EnsureDir(filepath.Dir(cachePath)); err != nil {
 					t.Fatal(err)
 				}
-				if err := internal.WriteJSONToFile(cachePath, &expectedCommit); err != nil {
+				if err := filecache.WriteJSONToFile(cachePath, &expectedCommit); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -69,7 +69,7 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 
 			cacheDir := t.TempDir()
 			gc := gitcache.New(mock, cacheDir)
-			cachePath := filepath.Join(internal.FileLastCommitDir(cacheDir), internal.KeyFile(internal.KeyHash(path)))
+			cachePath := filepath.Join(gitcache.FileLastCommitDir(cacheDir), filecache.KeyFile(filecache.KeyHash(path)))
 
 			tc.before(t, cachePath)
 
@@ -113,13 +113,13 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 			},
 			before: func(t *testing.T, cachePath string) {
 				t.Helper()
-				if internal.FileExists(cachePath) {
+				if filecache.FileExists(cachePath) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cachePath string) {
 				t.Helper()
-				if !internal.FileExists(cachePath) {
+				if !filecache.FileExists(cachePath) {
 					t.Errorf("cache file %s should exist", cachePath)
 				}
 			},
@@ -128,10 +128,10 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 			name: "hit cache",
 			before: func(t *testing.T, cachePath string) {
 				t.Helper()
-				if err := internal.EnsureDir(filepath.Dir(cachePath)); err != nil {
+				if err := filecache.EnsureDir(filepath.Dir(cachePath)); err != nil {
 					t.Fatal(err)
 				}
-				if err := internal.WriteJSONToFile(cachePath, &expectedCommits); err != nil {
+				if err := filecache.WriteJSONToFile(cachePath, &expectedCommits); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -150,7 +150,7 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 			cacheDir := t.TempDir()
 
 			gc := gitcache.New(mock, cacheDir)
-			cachePath := filepath.Join(internal.FileUpdatesDir(cacheDir), internal.KeyFile(internal.KeyHash(path)))
+			cachePath := filepath.Join(gitcache.FileUpdatesDir(cacheDir), filecache.KeyFile(filecache.KeyHash(path)))
 
 			tc.before(t, cachePath)
 
@@ -192,12 +192,12 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 			},
 			before: func(t *testing.T, cachePath string) {
 				t.Helper()
-				if internal.FileExists(cachePath) {
+				if filecache.FileExists(cachePath) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cachePath string) {
-				if !internal.FileExists(cachePath) {
+				if !filecache.FileExists(cachePath) {
 					t.Errorf("cache file %s should exist", cachePath)
 				}
 			},
@@ -206,10 +206,10 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 			name: "hit cache",
 			before: func(t *testing.T, cachePath string) {
 				t.Helper()
-				if err := internal.EnsureDir(filepath.Dir(cachePath)); err != nil {
+				if err := filecache.EnsureDir(filepath.Dir(cachePath)); err != nil {
 					t.Fatal(err)
 				}
-				if err := internal.WriteJSONToFile(cachePath, &expectedCommits); err != nil {
+				if err := filecache.WriteJSONToFile(cachePath, &expectedCommits); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -227,7 +227,7 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 
 			cacheDir := t.TempDir()
 			gc := gitcache.New(mock, cacheDir)
-			cachePath := filepath.Join(internal.MergePointsDir(cacheDir), internal.KeyFile(internal.KeyHash(commitID)))
+			cachePath := filepath.Join(gitcache.MergePointsDir(cacheDir), filecache.KeyFile(filecache.KeyHash(commitID)))
 
 			tc.before(t, cachePath)
 
@@ -263,13 +263,13 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 
 				cacheDir := prop["cacheDir"].(string)
 
-				cacheFile := filepath.Join(internal.FileLastCommitDir(cacheDir), internal.KeyFile(internal.KeyHash(path)))
+				cacheFile := filepath.Join(gitcache.FileLastCommitDir(cacheDir), filecache.KeyFile(filecache.KeyHash(path)))
 				prop["cacheFile"] = cacheFile
 
-				if err := internal.EnsureDir(filepath.Dir(cacheFile)); err != nil {
+				if err := filecache.EnsureDir(filepath.Dir(cacheFile)); err != nil {
 					t.Fatal(err)
 				}
-				if err := internal.WriteJSONToFile(cacheFile, struct{}{}); err != nil {
+				if err := filecache.WriteJSONToFile(cacheFile, struct{}{}); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -278,7 +278,7 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 
 				cacheFile := prop["cacheFile"].(string)
 
-				if internal.FileExists(cacheFile) {
+				if filecache.FileExists(cacheFile) {
 					t.Errorf("cache file %s should not exist", cacheFile)
 				}
 			},
@@ -290,13 +290,13 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 
 				cacheDir := prop["cacheDir"].(string)
 
-				cacheFile := filepath.Join(internal.FileUpdatesDir(cacheDir), internal.KeyFile(internal.KeyHash(path)))
+				cacheFile := filepath.Join(gitcache.FileUpdatesDir(cacheDir), filecache.KeyFile(filecache.KeyHash(path)))
 				prop["cacheFile"] = cacheFile
 
-				if err := internal.EnsureDir(filepath.Dir(cacheFile)); err != nil {
+				if err := filecache.EnsureDir(filepath.Dir(cacheFile)); err != nil {
 					t.Fatal(err)
 				}
-				if err := internal.WriteJSONToFile(cacheFile, struct{}{}); err != nil {
+				if err := filecache.WriteJSONToFile(cacheFile, struct{}{}); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -305,7 +305,7 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 
 				cacheFile := prop["cacheFile"].(string)
 
-				if internal.FileExists(cacheFile) {
+				if filecache.FileExists(cacheFile) {
 					t.Errorf("cache file %s should not exist", cacheFile)
 				}
 			},

@@ -4,8 +4,8 @@ package gitcache
 import (
 	"context"
 	"fmt"
+	"go-kweb-lang/filecache"
 	"go-kweb-lang/git"
-	"go-kweb-lang/gitcache/internal"
 	"os"
 	"path/filepath"
 )
@@ -36,21 +36,21 @@ func (c *GitRepoCache) ListFiles(path string) ([]string, error) {
 
 func (c *GitRepoCache) FindFileLastCommit(ctx context.Context, path string) (git.CommitInfo, error) {
 	key := path
-	return cacheWrapperCtx(ctx, internal.FileLastCommitDir(c.cacheDir), key, func() (git.CommitInfo, error) {
+	return filecache.CacheWrapperCtx(ctx, FileLastCommitDir(c.cacheDir), key, func() (git.CommitInfo, error) {
 		return c.gitRepo.FindFileLastCommit(ctx, path)
 	})
 }
 
 func (c *GitRepoCache) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]git.CommitInfo, error) {
 	key := path
-	return cacheWrapperCtx(ctx, internal.FileUpdatesDir(c.cacheDir), key, func() ([]git.CommitInfo, error) {
+	return filecache.CacheWrapperCtx(ctx, FileUpdatesDir(c.cacheDir), key, func() ([]git.CommitInfo, error) {
 		return c.gitRepo.FindFileCommitsAfter(ctx, path, commitIDFrom)
 	})
 }
 
 func (c *GitRepoCache) FindMergePoints(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
 	key := commitID
-	return cacheWrapperCtx(ctx, internal.MergePointsDir(c.cacheDir), key, func() ([]git.CommitInfo, error) {
+	return filecache.CacheWrapperCtx(ctx, MergePointsDir(c.cacheDir), key, func() ([]git.CommitInfo, error) {
 		return c.gitRepo.FindMergePoints(ctx, commitID)
 	})
 }
@@ -74,8 +74,8 @@ func (c *GitRepoCache) CommitFiles(ctx context.Context, commitID string) ([]stri
 
 func (c *GitRepoCache) InvalidatePath(path string) error {
 	for _, cacheFile := range []string{
-		filepath.Join(internal.FileLastCommitDir(c.cacheDir), internal.KeyFile(internal.KeyHash(path))),
-		filepath.Join(internal.FileUpdatesDir(c.cacheDir), internal.KeyFile(internal.KeyHash(path))),
+		filepath.Join(FileLastCommitDir(c.cacheDir), filecache.KeyFile(filecache.KeyHash(path))),
+		filepath.Join(FileUpdatesDir(c.cacheDir), filecache.KeyFile(filecache.KeyHash(path))),
 	} {
 		if err := removeFile(cacheFile); err != nil {
 			return err
@@ -111,47 +111,6 @@ func (c *GitRepoCache) PullRefresh(ctx context.Context) error {
 		return fmt.Errorf("git pull error: %w", err)
 	}
 	return nil
-}
-
-func cacheWrapperCtx[T any](ctx context.Context, cacheDir string, key string, block func() (T, error)) (T, error) {
-	select {
-	case <-ctx.Done():
-		var zero T
-		return zero, ctx.Err()
-	default:
-	}
-
-	return cacheWrapper(cacheDir, key, block)
-}
-
-func cacheWrapper[T any](cacheDir string, key string, block func() (T, error)) (T, error) {
-	if err := internal.EnsureDir(cacheDir); err != nil {
-		var zero T
-		return zero, err
-	}
-
-	hash := internal.KeyHash(key)
-	cachePath := filepath.Join(cacheDir, internal.KeyFile(hash))
-	if internal.FileExists(cachePath) {
-		var buff T
-		if err := internal.ReadJSONFromFile(cachePath, &buff); err != nil {
-			return buff, err
-		}
-
-		return buff, nil
-	}
-
-	result, err := block()
-	if err != nil {
-		return result, err
-	}
-
-	if err := internal.WriteJSONToFile(cachePath, result); err != nil {
-		var zero T
-		return zero, err
-	}
-
-	return result, nil
 }
 
 func removeFile(path string) error {
