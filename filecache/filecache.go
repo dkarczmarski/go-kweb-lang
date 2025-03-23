@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
+	"os"
 	"path/filepath"
 )
 
@@ -57,4 +59,32 @@ func CacheWrapper[T any](cacheDir string, key string, block func() (T, error)) (
 	}
 
 	return result, nil
+}
+
+func InvalidateKey(cacheDir string, key string) error {
+	cacheFile := filepath.Join(cacheDir, KeyFile(key))
+
+	if err := removeFile(cacheFile); err != nil {
+		return fmt.Errorf("error while removing file %v: %w", cacheFile, err)
+	}
+
+	return nil
+}
+
+func removeFile(path string) error {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// skip silently
+			return nil
+		}
+		return fmt.Errorf("failed to check file: %w", err)
+	}
+
+	err = os.Remove(path)
+	if err != nil {
+		return fmt.Errorf("failed to remove file %s: %w", path, err)
+	}
+
+	return nil
 }

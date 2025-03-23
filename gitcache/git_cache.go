@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"go-kweb-lang/filecache"
 	"go-kweb-lang/git"
-	"os"
-	"path/filepath"
 )
 
 type GitRepoCache struct {
@@ -73,12 +71,13 @@ func (c *GitRepoCache) CommitFiles(ctx context.Context, commitID string) ([]stri
 }
 
 func (c *GitRepoCache) InvalidatePath(path string) error {
-	for _, cacheFile := range []string{
-		filepath.Join(FileLastCommitDir(c.cacheDir), filecache.KeyFile(filecache.KeyHash(path))),
-		filepath.Join(FileUpdatesDir(c.cacheDir), filecache.KeyFile(filecache.KeyHash(path))),
+	for _, cacheDir := range []string{
+		FileLastCommitDir(c.cacheDir),
+		FileUpdatesDir(c.cacheDir),
 	} {
-		if err := removeFile(cacheFile); err != nil {
-			return err
+		key := filecache.KeyHash(path)
+		if err := filecache.InvalidateKey(cacheDir, key); err != nil {
+			return fmt.Errorf("error while invalidataing cache key %v: %w", key, err)
 		}
 	}
 
@@ -110,23 +109,5 @@ func (c *GitRepoCache) PullRefresh(ctx context.Context) error {
 	if err := c.gitRepo.Pull(ctx); err != nil {
 		return fmt.Errorf("git pull error: %w", err)
 	}
-	return nil
-}
-
-func removeFile(path string) error {
-	_, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			// skip silently
-			return nil
-		}
-		return fmt.Errorf("failed to check file: %w", err)
-	}
-
-	err = os.Remove(path)
-	if err != nil {
-		return fmt.Errorf("failed to remove file %s: %w", path, err)
-	}
-
 	return nil
 }
