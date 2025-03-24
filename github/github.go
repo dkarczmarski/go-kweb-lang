@@ -1,5 +1,7 @@
 package github
 
+//go:generate mockgen -typed -source=github.go -destination=../mocks/mock_github.go -package=mocks
+
 import (
 	"context"
 	"net/http"
