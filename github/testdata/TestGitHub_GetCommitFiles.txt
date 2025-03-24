@@ -1,0 +1,108 @@
+{
+  "sha" : "f9ef60a9cf2ce7fdc4e242c292d8ed728deab912",
+  "node_id" : "C_kwDOAxF--toAKGY5ZWY2MGE5Y2YyY2U3ZmRjNGUyNDJjMjkyZDhlZDcyOGRlYWI5MTI",
+  "commit" : {
+    "author" : {
+      "name" : "Sayak Mukhopadhyay",
+      "email" : "mukhopadhyaysayak@gmail.com",
+      "date" : "2025-03-23T13:22:08Z"
+    },
+    "committer" : {
+      "name" : "Sayak Mukhopadhyay",
+      "email" : "mukhopadhyaysayak@gmail.com",
+      "date" : "2025-03-23T13:22:08Z"
+    },
+    "message" : "feat: remove the site-searchbar shortcode",
+    "tree" : {
+      "sha" : "2bd3fa2abe76a1b53ae6b9a7fa11027d50d64f29",
+      "url" : "https://api.github.com/repos/kubernetes/website/git/trees/2bd3fa2abe76a1b53ae6b9a7fa11027d50d64f29"
+    },
+    "url" : "https://api.github.com/repos/kubernetes/website/git/commits/f9ef60a9cf2ce7fdc4e242c292d8ed728deab912",
+    "comment_count" : 0,
+    "verification" : {
+      "verified" : true,
+      "reason" : "valid",
+      "signature" : "-----BEGIN PGP SIGNATURE-----\n\niQIzBAABCAAdFiEETC8PvEXOOracpV+Bie7/P7I9P/0FAmfgCwEACgkQie7/P7I9\nP/0a+BAArIiQa4/ONHfasLaHBxojBpm/jLgHyCiJ042JBu99z1Gz2G6Ux8iiFBxk\nsEN7Q9Dv07uddF3xWR/YHX4jSvWUkYJb/xdxY7z5PpiIrxhkedtkpXWw9NKqcERk\nH3RIsPWYPzi8GNFcNPES7AkyIvTbAjQjZoFY1Z73hkIzJjzJGS8u5i2COS7j2Q8D\nfjyNWQwRt86JmOjEz6IKbaKLSynAebYKR3ioLcqnARHaV0QIMtuB5OJyvqN7oQsh\nI1pHnPbEQDe+ebpuR0nsbq2qYK453b5OozHRyxuC57eHo5LDBX8kwfa/OIPKLt4R\nq4AQzp/QSutYmHKg5ZK1ZC1FYaCAv7xvPl8jgpRl+YjKL1pkYKT4GfUVeqbk6DYM\nf4DvLTn5rc45Yh6bPJV5w/vAln8wEoLywqm8dBU8Q9CG0KSQefRntHsXsQnF/hlW\nH3lAAf4zxlOQEDsFN4g3vX5efq1Y2iptrrCYy88pBADsv/K6EbhrY4WBULEiV+CO\ni9zlRWhvF7UJ+niF22TFdt9DcD+71RqORE93A8QXOtI4YE10jb46w/7Kl6me3yh6\nss80Pnrk2gn3HmvYh8dWacPMPI4M8Fu5JCdLZKvzNzgysARDfrDTKPUNYDlUjjZE\n/FVGM/LtFEVQ7k672TteiGw5DVG4B+dhVbY6Fw6OMEEujFGm2wk=\n=Axa/\n-----END PGP SIGNATURE-----",
+      "payload" : "tree 2bd3fa2abe76a1b53ae6b9a7fa11027d50d64f29\nparent f5eee4f11f04cd67a028c4f6f78eaa374d1ad543\nauthor Sayak Mukhopadhyay <mukhopadhyaysayak@gmail.com> 1742736128 +0530\ncommitter Sayak Mukhopadhyay <mukhopadhyaysayak@gmail.com> 1742736128 +0530\n\nfeat: remove the site-searchbar shortcode\n",
+      "verified_at" : "2025-03-23T13:27:18Z"
+    }
+  },
+  "url" : "https://api.github.com/repos/kubernetes/website/commits/f9ef60a9cf2ce7fdc4e242c292d8ed728deab912",
+  "html_url" : "https://github.com/kubernetes/website/commit/f9ef60a9cf2ce7fdc4e242c292d8ed728deab912",
+  "comments_url" : "https://api.github.com/repos/kubernetes/website/commits/f9ef60a9cf2ce7fdc4e242c292d8ed728deab912/comments",
+  "author" : {
+    "login" : "SayakMukhopadhyay",
+    "id" : 13748882,
+    "node_id" : "MDQ6VXNlcjEzNzQ4ODgy",
+    "avatar_url" : "https://avatars.githubusercontent.com/u/13748882?v=4",
+    "gravatar_id" : "",
+    "url" : "https://api.github.com/users/SayakMukhopadhyay",
+    "html_url" : "https://github.com/SayakMukhopadhyay",
+    "followers_url" : "https://api.github.com/users/SayakMukhopadhyay/followers",
+    "following_url" : "https://api.github.com/users/SayakMukhopadhyay/following{/other_user}",
+    "gists_url" : "https://api.github.com/users/SayakMukhopadhyay/gists{/gist_id}",
+    "starred_url" : "https://api.github.com/users/SayakMukhopadhyay/starred{/owner}{/repo}",
+    "subscriptions_url" : "https://api.github.com/users/SayakMukhopadhyay/subscriptions",
+    "organizations_url" : "https://api.github.com/users/SayakMukhopadhyay/orgs",
+    "repos_url" : "https://api.github.com/users/SayakMukhopadhyay/repos",
+    "events_url" : "https://api.github.com/users/SayakMukhopadhyay/events{/privacy}",
+    "received_events_url" : "https://api.github.com/users/SayakMukhopadhyay/received_events",
+    "type" : "User",
+    "user_view_type" : "public",
+    "site_admin" : false
+  },
+  "committer" : {
+    "login" : "SayakMukhopadhyay",
+    "id" : 13748882,
+    "node_id" : "MDQ6VXNlcjEzNzQ4ODgy",
+    "avatar_url" : "https://avatars.githubusercontent.com/u/13748882?v=4",
+    "gravatar_id" : "",
+    "url" : "https://api.github.com/users/SayakMukhopadhyay",
+    "html_url" : "https://github.com/SayakMukhopadhyay",
+    "followers_url" : "https://api.github.com/users/SayakMukhopadhyay/followers",
+    "following_url" : "https://api.github.com/users/SayakMukhopadhyay/following{/other_user}",
+    "gists_url" : "https://api.github.com/users/SayakMukhopadhyay/gists{/gist_id}",
+    "starred_url" : "https://api.github.com/users/SayakMukhopadhyay/starred{/owner}{/repo}",
+    "subscriptions_url" : "https://api.github.com/users/SayakMukhopadhyay/subscriptions",
+    "organizations_url" : "https://api.github.com/users/SayakMukhopadhyay/orgs",
+    "repos_url" : "https://api.github.com/users/SayakMukhopadhyay/repos",
+    "events_url" : "https://api.github.com/users/SayakMukhopadhyay/events{/privacy}",
+    "received_events_url" : "https://api.github.com/users/SayakMukhopadhyay/received_events",
+    "type" : "User",
+    "user_view_type" : "public",
+    "site_admin" : false
+  },
+  "parents" : [ {
+    "sha" : "f5eee4f11f04cd67a028c4f6f78eaa374d1ad543",
+    "url" : "https://api.github.com/repos/kubernetes/website/commits/f5eee4f11f04cd67a028c4f6f78eaa374d1ad543",
+    "html_url" : "https://github.com/kubernetes/website/commit/f5eee4f11f04cd67a028c4f6f78eaa374d1ad543"
+  } ],
+  "stats" : {
+    "total" : 7,
+    "additions" : 0,
+    "deletions" : 7
+  },
+  "files" : [ {
+    "sha" : "94fb602f9aa32c71f8b5e0c40f2126ed17a2aacd",
+    "filename" : "layouts/index.html",
+    "status" : "modified",
+    "additions" : 0,
+    "deletions" : 4,
+    "changes" : 4,
+    "blob_url" : "https://github.com/kubernetes/website/blob/f9ef60a9cf2ce7fdc4e242c292d8ed728deab912/layouts%2Findex.html",
+    "raw_url" : "https://github.com/kubernetes/website/raw/f9ef60a9cf2ce7fdc4e242c292d8ed728deab912/layouts%2Findex.html",
+    "contents_url" : "https://api.github.com/repos/kubernetes/website/contents/layouts%2Findex.html?ref=f9ef60a9cf2ce7fdc4e242c292d8ed728deab912",
+    "patch" : "@@ -1,11 +1,7 @@\n {{ define \"main\" }}\n-{{ if .HasShortcode \"site-searchbar\" }}\n-  {{ warnf \"The homepage of the language %s is using a deprecated shortcode site-searchbar. Please remove the shortcode. No other step is needed.\" .Lang }}\n-{{ else }}\n <div class=\"col-sm-6 col-md-6 col-lg-6 mx-auto py-3\">\n   {{partial \"search-input\" .}}\n </div>\n-{{ end }}\n {{ .Content }}\n <section id=\"cncf\">\n     {{ partial \"cncf.html\" . }}"
+  }, {
+    "sha" : "4431089fa3d9cfe1ba74bac0bb60d89fbcbd3c0e",
+    "filename" : "layouts/shortcodes/site-searchbar.html",
+    "status" : "removed",
+    "additions" : 0,
+    "deletions" : 3,
+    "changes" : 3,
+    "blob_url" : "https://github.com/kubernetes/website/blob/f5eee4f11f04cd67a028c4f6f78eaa374d1ad543/layouts%2Fshortcodes%2Fsite-searchbar.html",
+    "raw_url" : "https://github.com/kubernetes/website/raw/f5eee4f11f04cd67a028c4f6f78eaa374d1ad543/layouts%2Fshortcodes%2Fsite-searchbar.html",
+    "contents_url" : "https://api.github.com/repos/kubernetes/website/contents/layouts%2Fshortcodes%2Fsite-searchbar.html?ref=f5eee4f11f04cd67a028c4f6f78eaa374d1ad543",
+    "patch" : "@@ -1,3 +0,0 @@\n-<div class=\"col-sm-6 col-md-6 col-lg-6 mx-auto py-3\">\n-{{partial \"search-input\" .}}\n-</div>\n\\ No newline at end of file"
+  } ]
+}

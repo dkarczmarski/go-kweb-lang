@@ -1,0 +1,80 @@
+[ {
+  "sha" : "5bac466fc45325e2f5cfa63d06b9f2032ecba712",
+  "node_id" : "C_kwDOM5GgstoAKDViYWM0NjZmYzQ1MzI1ZTJmNWNmYTYzZDA2YjlmMjAzMmVjYmE3MTI",
+  "commit" : {
+    "author" : {
+      "name" : "Sayak Mukhopadhyay",
+      "email" : "mukhopadhyaysayak@gmail.com",
+      "date" : "2025-03-23T13:16:55Z"
+    },
+    "committer" : {
+      "name" : "Sayak Mukhopadhyay",
+      "email" : "mukhopadhyaysayak@gmail.com",
+      "date" : "2025-03-23T13:18:40Z"
+    },
+    "message" : "feat: removed site-searchbar",
+    "tree" : {
+      "sha" : "bb2aae9c3f3ae22682a2eed29046aef2eb18dc5f",
+      "url" : "https://api.github.com/repos/kubernetes/website/git/trees/bb2aae9c3f3ae22682a2eed29046aef2eb18dc5f"
+    },
+    "url" : "https://api.github.com/repos/kubernetes/website/git/commits/5bac466fc45325e2f5cfa63d06b9f2032ecba712",
+    "comment_count" : 0,
+    "verification" : {
+      "verified" : true,
+      "reason" : "valid",
+      "signature" : "-----BEGIN PGP SIGNATURE-----\n\niQIzBAABCAAdFiEETC8PvEXOOracpV+Bie7/P7I9P/0FAmfgCjAACgkQie7/P7I9\nP/3Emg//QmHvQprsXFStuFUhHZvLiPGrIf2JOJ5Xzf7UnQhkmZrn/flUKkmLLAuP\nHAarYND/yT3wDoiAGcdB8LaLvsx9y6+yE0Rx0SE+x0deon1pyFozBbOKUPsPsoQ/\nQZLdg8CCM41ItBatLaq5GqUf8ib5h8H1SdZgK/rC+lCj7mDuu6j/ovQkLKE9R8Sg\nr47q9zww13ZLMfKJihzJjTtWZxN+DIG6Tn34dwxalMuLROIhiOr29exhU5YstW9q\nYsH2128hIozBOPez0WTEAJ6DybNDFopVaAtLWFsr+afVyVbl50PXvAJY9/vlBrWP\nwu9eUqU6dLPQKnP4Vh7qb32YsYMTPkQYCVUspUPd3Ln0u/370iupzRWPlUrUM7pY\nH/FcijEOQZI/ufr2q0eb2RGINviO/ACqBGNhLL3ZpR/YQtduzwUOotUsOW3bfRMa\nVkq7ukB2pugSzat5TEByXI5b8F0YG8/rapKCEMWfRdp9RgKFRyb1RkklX47RSced\nHPNVEkfwRNeIUH5ibt5KjtZSfQivqAPCakiMZ5qJyfptTlJPRYiZpj+gdBzyHIAP\nq+dfSGC+aaEJRCGzBZlAd57JGPNTldoXofNbHj9s77Mvjf3+hRNyaW6vMZRUC+QR\nK4Isjwkmj9UFzNPRyUDYMjg03jkV7ij1CmJB1ACbDXGOCTHPe60=\n=sJpe\n-----END PGP SIGNATURE-----",
+      "payload" : "tree bb2aae9c3f3ae22682a2eed29046aef2eb18dc5f\nparent f5eee4f11f04cd67a028c4f6f78eaa374d1ad543\nauthor Sayak Mukhopadhyay <mukhopadhyaysayak@gmail.com> 1742735815 +0530\ncommitter Sayak Mukhopadhyay <mukhopadhyaysayak@gmail.com> 1742735920 +0530\n\nfeat: removed site-searchbar\n",
+      "verified_at" : "2025-03-23T13:23:55Z"
+    }
+  },
+  "url" : "https://api.github.com/repos/kubernetes/website/commits/5bac466fc45325e2f5cfa63d06b9f2032ecba712",
+  "html_url" : "https://github.com/kubernetes/website/commit/5bac466fc45325e2f5cfa63d06b9f2032ecba712",
+  "comments_url" : "https://api.github.com/repos/kubernetes/website/commits/5bac466fc45325e2f5cfa63d06b9f2032ecba712/comments",
+  "author" : {
+    "login" : "SayakMukhopadhyay",
+    "id" : 13748882,
+    "node_id" : "MDQ6VXNlcjEzNzQ4ODgy",
+    "avatar_url" : "https://avatars.githubusercontent.com/u/13748882?v=4",
+    "gravatar_id" : "",
+    "url" : "https://api.github.com/users/SayakMukhopadhyay",
+    "html_url" : "https://github.com/SayakMukhopadhyay",
+    "followers_url" : "https://api.github.com/users/SayakMukhopadhyay/followers",
+    "following_url" : "https://api.github.com/users/SayakMukhopadhyay/following{/other_user}",
+    "gists_url" : "https://api.github.com/users/SayakMukhopadhyay/gists{/gist_id}",
+    "starred_url" : "https://api.github.com/users/SayakMukhopadhyay/starred{/owner}{/repo}",
+    "subscriptions_url" : "https://api.github.com/users/SayakMukhopadhyay/subscriptions",
+    "organizations_url" : "https://api.github.com/users/SayakMukhopadhyay/orgs",
+    "repos_url" : "https://api.github.com/users/SayakMukhopadhyay/repos",
+    "events_url" : "https://api.github.com/users/SayakMukhopadhyay/events{/privacy}",
+    "received_events_url" : "https://api.github.com/users/SayakMukhopadhyay/received_events",
+    "type" : "User",
+    "user_view_type" : "public",
+    "site_admin" : false
+  },
+  "committer" : {
+    "login" : "SayakMukhopadhyay",
+    "id" : 13748882,
+    "node_id" : "MDQ6VXNlcjEzNzQ4ODgy",
+    "avatar_url" : "https://avatars.githubusercontent.com/u/13748882?v=4",
+    "gravatar_id" : "",
+    "url" : "https://api.github.com/users/SayakMukhopadhyay",
+    "html_url" : "https://github.com/SayakMukhopadhyay",
+    "followers_url" : "https://api.github.com/users/SayakMukhopadhyay/followers",
+    "following_url" : "https://api.github.com/users/SayakMukhopadhyay/following{/other_user}",
+    "gists_url" : "https://api.github.com/users/SayakMukhopadhyay/gists{/gist_id}",
+    "starred_url" : "https://api.github.com/users/SayakMukhopadhyay/starred{/owner}{/repo}",
+    "subscriptions_url" : "https://api.github.com/users/SayakMukhopadhyay/subscriptions",
+    "organizations_url" : "https://api.github.com/users/SayakMukhopadhyay/orgs",
+    "repos_url" : "https://api.github.com/users/SayakMukhopadhyay/repos",
+    "events_url" : "https://api.github.com/users/SayakMukhopadhyay/events{/privacy}",
+    "received_events_url" : "https://api.github.com/users/SayakMukhopadhyay/received_events",
+    "type" : "User",
+    "user_view_type" : "public",
+    "site_admin" : false
+  },
+  "parents" : [ {
+    "sha" : "f5eee4f11f04cd67a028c4f6f78eaa374d1ad543",
+    "url" : "https://api.github.com/repos/kubernetes/website/commits/f5eee4f11f04cd67a028c4f6f78eaa374d1ad543",
+    "html_url" : "https://github.com/kubernetes/website/commit/f5eee4f11f04cd67a028c4f6f78eaa374d1ad543"
+  } ]
+} ]
