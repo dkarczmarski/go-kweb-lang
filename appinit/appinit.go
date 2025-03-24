@@ -22,7 +22,7 @@ type Config struct {
 	GitRepo                 git.Repo
 	TemplateData            *web.TemplateData
 	GitRepoCache            *gitcache.GitRepoCache
-	GitHub                  *github.GitHub
+	GitHub                  github.GitHub
 	RefreshRepoTask         *tasks.RefreshRepoTask
 	RefreshTemplateDataTask *tasks.RefreshTemplateDataTask
 	RepoMonitor             *github.RepoMonitor

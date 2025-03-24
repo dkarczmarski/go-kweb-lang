@@ -8,14 +8,14 @@ import (
 )
 
 type RepoMonitor struct {
-	gh    *GitHub
+	gh    GitHub
 	tasks []OnUpdateTask
 
 	// todo: sync
 	lastCommitID string
 }
 
-func NewRepoMonitor(gh *GitHub, tasks []OnUpdateTask) *RepoMonitor {
+func NewRepoMonitor(gh GitHub, tasks []OnUpdateTask) *RepoMonitor {
 	return &RepoMonitor{
 		gh:    gh,
 		tasks: tasks,

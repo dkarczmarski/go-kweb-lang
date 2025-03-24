@@ -38,7 +38,7 @@ func TestGitHub_GetCommitFiles_INT(t *testing.T) {
 			mockServer := newMockServer(t, tc.expectedURL, url.Values{}, tc.response)
 			defer mockServer.Close()
 
-			gh := &github.GitHub{
+			gh := &github.Client{
 				HTTPClient: mockServer.Client(),
 				BaseURL:    mockServer.URL,
 			}
@@ -77,7 +77,7 @@ func TestGitHub_GetPRCommits_INT(t *testing.T) {
 			mockServer := newMockServer(t, tc.expectedURL, url.Values{}, tc.response)
 			defer mockServer.Close()
 
-			gh := &github.GitHub{
+			gh := &github.Client{
 				HTTPClient: mockServer.Client(),
 				BaseURL:    mockServer.URL,
 			}
@@ -142,7 +142,7 @@ func TestGitHub_PRSearch_INT(t *testing.T) {
 			mockServer := newMockServer(t, tc.expectedURL, tc.expectedQueryParams, tc.response)
 			defer mockServer.Close()
 
-			gh := &github.GitHub{
+			gh := &github.Client{
 				HTTPClient: mockServer.Client(),
 				BaseURL:    mockServer.URL,
 			}

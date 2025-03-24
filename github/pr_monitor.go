@@ -9,7 +9,7 @@ import (
 )
 
 type PRMonitor struct {
-	gh       *GitHub
+	gh       GitHub
 	cacheDir string
 	tasks    []OnPRUpdateTask
 }
