@@ -2,18 +2,14 @@ package github
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type PRMonitor struct {
+	gh       *GitHub
 	cacheDir string
 	tasks    []OnPRUpdateTask
 }
@@ -22,59 +18,19 @@ type OnPRUpdateTask interface {
 	Run(ctx context.Context) error
 }
 
-type searchResult struct {
-	Items []pullRequest `json:"items"`
-}
-
-type pullRequest struct {
-	Number    int    `json:"number"`
-	UpdatedAt string `json:"updated_at"`
-}
-
 func (mon *PRMonitor) maxUpdatedAt(langCode string) (string, error) {
-	baseURL := "https://api.github.com/search/issues"
-
-	q := strings.Join(
-		[]string{
-			"repo:kubernetes/website",
-			"is:pr",
-			"label:language/" + langCode,
+	result, err := mon.gh.PRSearch(
+		PRSearchFilter{
+			LangCode: langCode,
 		},
-		"+",
+		PageRequest{
+			Sort:    "updated",
+			Order:   "desc",
+			PerPage: 1,
+		},
 	)
-
-	query := url.Values{}
-	query.Set("sort", "updated")
-	query.Set("order", "desc")
-	query.Set("per_page", "1")
-
-	u, err := url.Parse(baseURL)
 	if err != nil {
-		return "", fmt.Errorf("error while parsing base URL: %v", err)
-	}
-
-	u.RawQuery = fmt.Sprintf("q=%s&%s", q, query.Encode())
-
-	urlStr := u.String()
-
-	resp, err := http.Get(urlStr)
-	if err != nil {
-		return "", fmt.Errorf("error while sending request to GitHub API: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("error while reading GitHub API response: status %s", resp.Status)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("error while reading response body: %v", err)
-	}
-
-	var result searchResult
-	if err := json.Unmarshal(body, &result); err != nil {
-		return "", fmt.Errorf("error while parsing JSON response: %v", err)
+		return "", err
 	}
 
 	if len(result.Items) == 0 {
