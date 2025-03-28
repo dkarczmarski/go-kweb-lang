@@ -116,7 +116,7 @@ func main() {
 	}()
 
 	log.Println("starting web server")
-	if err := server.ListenAndServe(); err != nil && errors.Is(err, http.ErrServerClosed) {
-		log.Fatal(err)
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatal(fmt.Errorf("error while running http server: %w", err))
 	}
 }
