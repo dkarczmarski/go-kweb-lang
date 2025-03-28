@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"go-kweb-lang/appinit"
 	"go-kweb-lang/git"
+	"go-kweb-lang/github"
 	"go-kweb-lang/tasks"
 	"log"
 	"net/http"
@@ -48,16 +49,44 @@ func fileExists(path string) (bool, error) {
 func runTasks(
 	ctx context.Context,
 	refreshRepoTask *tasks.RefreshRepoTask,
+	refreshPRTask *tasks.RefreshPRTask,
 	refreshTemplateDataTask *tasks.RefreshTemplateDataTask,
 ) error {
 	if err := refreshRepoTask.Run(ctx); err != nil {
 		return fmt.Errorf("error while running the refresh repository task: %w", err)
+	}
+	if err := refreshPRTask.RunAll(ctx); err != nil {
+		return fmt.Errorf("error while running the refresh repository task: %w", err) //todo
 	}
 	if err := refreshTemplateDataTask.Run(ctx); err != nil {
 		return fmt.Errorf("error while running the refresh template data task: %w", err)
 	}
 
 	return nil
+}
+
+func runChecks(
+	ctx context.Context,
+	delay time.Duration,
+	repoMonitor *github.RepoMonitor,
+	prMonitor *github.PRMonitor,
+) {
+	for {
+		if err := repoMonitor.CheckRepo(ctx); err != nil {
+			log.Printf("error while checking github for changes: %v", err)
+		}
+
+		if err := prMonitor.Check(ctx); err != nil {
+			log.Printf("error while cheking for PR updates: %v", err)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(delay):
+		}
+	}
+
 }
 
 var flagOnce = flag.Bool("once", false, "run synchronization once at startup")
@@ -76,10 +105,13 @@ func main() {
 		appinit.NewRepo(),
 		appinit.NewRepoCache(),
 		appinit.NewGitHub(),
+		appinit.NewPullRequests(),
 		appinit.NewTemplateData(),
 		appinit.NewRefreshRepoTask(),
 		appinit.NewRefreshTemplateDataTask(),
+		appinit.NewRefreshPRTask(),
 		appinit.NewRepoMonitor(),
+		appinit.NewPRMonitor(),
 		appinit.NewServer(),
 	)
 	if err != nil {
@@ -93,16 +125,15 @@ func main() {
 	}
 
 	if *flagOnce {
-		refreshRepoTask := cfg.RefreshRepoTask
-		refreshTemplateDataTask := cfg.RefreshTemplateDataTask
-		if err := runTasks(ctx, refreshRepoTask, refreshTemplateDataTask); err != nil {
+		if err := runTasks(ctx, cfg.RefreshRepoTask, cfg.RefreshPRTask, cfg.RefreshTemplateDataTask); err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	if *flagInterval > 0 {
-		monitor := cfg.RepoMonitor
-		go monitor.RepeatCheckRepo(ctx, time.Minute*time.Duration(*flagInterval))
+		delay := time.Minute * time.Duration(*flagInterval)
+
+		go runChecks(ctx, delay, cfg.RepoMonitor, cfg.PRMonitor)
 	}
 
 	server := cfg.Server

@@ -20,7 +20,13 @@ func KeyHash(value string) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func CacheWrapperCtx[T any](ctx context.Context, cacheDir string, key string, block func() (T, error)) (T, error) {
+func CacheWrapperCtx[T any](
+	ctx context.Context,
+	cacheDir string,
+	key string,
+	invalidate func(T) bool,
+	block func() (T, error),
+) (T, error) {
 	select {
 	case <-ctx.Done():
 		var zero T
@@ -28,24 +34,31 @@ func CacheWrapperCtx[T any](ctx context.Context, cacheDir string, key string, bl
 	default:
 	}
 
-	return CacheWrapper(cacheDir, key, block)
+	return CacheWrapper(cacheDir, key, invalidate, block)
 }
 
-func CacheWrapper[T any](cacheDir string, key string, block func() (T, error)) (T, error) {
+func CacheWrapper[T any](
+	cacheDir string,
+	key string,
+	isInvalid func(T) bool,
+	block func() (T, error),
+) (T, error) {
 	if err := EnsureDir(cacheDir); err != nil {
 		var zero T
 		return zero, err
 	}
 
-	hash := KeyHash(key)
-	cachePath := filepath.Join(cacheDir, KeyFile(hash))
+	key = KeyHash(key)
+	cachePath := filepath.Join(cacheDir, KeyFile(key))
 	if FileExists(cachePath) {
 		var buff T
 		if err := ReadJSONFromFile(cachePath, &buff); err != nil {
 			return buff, err
 		}
 
-		return buff, nil
+		if isInvalid == nil || !isInvalid(buff) {
+			return buff, nil
+		}
 	}
 
 	result, err := block()

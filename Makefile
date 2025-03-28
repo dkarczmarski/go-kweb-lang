@@ -27,11 +27,8 @@ dev-test-build:
 dev-test-run:
 	ALLOWED_LANGS=pl ./go-kweb-lang --once
 
-dev-test-run-once:
-	./go-kweb-lang --once
-
 dev-test-run-interval:
-	./go-kweb-lang --interval 1
+	ALLOWED_LANGS=pl ./go-kweb-lang --interval 1
 
 dev-test-docker-build:
 	docker build -t kweb-test .

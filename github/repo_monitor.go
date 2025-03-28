@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 )
 
 type RepoMonitor struct {
@@ -27,6 +26,8 @@ type OnUpdateTask interface {
 }
 
 func (mon *RepoMonitor) CheckRepo(ctx context.Context) error {
+	log.Printf("checking for repo changes")
+
 	commitInfo, err := mon.gh.GetLatestCommit(ctx)
 	if err != nil {
 		return fmt.Errorf("GitHub get latest commit error: %w", err)
@@ -43,18 +44,4 @@ func (mon *RepoMonitor) CheckRepo(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (mon *RepoMonitor) RepeatCheckRepo(ctx context.Context, delay time.Duration) {
-	for {
-		if err := mon.CheckRepo(ctx); err != nil {
-			log.Printf("error while checking github for changes: %v", err)
-		}
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(delay):
-		}
-	}
 }

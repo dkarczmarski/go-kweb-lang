@@ -7,6 +7,7 @@ import (
 	"go-kweb-lang/gitcache"
 	"go-kweb-lang/github"
 	"go-kweb-lang/langcnt"
+	"go-kweb-lang/pullreq"
 	"go-kweb-lang/tasks"
 	"go-kweb-lang/web"
 	"log"
@@ -23,9 +24,12 @@ type Config struct {
 	TemplateData            *web.TemplateData
 	GitRepoCache            *gitcache.GitRepoCache
 	GitHub                  github.GitHub
+	PullRequests            *pullreq.PullRequests
 	RefreshRepoTask         *tasks.RefreshRepoTask
 	RefreshTemplateDataTask *tasks.RefreshTemplateDataTask
+	RefreshPRTask           *tasks.RefreshPRTask
 	RepoMonitor             *github.RepoMonitor
+	PRMonitor               *github.PRMonitor
 	Server                  *web.Server
 }
 
@@ -143,7 +147,31 @@ func NewRepoCache() func(*Config) error {
 
 func NewGitHub() func(*Config) error {
 	return func(config *Config) error {
-		config.GitHub = github.New()
+		config.GitHub = github.New(func(config *github.ClientConfig) {
+			config.Token = os.Getenv("GITHUB_TOKEN")
+		})
+
+		return nil
+	}
+}
+
+func NewPullRequests() func(*Config) error {
+	return func(config *Config) error {
+		gitHub := config.GitHub
+		if gitHub == nil {
+			return fmt.Errorf("param GitHub is not set: %w", ErrBadConfiguration)
+		}
+
+		cacheDirPath := config.CacheDirPath
+		if len(cacheDirPath) == 0 {
+			return fmt.Errorf("param CacheDirPath is not set: %w", ErrBadConfiguration)
+		}
+
+		config.PullRequests = &pullreq.PullRequests{
+			GitHub:   gitHub,
+			CacheDir: cacheDirPath,
+			PerPage:  100,
+		}
 
 		return nil
 	}
@@ -174,6 +202,11 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 			return fmt.Errorf("param GitRepoCache is not set: %w", ErrBadConfiguration)
 		}
 
+		prs := config.PullRequests
+		if prs == nil {
+			return fmt.Errorf("param PullRequests is not set: %w", ErrBadConfiguration)
+		}
+
 		templateData := config.TemplateData
 		if templateData == nil {
 			return fmt.Errorf("param TemplateData is not set: %w", ErrBadConfiguration)
@@ -182,8 +215,27 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 		config.RefreshTemplateDataTask = tasks.NewRefreshTemplateDataTask(
 			content,
 			gitRepoCache,
+			prs,
 			templateData,
 		)
+
+		return nil
+	}
+}
+
+func NewRefreshPRTask() func(*Config) error {
+	return func(config *Config) error {
+		prs := config.PullRequests
+		if prs == nil {
+			return fmt.Errorf("param PullRequests is not set: %w", ErrBadConfiguration)
+		}
+
+		content := config.Content
+		if content == nil {
+			return fmt.Errorf("param Content is not set: %w", ErrBadConfiguration)
+		}
+
+		config.RefreshPRTask = tasks.NewRefreshPRTask(prs, content)
 
 		return nil
 	}
@@ -211,6 +263,41 @@ func NewRepoMonitor() func(*Config) error {
 			[]github.OnUpdateTask{
 				refreshRepoTask,
 				refreshTemplateDataTask,
+			},
+		)
+
+		return nil
+	}
+}
+
+func NewPRMonitor() func(*Config) error {
+	return func(config *Config) error {
+		gitHub := config.GitHub
+		if gitHub == nil {
+			return fmt.Errorf("param GitHub is not set: %w", ErrBadConfiguration)
+		}
+
+		cacheDirPath := config.CacheDirPath
+		if len(cacheDirPath) == 0 {
+			return fmt.Errorf("param CacheDirPath is not set: %w", ErrBadConfiguration)
+		}
+
+		content := config.Content
+		if content == nil {
+			return fmt.Errorf("param Content is not set: %w", ErrBadConfiguration)
+		}
+
+		refreshPRTask := config.RefreshPRTask
+		if refreshPRTask == nil {
+			return fmt.Errorf("param RefreshPRTask is not set: %w", ErrBadConfiguration)
+		}
+
+		config.PRMonitor = github.NewPRMonitor(
+			gitHub,
+			cacheDirPath,
+			content,
+			[]github.OnPRUpdateTask{
+				refreshPRTask,
 			},
 		)
 

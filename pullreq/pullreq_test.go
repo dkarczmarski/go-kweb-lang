@@ -1,0 +1,135 @@
+package pullreq_test
+
+import (
+	"go-kweb-lang/github"
+	"go-kweb-lang/mocks"
+	"go-kweb-lang/pullreq"
+	"reflect"
+	"testing"
+
+	"go.uber.org/mock/gomock"
+)
+
+func TestPullRequests_ListPRs(t *testing.T) {
+
+}
+
+func TestPullRequests_Update(t *testing.T) {
+	langCode := "pl"
+
+	ctrl := gomock.NewController(t)
+	mock := mocks.NewMockGitHub(ctrl)
+
+	mock.EXPECT().
+		PRSearch(
+			github.PRSearchFilter{
+				LangCode:    langCode,
+				UpdatedFrom: "",
+				OnlyOpen:    true,
+			},
+			github.PageRequest{
+				Sort:    "updated",
+				Order:   "asc",
+				PerPage: 2,
+			},
+		).
+		Return(
+			&github.PRSearchResult{
+				Items: []github.PRItem{
+					{
+						Number:    12,
+						UpdatedAt: "D001",
+					},
+					{
+						Number:    14,
+						UpdatedAt: "D003",
+					},
+				},
+				TotalCount: 3,
+			},
+			nil,
+		).Times(1)
+
+	mock.EXPECT().
+		PRSearch(
+			github.PRSearchFilter{
+				LangCode:    langCode,
+				UpdatedFrom: "D003",
+				OnlyOpen:    true,
+			},
+			github.PageRequest{
+				Sort:    "updated",
+				Order:   "asc",
+				PerPage: 2,
+			},
+		).
+		Return(
+			&github.PRSearchResult{
+				Items: []github.PRItem{
+					{
+						Number:    15,
+						UpdatedAt: "D004",
+					},
+				},
+				TotalCount: 3,
+			},
+			nil,
+		).Times(1)
+
+	mock.EXPECT().
+		PRSearch(
+			github.PRSearchFilter{
+				LangCode:    langCode,
+				UpdatedFrom: "D004",
+				OnlyOpen:    true,
+			},
+			github.PageRequest{
+				Sort:    "updated",
+				Order:   "asc",
+				PerPage: 2,
+			},
+		).
+		Return(
+			&github.PRSearchResult{
+				Items:      []github.PRItem{},
+				TotalCount: 3,
+			},
+			nil,
+		).Times(1)
+
+	mock.EXPECT().GetPRCommits(12).Return([]string{"C1"}, nil)
+	mock.EXPECT().GetPRCommits(14).Return([]string{"C2", "C3"}, nil)
+	mock.EXPECT().GetPRCommits(15).Return([]string{"C4"}, nil)
+
+	mock.EXPECT().GetCommitFiles("C1").Return(&github.CommitFiles{Files: []string{"F1"}}, nil)
+	mock.EXPECT().GetCommitFiles("C2").Return(&github.CommitFiles{Files: []string{"F2", "F3"}}, nil)
+	mock.EXPECT().GetCommitFiles("C3").Return(&github.CommitFiles{Files: []string{"F1", "F4"}}, nil)
+	mock.EXPECT().GetCommitFiles("C4").Return(&github.CommitFiles{Files: []string{"F5"}}, nil)
+
+	prs := &pullreq.PullRequests{
+		GitHub:   mock,
+		CacheDir: t.TempDir(),
+		PerPage:  2,
+	}
+
+	err := prs.Update(langCode)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if numbers, err := prs.ListPRs("F1"); err != nil || !reflect.DeepEqual(numbers, []int{12, 14}) {
+		t.Error(numbers, err)
+	}
+	if numbers, err := prs.ListPRs("F2"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
+		t.Error(numbers, err)
+	}
+	if numbers, err := prs.ListPRs("F3"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
+		t.Error(numbers, err)
+	}
+	if numbers, err := prs.ListPRs("F4"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
+		t.Error(numbers, err)
+	}
+	if numbers, err := prs.ListPRs("F5"); err != nil || !reflect.DeepEqual(numbers, []int{15}) {
+		t.Error(numbers, err)
+	}
+}

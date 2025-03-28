@@ -15,6 +15,7 @@
         <th scope="col">Lang<br/>RelPath</th>
         <th scope="col">Origin<br/>Status</th>
         <th scope="col">Origin<br/>Updates</th>
+        <th scope="col">Lang<br/>PR</th>
     </tr>
     </thead>
     <tbody>
@@ -30,6 +31,15 @@
                 {{range .OriginUpdates}}
                 <li>
                     <a href="{{ .Link.URL }}">{{ .Commit.Comment }}</a> {{ truncate .Commit.DateTime 10 }}
+                </li>
+                {{end}}
+            </ul>
+        </td>
+        <td>
+            <ul>
+                {{range .PRs}}
+                <li>
+                    <a href="{{ .URL }}">{{ .Text }}</a>
                 </li>
                 {{end}}
             </ul>

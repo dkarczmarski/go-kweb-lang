@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"go-kweb-lang/git"
 	"go-kweb-lang/seek"
 )
@@ -14,6 +15,7 @@ type FileModel struct {
 	LangLastCommit git.CommitInfo
 	OriginStatus   string
 	OriginUpdates  []CommitLinkModel
+	PRs            []LinkModel
 }
 
 type FileLinkModel struct {
@@ -26,7 +28,12 @@ type CommitLinkModel struct {
 	Commit git.CommitInfo
 }
 
-func BuildLangModel(fileInfos []seek.FileInfo) *LangModel {
+type FileInfo struct {
+	seek.FileInfo
+	PRs []int
+}
+
+func BuildLangModel(fileInfos []FileInfo) *LangModel {
 	var table LangModel
 
 	for _, fileInfo := range fileInfos {
@@ -49,6 +56,15 @@ func BuildLangModel(fileInfos []seek.FileInfo) *LangModel {
 			fileModel.OriginUpdates = append(fileModel.OriginUpdates, toCommitLinkModel(originUpdate.MergePoint))
 			mergePoints[originUpdate.MergePoint.CommitID] = struct{}{}
 		}
+
+		var prLinks []LinkModel
+		for _, pr := range fileInfo.PRs {
+			prLinks = append(prLinks, LinkModel{
+				Text: fmt.Sprintf("%v", pr),
+				URL:  fmt.Sprintf("https://github.com/kubernetes/website/pull/%v", pr),
+			})
+		}
+		fileModel.PRs = prLinks
 
 		table.Files = append(table.Files, fileModel)
 	}

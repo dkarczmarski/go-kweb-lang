@@ -9,11 +9,45 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
+
+type ClientConfig struct {
+	BaseURL string
+	Token   string
+}
 
 type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client
+}
+
+func NewClient(opts ...func(*ClientConfig)) *Client {
+	config := ClientConfig{
+		BaseURL: "https://api.github.com",
+	}
+
+	for _, opt := range opts {
+		opt(&config)
+	}
+
+	var transport http.RoundTripper
+
+	if len(config.Token) > 0 {
+		transport = &authorizationTransport{
+			Token: config.Token,
+		}
+	}
+
+	httpClient := &http.Client{
+		Timeout:   time.Minute,
+		Transport: transport,
+	}
+
+	return &Client{
+		BaseURL:    config.BaseURL,
+		HTTPClient: httpClient,
+	}
 }
 
 func (gh *Client) GetLatestCommit(ctx context.Context) (*CommitInfo, error) {

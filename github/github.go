@@ -4,8 +4,6 @@ package github
 
 import (
 	"context"
-	"net/http"
-	"time"
 )
 
 type CommitInfo struct {
@@ -51,13 +49,6 @@ type GitHub interface {
 	GetCommitFiles(commitID string) (*CommitFiles, error)
 }
 
-func New() GitHub {
-	httpClient := &http.Client{
-		Timeout: time.Minute,
-	}
-
-	return &Client{
-		BaseURL:    "https://api.github.com",
-		HTTPClient: httpClient,
-	}
+func New(opts ...func(*ClientConfig)) GitHub {
+	return NewClient(opts...)
 }
