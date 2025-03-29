@@ -2,13 +2,16 @@ package pullreq
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"go-kweb-lang/github"
 	"go-kweb-lang/proxycache"
 	"log"
-	"os"
-	"path/filepath"
+)
+
+const (
+	categoryPrCommits   = "pr-pr-commits"
+	categoryCommitFiles = "pr-commit-files"
+	categoryFilePrs     = "pr-fileprs"
 )
 
 type PullRequests struct {
@@ -60,9 +63,10 @@ type prCommits struct {
 
 func (p *PullRequests) fetchPRCommits(pr github.PRItem) ([]string, error) {
 	key := fmt.Sprintf("%v", pr.Number)
-	commits, err := proxycache.GetCtx(
+	commits, err := proxycache.Get(
 		context.Background(), // todo:
-		filepath.Join(p.CacheDir, "pr", "pr-commits"),
+		p.CacheDir,
+		categoryPrCommits,
 		key,
 		func(cachedPrCommits prCommits) bool {
 			isInvalid := cachedPrCommits.UpdatedAt != pr.UpdatedAt
@@ -93,9 +97,10 @@ func (p *PullRequests) fetchPRCommits(pr github.PRItem) ([]string, error) {
 }
 
 func (p *PullRequests) fetchCommitFiles(commitID string) (*github.CommitFiles, error) {
-	return proxycache.GetCtx(
+	return proxycache.Get(
 		context.Background(), // todo:
-		filepath.Join(p.CacheDir, "pr", "commit-files"),
+		p.CacheDir,
+		categoryCommitFiles,
 		commitID,
 		nil,
 		func(ctx context.Context) (*github.CommitFiles, error) {
@@ -170,11 +175,6 @@ func (p *PullRequests) Update(langCode string) error {
 	return nil
 }
 
-type filePRsRecord struct {
-	Path string // this field is not necessary
-	PRs  []int
-}
-
 func (p *PullRequests) storeAll(filePRs map[string][]int) error {
 	for path, prs := range filePRs {
 		if err := p.store(path, prs); err != nil {
@@ -185,53 +185,28 @@ func (p *PullRequests) storeAll(filePRs map[string][]int) error {
 	return nil
 }
 
-func (p *PullRequests) storageFile(path string) string {
-	return filepath.Join(p.CacheDir, "pr", "file-prs", proxycache.KeyFile(proxycache.KeyHash(path)))
-}
-
 func (p *PullRequests) store(path string, prs []int) error {
-	record := filePRsRecord{
-		Path: path,
-		PRs:  prs,
-	}
-
-	b, err := json.MarshalIndent(&record, "", "\t")
-	if err != nil {
-		return fmt.Errorf("error while marshalling data: %w", err)
-	}
-
-	storageFile := p.storageFile(path)
-	if err := proxycache.EnsureDir(filepath.Dir(storageFile)); err != nil {
-		return fmt.Errorf("error while checking parent directories for %v: %w",
-			storageFile, err)
-	}
-	if err := os.WriteFile(storageFile, b, 0644); err != nil {
-		return fmt.Errorf("error while writing file %v: %w", storageFile, err)
-	}
-
-	return nil
+	return proxycache.Put(
+		p.CacheDir,
+		categoryFilePrs,
+		path,
+		prs,
+	)
 }
 
 func (p *PullRequests) load(path string) ([]int, error) {
-	storageFile := p.storageFile(path)
-
-	b, err := os.ReadFile(storageFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-
-		return nil, fmt.Errorf("error while reading file %v: %w", storageFile, err)
-	}
-
-	var buff filePRsRecord
-	if err := json.Unmarshal(b, &buff); err != nil {
-		return nil, fmt.Errorf("error while unmashalling data: %w", err)
-	}
-
-	return buff.PRs, nil
+	return proxycache.Get(
+		context.Background(),
+		p.CacheDir,
+		categoryFilePrs,
+		path,
+		nil,
+		func(ctx context.Context) ([]int, error) {
+			return []int{}, nil
+		},
+	)
 }
 
-func (p *PullRequests) ListPRs(file string) ([]int, error) {
-	return p.load(file)
+func (p *PullRequests) ListPRs(path string) ([]int, error) {
+	return p.load(path)
 }

@@ -8,6 +8,12 @@ import (
 	"go-kweb-lang/proxycache"
 )
 
+const (
+	CategoryLastCommit  = "git-file-last-commit"
+	CategoryUpdates     = "git-file-updates"
+	CategoryMergePoints = "git-merge-points"
+)
+
 type GitRepoCache struct {
 	gitRepo  git.Repo
 	cacheDir string
@@ -34,9 +40,10 @@ func (c *GitRepoCache) ListFiles(path string) ([]string, error) {
 
 func (c *GitRepoCache) FindFileLastCommit(ctx context.Context, path string) (git.CommitInfo, error) {
 	key := path
-	return proxycache.GetCtx(
+	return proxycache.Get(
 		ctx,
-		FileLastCommitDir(c.cacheDir),
+		c.cacheDir,
+		CategoryLastCommit,
 		key,
 		nil,
 		func(ctx context.Context) (git.CommitInfo, error) {
@@ -47,9 +54,10 @@ func (c *GitRepoCache) FindFileLastCommit(ctx context.Context, path string) (git
 
 func (c *GitRepoCache) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]git.CommitInfo, error) {
 	key := path
-	return proxycache.GetCtx(
+	return proxycache.Get(
 		ctx,
-		FileUpdatesDir(c.cacheDir),
+		c.cacheDir,
+		CategoryUpdates,
 		key,
 		nil,
 		func(ctx context.Context) ([]git.CommitInfo, error) {
@@ -60,9 +68,10 @@ func (c *GitRepoCache) FindFileCommitsAfter(ctx context.Context, path string, co
 
 func (c *GitRepoCache) FindMergePoints(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
 	key := commitID
-	return proxycache.GetCtx(
+	return proxycache.Get(
 		ctx,
-		MergePointsDir(c.cacheDir),
+		c.cacheDir,
+		CategoryMergePoints,
 		key,
 		nil,
 		func(ctx context.Context) ([]git.CommitInfo, error) {
@@ -89,12 +98,12 @@ func (c *GitRepoCache) CommitFiles(ctx context.Context, commitID string) ([]stri
 }
 
 func (c *GitRepoCache) InvalidatePath(path string) error {
-	for _, cacheDir := range []string{
-		FileLastCommitDir(c.cacheDir),
-		FileUpdatesDir(c.cacheDir),
+	for _, category := range []string{
+		CategoryLastCommit,
+		CategoryUpdates,
 	} {
-		key := proxycache.KeyHash(path)
-		if err := proxycache.InvalidateKey(cacheDir, key); err != nil {
+		key := path
+		if err := proxycache.InvalidateKey(c.cacheDir, category, key); err != nil {
 			return fmt.Errorf("error while invalidataing cache key %v: %w", key, err)
 		}
 	}

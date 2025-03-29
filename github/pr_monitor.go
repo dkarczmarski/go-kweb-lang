@@ -6,8 +6,6 @@ import (
 	"go-kweb-lang/langcnt"
 	"go-kweb-lang/proxycache"
 	"log"
-	"os"
-	"path/filepath"
 )
 
 type PRMonitor struct {
@@ -57,37 +55,26 @@ func (mon *PRMonitor) maxUpdatedAt(langCode string) (string, error) {
 	return result.Items[0].UpdatedAt, nil
 }
 
-func (mon *PRMonitor) lastUpdatedAtFile(langCode string) string {
-	return filepath.Join(mon.cacheDir, "github", fmt.Sprintf("last-updated-at-%v.txt", langCode))
-}
-
 func (mon *PRMonitor) lastMaxUpdatedAt(langCode string) (string, error) {
-	path := mon.lastUpdatedAtFile(langCode)
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
+	return proxycache.Get(
+		context.Background(),
+		mon.cacheDir,
+		"github-last-lang-updated-at",
+		langCode,
+		nil,
+		func(ctx context.Context) (string, error) {
 			return "", nil
-		}
-
-		return "", fmt.Errorf("error while reading file %s: %w", path, err)
-	}
-
-	return string(data), nil
+		},
+	)
 }
 
 func (mon *PRMonitor) setLastMaxUpdatedAt(maxUpdatedAt, langCode string) error {
-	path := mon.lastUpdatedAtFile(langCode)
-
-	if err := proxycache.EnsureDir(filepath.Dir(path)); err != nil {
-		return fmt.Errorf("error while checking parent directories for %v: %w", path, err)
-	}
-
-	if err := os.WriteFile(path, []byte(maxUpdatedAt), 0644); err != nil {
-		return fmt.Errorf("error while writing to file %s: %w", path, err)
-	}
-
-	return nil
+	return proxycache.Put(
+		mon.cacheDir,
+		"github-lang-last-updated-at",
+		langCode,
+		maxUpdatedAt,
+	)
 }
 
 func (mon *PRMonitor) CheckLang(ctx context.Context, langCode string) (bool, error) {

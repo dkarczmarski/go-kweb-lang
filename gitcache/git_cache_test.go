@@ -6,7 +6,6 @@ import (
 	"go-kweb-lang/gitcache"
 	"go-kweb-lang/mocks"
 	"go-kweb-lang/proxycache"
-	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -20,8 +19,8 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		initMock func(repo *mocks.MockRepo)
-		before   func(t *testing.T, cachePath string)
-		after    func(t *testing.T, cachePath string)
+		before   func(t *testing.T, cacheDir, category, key string)
+		after    func(t *testing.T, cacheDir, category, key string)
 	}{
 		{
 			name: "miss cache",
@@ -31,27 +30,25 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 					Return(expectedCommit, nil).
 					Times(1)
 			},
-			before: func(t *testing.T, cachePath string) {
+			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if proxycache.FileExists(cachePath) {
+				if proxycache.KeyExists(cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
-			after: func(t *testing.T, cachePath string) {
+			after: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if !proxycache.FileExists(cachePath) {
-					t.Errorf("cache file %s should exist", cachePath)
+				if !proxycache.KeyExists(cacheDir, category, key) {
+					t.Errorf("cache key %s should exist", key)
 				}
 			},
 		},
 		{
 			name: "hit cache",
-			before: func(t *testing.T, cachePath string) {
+			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if err := proxycache.EnsureDir(filepath.Dir(cachePath)); err != nil {
-					t.Fatal(err)
-				}
-				if err := proxycache.WriteJSONToFile(cachePath, &expectedCommit); err != nil {
+
+				if err := proxycache.Put(cacheDir, category, key, expectedCommit); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -69,9 +66,11 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 
 			cacheDir := t.TempDir()
 			gc := gitcache.New(mock, cacheDir)
-			cachePath := filepath.Join(gitcache.FileLastCommitDir(cacheDir), proxycache.KeyFile(proxycache.KeyHash(path)))
 
-			tc.before(t, cachePath)
+			category := gitcache.CategoryLastCommit
+			key := path
+
+			tc.before(t, cacheDir, category, key)
 
 			commit, err := gc.FindFileLastCommit(context.Background(), path)
 			if err != nil {
@@ -83,7 +82,7 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 			}
 
 			if tc.after != nil {
-				tc.after(t, cachePath)
+				tc.after(t, cacheDir, category, key)
 			}
 		})
 	}
@@ -100,8 +99,8 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		initMock func(repo *mocks.MockRepo)
-		before   func(t *testing.T, cachePath string)
-		after    func(t *testing.T, cachePath string)
+		before   func(t *testing.T, cacheDir, category, key string)
+		after    func(t *testing.T, cacheDir, category, key string)
 	}{
 		{
 			name: "miss cache",
@@ -111,27 +110,25 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 					Return(expectedCommits, nil).
 					Times(1)
 			},
-			before: func(t *testing.T, cachePath string) {
+			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if proxycache.FileExists(cachePath) {
+				if proxycache.KeyExists(cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
-			after: func(t *testing.T, cachePath string) {
+			after: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if !proxycache.FileExists(cachePath) {
-					t.Errorf("cache file %s should exist", cachePath)
+				if !proxycache.KeyExists(cacheDir, category, key) {
+					t.Errorf("cache key %s should exist", key)
 				}
 			},
 		},
 		{
 			name: "hit cache",
-			before: func(t *testing.T, cachePath string) {
+			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if err := proxycache.EnsureDir(filepath.Dir(cachePath)); err != nil {
-					t.Fatal(err)
-				}
-				if err := proxycache.WriteJSONToFile(cachePath, &expectedCommits); err != nil {
+
+				if err := proxycache.Put(cacheDir, category, key, expectedCommits); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -150,9 +147,11 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 			cacheDir := t.TempDir()
 
 			gc := gitcache.New(mock, cacheDir)
-			cachePath := filepath.Join(gitcache.FileUpdatesDir(cacheDir), proxycache.KeyFile(proxycache.KeyHash(path)))
 
-			tc.before(t, cachePath)
+			category := gitcache.CategoryUpdates
+			key := path
+
+			tc.before(t, cacheDir, category, key)
 
 			commits, err := gc.FindFileCommitsAfter(context.Background(), path, commitID)
 			if err != nil {
@@ -163,7 +162,7 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 			}
 
 			if tc.after != nil {
-				tc.after(t, cachePath)
+				tc.after(t, cacheDir, category, key)
 			}
 		})
 	}
@@ -179,8 +178,8 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		initMock func(repo *mocks.MockRepo)
-		before   func(t *testing.T, cachePath string)
-		after    func(t *testing.T, cachePath string)
+		before   func(t *testing.T, cacheDir, category, key string)
+		after    func(t *testing.T, cacheDir, category, key string)
 	}{
 		{
 			name: "miss cache",
@@ -190,26 +189,24 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 					Return(expectedCommits, nil).
 					Times(1)
 			},
-			before: func(t *testing.T, cachePath string) {
+			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if proxycache.FileExists(cachePath) {
+				if proxycache.KeyExists(cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
-			after: func(t *testing.T, cachePath string) {
-				if !proxycache.FileExists(cachePath) {
-					t.Errorf("cache file %s should exist", cachePath)
+			after: func(t *testing.T, cacheDir, category, key string) {
+				if !proxycache.KeyExists(cacheDir, category, key) {
+					t.Errorf("cache key %s should exist", key)
 				}
 			},
 		},
 		{
 			name: "hit cache",
-			before: func(t *testing.T, cachePath string) {
+			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if err := proxycache.EnsureDir(filepath.Dir(cachePath)); err != nil {
-					t.Fatal(err)
-				}
-				if err := proxycache.WriteJSONToFile(cachePath, &expectedCommits); err != nil {
+
+				if err := proxycache.Put(cacheDir, category, key, expectedCommits); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -227,9 +224,11 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 
 			cacheDir := t.TempDir()
 			gc := gitcache.New(mock, cacheDir)
-			cachePath := filepath.Join(gitcache.MergePointsDir(cacheDir), proxycache.KeyFile(proxycache.KeyHash(commitID)))
 
-			tc.before(t, cachePath)
+			category := gitcache.CategoryMergePoints
+			key := commitID
+
+			tc.before(t, cacheDir, category, key)
 
 			commits, err := gc.FindMergePoints(context.Background(), commitID)
 			if err != nil {
@@ -240,73 +239,52 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 			}
 
 			if tc.after != nil {
-				tc.after(t, cachePath)
+				tc.after(t, cacheDir, category, key)
 			}
 		})
 	}
 }
 
 func TestGitRepoCache_InvalidatePath(t *testing.T) {
-	path := "dir1/path1"
 	for _, tc := range []struct {
 		name   string
-		before func(t *testing.T, prop map[string]any)
-		after  func(t *testing.T, prop map[string]any)
+		before func(t *testing.T, cacheDir, key string)
+		after  func(t *testing.T, cacheDir, key string)
 	}{
 		{
 			name: "when cache file does not exist, it returns no error",
 		},
 		{
 			name: "when 'file-last-commit' cache file exists, it removes it",
-			before: func(t *testing.T, prop map[string]any) {
+			before: func(t *testing.T, cacheDir, key string) {
 				t.Helper()
 
-				cacheDir := prop["cacheDir"].(string)
-
-				cacheFile := filepath.Join(gitcache.FileLastCommitDir(cacheDir), proxycache.KeyFile(proxycache.KeyHash(path)))
-				prop["cacheFile"] = cacheFile
-
-				if err := proxycache.EnsureDir(filepath.Dir(cacheFile)); err != nil {
-					t.Fatal(err)
-				}
-				if err := proxycache.WriteJSONToFile(cacheFile, struct{}{}); err != nil {
+				if err := proxycache.Put(cacheDir, gitcache.CategoryLastCommit, key, struct{}{}); err != nil {
 					t.Fatal(err)
 				}
 			},
-			after: func(t *testing.T, prop map[string]any) {
+			after: func(t *testing.T, cacheDir, key string) {
 				t.Helper()
 
-				cacheFile := prop["cacheFile"].(string)
-
-				if proxycache.FileExists(cacheFile) {
-					t.Errorf("cache file %s should not exist", cacheFile)
+				if proxycache.KeyExists(cacheDir, "", key) {
+					t.Error("cache key should not exist")
 				}
 			},
 		},
 		{
 			name: "when 'file-updates' cache file exists, it removes it",
-			before: func(t *testing.T, prop map[string]any) {
+			before: func(t *testing.T, cacheDir, key string) {
 				t.Helper()
 
-				cacheDir := prop["cacheDir"].(string)
-
-				cacheFile := filepath.Join(gitcache.FileUpdatesDir(cacheDir), proxycache.KeyFile(proxycache.KeyHash(path)))
-				prop["cacheFile"] = cacheFile
-
-				if err := proxycache.EnsureDir(filepath.Dir(cacheFile)); err != nil {
-					t.Fatal(err)
-				}
-				if err := proxycache.WriteJSONToFile(cacheFile, struct{}{}); err != nil {
+				if err := proxycache.Put(cacheDir, gitcache.CategoryUpdates, key, struct{}{}); err != nil {
 					t.Fatal(err)
 				}
 			},
-			after: func(t *testing.T, prop map[string]any) {
+			after: func(t *testing.T, cacheDir, key string) {
 				t.Helper()
 
-				cacheFile := prop["cacheFile"].(string)
-
-				if proxycache.FileExists(cacheFile) {
-					t.Errorf("cache file %s should not exist", cacheFile)
+				if proxycache.KeyExists(cacheDir, "", key) {
+					t.Error("cache key should not exist")
 				}
 			},
 		},
@@ -317,23 +295,22 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			mock := mocks.NewMockRepo(ctrl)
 
-			prop := make(map[string]any)
-
 			cacheDir := t.TempDir()
-			prop["cacheDir"] = cacheDir
 
 			gitCache := gitcache.New(mock, cacheDir)
 
+			samplePath := "dir1/path1"
+
 			if tc.before != nil {
-				tc.before(t, prop)
+				tc.before(t, cacheDir, samplePath)
 			}
 
-			if err := gitCache.InvalidatePath(path); err != nil {
+			if err := gitCache.InvalidatePath(samplePath); err != nil {
 				t.Fatal(err)
 			}
 
 			if tc.after != nil {
-				tc.after(t, prop)
+				tc.after(t, cacheDir, samplePath)
 			}
 		})
 	}
