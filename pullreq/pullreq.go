@@ -73,7 +73,7 @@ func (p *PullRequests) fetchPRCommits(pr github.PRItem) ([]string, error) {
 
 			return isInvalid
 		},
-		func() (prCommits, error) {
+		func(ctx context.Context) (prCommits, error) {
 			log.Printf("fetching commit list for PR #%v", pr.Number)
 
 			commitIds, err := p.GitHub.GetPRCommits(pr.Number)
@@ -98,7 +98,7 @@ func (p *PullRequests) fetchCommitFiles(commitID string) (*github.CommitFiles, e
 		filepath.Join(p.CacheDir, "pr", "commit-files"),
 		commitID,
 		nil,
-		func() (*github.CommitFiles, error) {
+		func(ctx context.Context) (*github.CommitFiles, error) {
 			return p.GitHub.GetCommitFiles(commitID)
 		},
 	)

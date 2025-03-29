@@ -25,7 +25,7 @@ func GetCtx[T any](
 	cacheDir string,
 	key string,
 	isInvalid func(T) bool,
-	block func() (T, error),
+	block func(context.Context) (T, error),
 ) (T, error) {
 	select {
 	case <-ctx.Done():
@@ -52,7 +52,7 @@ func GetCtx[T any](
 		}
 	}
 
-	result, err := block()
+	result, err := block(ctx)
 	if err != nil {
 		return result, err
 	}
