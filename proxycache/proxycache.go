@@ -12,21 +12,6 @@ import (
 	"path/filepath"
 )
 
-func keyFileName(key string) string {
-	return key + ".json"
-}
-
-func keyHash(value string) string {
-	hash := sha1.New()
-	hash.Write([]byte(value))
-
-	return hex.EncodeToString(hash.Sum(nil))
-}
-
-func keyFilePath(cacheDir string, category string, key string) string {
-	return filepath.Join(cacheDir, category, keyFileName(keyHash(key)))
-}
-
 // Get returns a value from local cache if it exists, or calls the block to retrieve it.
 func Get[T any](
 	ctx context.Context,
@@ -111,6 +96,21 @@ func keyFileExists(cacheFile string) bool {
 	}
 
 	return err == nil
+}
+
+func keyFileName(key string) string {
+	return key + ".json"
+}
+
+func keyHash(value string) string {
+	hash := sha1.New()
+	hash.Write([]byte(value))
+
+	return hex.EncodeToString(hash.Sum(nil))
+}
+
+func keyFilePath(cacheDir string, category string, key string) string {
+	return filepath.Join(cacheDir, category, keyFileName(keyHash(key)))
 }
 
 func ensureDir(path string) error {
