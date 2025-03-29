@@ -37,7 +37,14 @@ func Get[T any](
 		return zero, err
 	}
 
-	if keyFileExists(cacheFile) {
+	exists, err := keyFileExists(cacheFile)
+	if err != nil {
+		var zero T
+
+		return zero, err
+	}
+
+	if exists {
 		var buff T
 		if err := readJSONFromFile(cacheFile, &buff); err != nil {
 			return buff, err
@@ -85,17 +92,21 @@ func Put[T any](cacheDir, category, key string, value T) error {
 }
 
 // KeyExists checks if the item exists for the given key.
-func KeyExists(cacheDir, category, key string) bool {
+func KeyExists(cacheDir, category, key string) (bool, error) {
 	return keyFileExists(keyFilePath(cacheDir, category, key))
 }
 
-func keyFileExists(cacheFile string) bool {
+func keyFileExists(cacheFile string) (bool, error) {
 	_, err := os.Stat(cacheFile)
-	if os.IsNotExist(err) {
-		return false
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+
+		return false, err
 	}
 
-	return err == nil
+	return true, nil
 }
 
 func keyFileName(key string) string {

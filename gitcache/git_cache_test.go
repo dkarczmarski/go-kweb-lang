@@ -32,13 +32,13 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 			},
 			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if proxycache.KeyExists(cacheDir, category, key) {
+				if proxycacheKeyExists(t, cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if !proxycache.KeyExists(cacheDir, category, key) {
+				if !proxycacheKeyExists(t, cacheDir, category, key) {
 					t.Errorf("cache key %s should exist", key)
 				}
 			},
@@ -112,13 +112,13 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 			},
 			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if proxycache.KeyExists(cacheDir, category, key) {
+				if proxycacheKeyExists(t, cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if !proxycache.KeyExists(cacheDir, category, key) {
+				if !proxycacheKeyExists(t, cacheDir, category, key) {
 					t.Errorf("cache key %s should exist", key)
 				}
 			},
@@ -191,12 +191,12 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 			},
 			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if proxycache.KeyExists(cacheDir, category, key) {
+				if proxycacheKeyExists(t, cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cacheDir, category, key string) {
-				if !proxycache.KeyExists(cacheDir, category, key) {
+				if !proxycacheKeyExists(t, cacheDir, category, key) {
 					t.Errorf("cache key %s should exist", key)
 				}
 			},
@@ -266,7 +266,7 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 			after: func(t *testing.T, cacheDir, key string) {
 				t.Helper()
 
-				if proxycache.KeyExists(cacheDir, "", key) {
+				if proxycacheKeyExists(t, cacheDir, "", key) {
 					t.Error("cache key should not exist")
 				}
 			},
@@ -283,7 +283,7 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 			after: func(t *testing.T, cacheDir, key string) {
 				t.Helper()
 
-				if proxycache.KeyExists(cacheDir, "", key) {
+				if proxycacheKeyExists(t, cacheDir, "", key) {
 					t.Error("cache key should not exist")
 				}
 			},
@@ -314,4 +314,15 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 			}
 		})
 	}
+}
+
+func proxycacheKeyExists(t *testing.T, cacheDir, category, key string) bool {
+	t.Helper()
+
+	exists, err := proxycache.KeyExists(cacheDir, category, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return exists
 }
