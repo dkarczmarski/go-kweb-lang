@@ -59,7 +59,7 @@ type prCommits struct {
 
 func (p *PullRequests) fetchPRCommits(pr github.PRItem) ([]string, error) {
 	key := fmt.Sprintf("%v", pr.Number)
-	commits, err := proxycache.CacheWrapper(
+	commits, err := proxycache.Get(
 		filepath.Join(p.CacheDir, "pr", "pr-commits"),
 		key,
 		func(cachedPrCommits prCommits) bool {
@@ -91,7 +91,7 @@ func (p *PullRequests) fetchPRCommits(pr github.PRItem) ([]string, error) {
 }
 
 func (p *PullRequests) fetchCommitFiles(commitID string) (*github.CommitFiles, error) {
-	return proxycache.CacheWrapper(
+	return proxycache.Get(
 		filepath.Join(p.CacheDir, "pr", "commit-files"),
 		commitID,
 		nil,

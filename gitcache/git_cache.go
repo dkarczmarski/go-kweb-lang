@@ -34,7 +34,7 @@ func (c *GitRepoCache) ListFiles(path string) ([]string, error) {
 
 func (c *GitRepoCache) FindFileLastCommit(ctx context.Context, path string) (git.CommitInfo, error) {
 	key := path
-	return proxycache.CacheWrapperCtx(
+	return proxycache.GetCtx(
 		ctx,
 		FileLastCommitDir(c.cacheDir),
 		key,
@@ -47,14 +47,14 @@ func (c *GitRepoCache) FindFileLastCommit(ctx context.Context, path string) (git
 
 func (c *GitRepoCache) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]git.CommitInfo, error) {
 	key := path
-	return proxycache.CacheWrapperCtx(ctx, FileUpdatesDir(c.cacheDir), key, nil, func() ([]git.CommitInfo, error) {
+	return proxycache.GetCtx(ctx, FileUpdatesDir(c.cacheDir), key, nil, func() ([]git.CommitInfo, error) {
 		return c.gitRepo.FindFileCommitsAfter(ctx, path, commitIDFrom)
 	})
 }
 
 func (c *GitRepoCache) FindMergePoints(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
 	key := commitID
-	return proxycache.CacheWrapperCtx(ctx, MergePointsDir(c.cacheDir), key, nil, func() ([]git.CommitInfo, error) {
+	return proxycache.GetCtx(ctx, MergePointsDir(c.cacheDir), key, nil, func() ([]git.CommitInfo, error) {
 		return c.gitRepo.FindMergePoints(ctx, commitID)
 	})
 }

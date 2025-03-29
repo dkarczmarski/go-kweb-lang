@@ -20,7 +20,7 @@ func KeyHash(value string) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func CacheWrapperCtx[T any](
+func GetCtx[T any](
 	ctx context.Context,
 	cacheDir string,
 	key string,
@@ -34,10 +34,10 @@ func CacheWrapperCtx[T any](
 	default:
 	}
 
-	return CacheWrapper(cacheDir, key, invalidate, block)
+	return Get(cacheDir, key, invalidate, block)
 }
 
-func CacheWrapper[T any](
+func Get[T any](
 	cacheDir string,
 	key string,
 	isInvalid func(T) bool,
