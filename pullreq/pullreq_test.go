@@ -117,7 +117,7 @@ func TestPullRequests_Update(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if numbers, err := prs.ListPRs("F1"); err != nil || !reflect.DeepEqual(numbers, []int{12, 14}) {
+	if numbers, err := prs.ListPRs("F1"); err != nil || !reflect.DeepEqual(numbers, []int{14, 12}) {
 		t.Error(numbers, err)
 	}
 	if numbers, err := prs.ListPRs("F2"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {

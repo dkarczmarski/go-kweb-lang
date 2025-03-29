@@ -6,6 +6,7 @@ import (
 	"go-kweb-lang/github"
 	"go-kweb-lang/proxycache"
 	"log"
+	"sort"
 )
 
 const (
@@ -116,6 +117,11 @@ func (p *PullRequests) convertToFilePRs(prsFiles map[int][]string) map[string][]
 		for _, file := range files {
 			filePRs[file] = append(filePRs[file], pr)
 		}
+	}
+
+	for file, prs := range filePRs {
+		sort.Sort(sort.Reverse(sort.IntSlice(prs)))
+		filePRs[file] = prs
 	}
 
 	return filePRs
