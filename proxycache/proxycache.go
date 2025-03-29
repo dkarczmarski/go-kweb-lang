@@ -24,7 +24,7 @@ func GetCtx[T any](
 	ctx context.Context,
 	cacheDir string,
 	key string,
-	invalidate func(T) bool,
+	isInvalid func(T) bool,
 	block func() (T, error),
 ) (T, error) {
 	select {
@@ -34,15 +34,6 @@ func GetCtx[T any](
 	default:
 	}
 
-	return Get(cacheDir, key, invalidate, block)
-}
-
-func Get[T any](
-	cacheDir string,
-	key string,
-	isInvalid func(T) bool,
-	block func() (T, error),
-) (T, error) {
 	if err := EnsureDir(cacheDir); err != nil {
 		var zero T
 		return zero, err
