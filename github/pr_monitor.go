@@ -3,8 +3,8 @@ package github
 import (
 	"context"
 	"fmt"
-	"go-kweb-lang/filecache"
 	"go-kweb-lang/langcnt"
+	"go-kweb-lang/proxycache"
 	"log"
 	"os"
 	"path/filepath"
@@ -79,7 +79,7 @@ func (mon *PRMonitor) lastMaxUpdatedAt(langCode string) (string, error) {
 func (mon *PRMonitor) setLastMaxUpdatedAt(maxUpdatedAt, langCode string) error {
 	path := mon.lastUpdatedAtFile(langCode)
 
-	if err := filecache.EnsureDir(filepath.Dir(path)); err != nil {
+	if err := proxycache.EnsureDir(filepath.Dir(path)); err != nil {
 		return fmt.Errorf("error while checking parent directories for %v: %w", path, err)
 	}
 

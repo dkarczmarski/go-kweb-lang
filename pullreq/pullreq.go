@@ -3,8 +3,8 @@ package pullreq
 import (
 	"encoding/json"
 	"fmt"
-	"go-kweb-lang/filecache"
 	"go-kweb-lang/github"
+	"go-kweb-lang/proxycache"
 	"log"
 	"os"
 	"path/filepath"
@@ -59,7 +59,7 @@ type prCommits struct {
 
 func (p *PullRequests) fetchPRCommits(pr github.PRItem) ([]string, error) {
 	key := fmt.Sprintf("%v", pr.Number)
-	commits, err := filecache.CacheWrapper(
+	commits, err := proxycache.CacheWrapper(
 		filepath.Join(p.CacheDir, "pr", "pr-commits"),
 		key,
 		func(cachedPrCommits prCommits) bool {
@@ -91,7 +91,7 @@ func (p *PullRequests) fetchPRCommits(pr github.PRItem) ([]string, error) {
 }
 
 func (p *PullRequests) fetchCommitFiles(commitID string) (*github.CommitFiles, error) {
-	return filecache.CacheWrapper(
+	return proxycache.CacheWrapper(
 		filepath.Join(p.CacheDir, "pr", "commit-files"),
 		commitID,
 		nil,
@@ -183,7 +183,7 @@ func (p *PullRequests) storeAll(filePRs map[string][]int) error {
 }
 
 func (p *PullRequests) storageFile(path string) string {
-	return filepath.Join(p.CacheDir, "pr", "file-prs", filecache.KeyFile(filecache.KeyHash(path)))
+	return filepath.Join(p.CacheDir, "pr", "file-prs", proxycache.KeyFile(proxycache.KeyHash(path)))
 }
 
 func (p *PullRequests) store(path string, prs []int) error {
@@ -198,7 +198,7 @@ func (p *PullRequests) store(path string, prs []int) error {
 	}
 
 	storageFile := p.storageFile(path)
-	if err := filecache.EnsureDir(filepath.Dir(storageFile)); err != nil {
+	if err := proxycache.EnsureDir(filepath.Dir(storageFile)); err != nil {
 		return fmt.Errorf("error while checking parent directories for %v: %w",
 			storageFile, err)
 	}

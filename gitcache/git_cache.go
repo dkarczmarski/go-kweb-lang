@@ -4,8 +4,8 @@ package gitcache
 import (
 	"context"
 	"fmt"
-	"go-kweb-lang/filecache"
 	"go-kweb-lang/git"
+	"go-kweb-lang/proxycache"
 )
 
 type GitRepoCache struct {
@@ -34,7 +34,7 @@ func (c *GitRepoCache) ListFiles(path string) ([]string, error) {
 
 func (c *GitRepoCache) FindFileLastCommit(ctx context.Context, path string) (git.CommitInfo, error) {
 	key := path
-	return filecache.CacheWrapperCtx(
+	return proxycache.CacheWrapperCtx(
 		ctx,
 		FileLastCommitDir(c.cacheDir),
 		key,
@@ -47,14 +47,14 @@ func (c *GitRepoCache) FindFileLastCommit(ctx context.Context, path string) (git
 
 func (c *GitRepoCache) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]git.CommitInfo, error) {
 	key := path
-	return filecache.CacheWrapperCtx(ctx, FileUpdatesDir(c.cacheDir), key, nil, func() ([]git.CommitInfo, error) {
+	return proxycache.CacheWrapperCtx(ctx, FileUpdatesDir(c.cacheDir), key, nil, func() ([]git.CommitInfo, error) {
 		return c.gitRepo.FindFileCommitsAfter(ctx, path, commitIDFrom)
 	})
 }
 
 func (c *GitRepoCache) FindMergePoints(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
 	key := commitID
-	return filecache.CacheWrapperCtx(ctx, MergePointsDir(c.cacheDir), key, nil, func() ([]git.CommitInfo, error) {
+	return proxycache.CacheWrapperCtx(ctx, MergePointsDir(c.cacheDir), key, nil, func() ([]git.CommitInfo, error) {
 		return c.gitRepo.FindMergePoints(ctx, commitID)
 	})
 }
@@ -81,8 +81,8 @@ func (c *GitRepoCache) InvalidatePath(path string) error {
 		FileLastCommitDir(c.cacheDir),
 		FileUpdatesDir(c.cacheDir),
 	} {
-		key := filecache.KeyHash(path)
-		if err := filecache.InvalidateKey(cacheDir, key); err != nil {
+		key := proxycache.KeyHash(path)
+		if err := proxycache.InvalidateKey(cacheDir, key); err != nil {
 			return fmt.Errorf("error while invalidataing cache key %v: %w", key, err)
 		}
 	}

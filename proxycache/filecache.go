@@ -1,4 +1,4 @@
-package filecache
+package proxycache
 
 import (
 	"context"
