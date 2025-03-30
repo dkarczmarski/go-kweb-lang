@@ -3,32 +3,33 @@ package tasks
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+
 	"go-kweb-lang/gitpc"
 	"go-kweb-lang/langcnt"
 	"go-kweb-lang/pullreq"
 	"go-kweb-lang/seek"
 	"go-kweb-lang/web"
-	"path/filepath"
 )
 
 type RefreshTemplateDataTask struct {
-	content      *langcnt.Content
-	gitRepoCache *gitpc.GitRepoProxyCache
-	pullRequests *pullreq.PullRequests
-	templateData *web.TemplateData
+	content           *langcnt.Content
+	gitRepoProxyCache *gitpc.ProxyCache
+	pullRequests      *pullreq.PullRequests
+	templateData      *web.TemplateData
 }
 
 func NewRefreshTemplateDataTask(
 	content *langcnt.Content,
-	gitRepoCache *gitpc.GitRepoProxyCache,
+	gitRepoProxyCache *gitpc.ProxyCache,
 	pullRequests *pullreq.PullRequests,
 	templateData *web.TemplateData,
 ) *RefreshTemplateDataTask {
 	return &RefreshTemplateDataTask{
-		content:      content,
-		gitRepoCache: gitRepoCache,
-		pullRequests: pullRequests,
-		templateData: templateData,
+		content:           content,
+		gitRepoProxyCache: gitRepoProxyCache,
+		pullRequests:      pullRequests,
+		templateData:      templateData,
 	}
 }
 
@@ -55,7 +56,7 @@ func (t *RefreshTemplateDataTask) Run(ctx context.Context) error {
 }
 
 func (t *RefreshTemplateDataTask) refreshLangModel(ctx context.Context, langCode string) error {
-	seeker := seek.NewGitLangSeeker(t.gitRepoCache)
+	seeker := seek.NewGitLangSeeker(t.gitRepoProxyCache)
 	seekerFileInfos, err := seeker.CheckLang(ctx, langCode)
 	if err != nil {
 		return fmt.Errorf("error while checking the content directory for the language code %s: %w", langCode, err)

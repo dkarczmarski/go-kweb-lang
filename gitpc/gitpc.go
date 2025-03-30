@@ -10,38 +10,44 @@ import (
 	"go-kweb-lang/proxycache"
 )
 
+// todo: should it be private ?
 const (
 	CategoryLastCommit  = "git-file-last-commit"
 	CategoryUpdates     = "git-file-updates"
 	CategoryMergePoints = "git-merge-points"
 )
 
-type GitRepoProxyCache struct {
+type ProxyCache struct {
 	gitRepo  git.Repo
 	cacheDir string
 }
 
-func New(gitRepo git.Repo, cacheDir string) *GitRepoProxyCache {
-	return &GitRepoProxyCache{
+func New(gitRepo git.Repo, cacheDir string) *ProxyCache {
+	return &ProxyCache{
 		gitRepo:  gitRepo,
 		cacheDir: cacheDir,
 	}
 }
 
-func (pc *GitRepoProxyCache) Create(ctx context.Context, url string) error {
+// Create function is a plain proxy wrapper to git.Repo.
+func (pc *ProxyCache) Create(ctx context.Context, url string) error {
 	return pc.gitRepo.Create(ctx, url)
 }
 
-func (pc *GitRepoProxyCache) FileExists(path string) (bool, error) {
+// FileExists function is a plain proxy wrapper to git.Repo.
+func (pc *ProxyCache) FileExists(path string) (bool, error) {
 	return pc.gitRepo.FileExists(path)
 }
 
-func (pc *GitRepoProxyCache) ListFiles(path string) ([]string, error) {
+// ListFiles function is a plain proxy wrapper to git.Repo.
+func (pc *ProxyCache) ListFiles(path string) ([]string, error) {
 	return pc.gitRepo.ListFiles(path)
 }
 
-func (pc *GitRepoProxyCache) FindFileLastCommit(ctx context.Context, path string) (git.CommitInfo, error) {
+// FindFileLastCommit function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) FindFileLastCommit(ctx context.Context, path string) (git.CommitInfo, error) {
 	key := path
+
 	return proxycache.Get(
 		ctx,
 		pc.cacheDir,
@@ -54,8 +60,10 @@ func (pc *GitRepoProxyCache) FindFileLastCommit(ctx context.Context, path string
 	)
 }
 
-func (pc *GitRepoProxyCache) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]git.CommitInfo, error) {
+// FindFileCommitsAfter function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]git.CommitInfo, error) {
 	key := path
+
 	return proxycache.Get(
 		ctx,
 		pc.cacheDir,
@@ -68,8 +76,10 @@ func (pc *GitRepoProxyCache) FindFileCommitsAfter(ctx context.Context, path stri
 	)
 }
 
-func (pc *GitRepoProxyCache) FindMergePoints(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
+// FindMergePoints function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) FindMergePoints(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
 	key := commitID
+
 	return proxycache.Get(
 		ctx,
 		pc.cacheDir,
@@ -82,23 +92,28 @@ func (pc *GitRepoProxyCache) FindMergePoints(ctx context.Context, commitID strin
 	)
 }
 
-func (pc *GitRepoProxyCache) Fetch(ctx context.Context) error {
+// Fetch function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) Fetch(ctx context.Context) error {
 	return pc.gitRepo.Fetch(ctx)
 }
 
-func (pc *GitRepoProxyCache) FreshCommits(ctx context.Context) ([]git.CommitInfo, error) {
+// FreshCommits function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) FreshCommits(ctx context.Context) ([]git.CommitInfo, error) {
 	return pc.gitRepo.FreshCommits(ctx)
 }
 
-func (pc *GitRepoProxyCache) Pull(ctx context.Context) error {
+// Pull function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) Pull(ctx context.Context) error {
 	return pc.gitRepo.Pull(ctx)
 }
 
-func (pc *GitRepoProxyCache) CommitFiles(ctx context.Context, commitID string) ([]string, error) {
+// CommitFiles function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) CommitFiles(ctx context.Context, commitID string) ([]string, error) {
 	return pc.gitRepo.CommitFiles(ctx, commitID)
 }
 
-func (pc *GitRepoProxyCache) InvalidatePath(path string) error {
+// todo: should it be private ?
+func (pc *ProxyCache) InvalidatePath(path string) error {
 	for _, category := range []string{
 		CategoryLastCommit,
 		CategoryUpdates,
@@ -112,7 +127,7 @@ func (pc *GitRepoProxyCache) InvalidatePath(path string) error {
 	return nil
 }
 
-func (pc *GitRepoProxyCache) PullRefresh(ctx context.Context) error {
+func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 	if err := pc.gitRepo.Fetch(ctx); err != nil {
 		return fmt.Errorf("git fetch error: %w", err)
 	}
@@ -134,8 +149,10 @@ func (pc *GitRepoProxyCache) PullRefresh(ctx context.Context) error {
 			}
 		}
 	}
+
 	if err := pc.gitRepo.Pull(ctx); err != nil {
 		return fmt.Errorf("git pull error: %w", err)
 	}
+
 	return nil
 }

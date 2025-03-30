@@ -3,6 +3,10 @@ package appinit
 import (
 	"errors"
 	"fmt"
+	"log"
+	"os"
+	"strings"
+
 	"go-kweb-lang/git"
 	"go-kweb-lang/github"
 	"go-kweb-lang/gitpc"
@@ -10,9 +14,6 @@ import (
 	"go-kweb-lang/pullreq"
 	"go-kweb-lang/tasks"
 	"go-kweb-lang/web"
-	"log"
-	"os"
-	"strings"
 )
 
 type Config struct {
@@ -22,7 +23,7 @@ type Config struct {
 	Content                 *langcnt.Content
 	GitRepo                 git.Repo
 	TemplateData            *web.TemplateData
-	GitRepoCache            *gitpc.GitRepoProxyCache
+	GitRepoProxyCache       *gitpc.ProxyCache
 	GitHub                  github.GitHub
 	PullRequests            *pullreq.PullRequests
 	RefreshRepoTask         *tasks.RefreshRepoTask
@@ -139,7 +140,7 @@ func NewRepoCache() func(*Config) error {
 			return fmt.Errorf("param CacheDirPath is not set: %w", ErrBadConfiguration)
 		}
 
-		config.GitRepoCache = gitpc.New(gitRepo, cacheDirPath)
+		config.GitRepoProxyCache = gitpc.New(gitRepo, cacheDirPath)
 
 		return nil
 	}
@@ -179,12 +180,12 @@ func NewPullRequests() func(*Config) error {
 
 func NewRefreshRepoTask() func(*Config) error {
 	return func(config *Config) error {
-		gitRepoCache := config.GitRepoCache
-		if gitRepoCache == nil {
-			return fmt.Errorf("param GitRepoProxyCache is not set: %w", ErrBadConfiguration)
+		gitRepoProxyCache := config.GitRepoProxyCache
+		if gitRepoProxyCache == nil {
+			return fmt.Errorf("param ProxyCache is not set: %w", ErrBadConfiguration)
 		}
 
-		config.RefreshRepoTask = tasks.NewRefreshRepoTask(gitRepoCache)
+		config.RefreshRepoTask = tasks.NewRefreshRepoTask(gitRepoProxyCache)
 
 		return nil
 	}
@@ -197,9 +198,9 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 			return fmt.Errorf("param Content is not set: %w", ErrBadConfiguration)
 		}
 
-		gitRepoCache := config.GitRepoCache
-		if gitRepoCache == nil {
-			return fmt.Errorf("param GitRepoProxyCache is not set: %w", ErrBadConfiguration)
+		gitRepoProxyCache := config.GitRepoProxyCache
+		if gitRepoProxyCache == nil {
+			return fmt.Errorf("param ProxyCache is not set: %w", ErrBadConfiguration)
 		}
 
 		prs := config.PullRequests
@@ -214,7 +215,7 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 
 		config.RefreshTemplateDataTask = tasks.NewRefreshTemplateDataTask(
 			content,
-			gitRepoCache,
+			gitRepoProxyCache,
 			prs,
 			templateData,
 		)

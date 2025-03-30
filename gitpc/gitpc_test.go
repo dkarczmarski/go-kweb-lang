@@ -13,7 +13,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
+func TestProxyCache_FindFileLastCommit(t *testing.T) {
 	path := "/path1"
 	expectedCommit := git.CommitInfo{CommitID: "ID1", DateTime: "DT1", Comment: "TEXT1"}
 
@@ -34,14 +34,14 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
 
-				if proxycacheKeyExists(t, cacheDir, category, key) {
+				if mustProxycacheKeyExists(t, cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
 
-				if !proxycacheKeyExists(t, cacheDir, category, key) {
+				if !mustProxycacheKeyExists(t, cacheDir, category, key) {
 					t.Errorf("cache key %s should exist", key)
 				}
 			},
@@ -91,7 +91,7 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 	}
 }
 
-func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
+func TestProxyCache_FindFileCommitsAfter(t *testing.T) {
 	path := "path1"
 	commitID := "ID"
 	expectedCommits := []git.CommitInfo{
@@ -116,14 +116,14 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
 
-				if proxycacheKeyExists(t, cacheDir, category, key) {
+				if mustProxycacheKeyExists(t, cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
 
-				if !proxycacheKeyExists(t, cacheDir, category, key) {
+				if !mustProxycacheKeyExists(t, cacheDir, category, key) {
 					t.Errorf("cache key %s should exist", key)
 				}
 			},
@@ -173,7 +173,7 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 	}
 }
 
-func TestGitRepoCache_FindMergePoints(t *testing.T) {
+func TestProxyCache_FindMergePoints(t *testing.T) {
 	commitID := "ID"
 	expectedCommits := []git.CommitInfo{
 		{CommitID: "ID1", DateTime: "DT1", Comment: "TEXT1"},
@@ -196,12 +196,15 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 			},
 			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
-				if proxycacheKeyExists(t, cacheDir, category, key) {
+
+				if mustProxycacheKeyExists(t, cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cacheDir, category, key string) {
-				if !proxycacheKeyExists(t, cacheDir, category, key) {
+				t.Helper()
+
+				if !mustProxycacheKeyExists(t, cacheDir, category, key) {
 					t.Errorf("cache key %s should exist", key)
 				}
 			},
@@ -239,6 +242,7 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
+
 			if !reflect.DeepEqual(commits, expectedCommits) {
 				t.Errorf("unexpected outcome\nactual   : %+v\nexpected: %+v", commits, expectedCommits)
 			}
@@ -250,7 +254,7 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 	}
 }
 
-func TestGitRepoCache_InvalidatePath(t *testing.T) {
+func TestProxyCache_InvalidatePath(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		before func(t *testing.T, cacheDir, key string)
@@ -271,7 +275,7 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 			after: func(t *testing.T, cacheDir, key string) {
 				t.Helper()
 
-				if proxycacheKeyExists(t, cacheDir, "", key) {
+				if mustProxycacheKeyExists(t, cacheDir, "", key) {
 					t.Error("cache key should not exist")
 				}
 			},
@@ -288,7 +292,7 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 			after: func(t *testing.T, cacheDir, key string) {
 				t.Helper()
 
-				if proxycacheKeyExists(t, cacheDir, "", key) {
+				if mustProxycacheKeyExists(t, cacheDir, "", key) {
 					t.Error("cache key should not exist")
 				}
 			},
@@ -321,7 +325,94 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 	}
 }
 
-func proxycacheKeyExists(t *testing.T, cacheDir, category, key string) bool {
+func TestProxyCache_PullRefresh(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		initMock func(t *testing.T, mock *mocks.MockRepo, cacheDir string, ctx context.Context) []string
+	}{
+		{
+			name: "no fresh commits",
+			initMock: func(t *testing.T, mock *mocks.MockRepo, cacheDir string, ctx context.Context) []string {
+				t.Helper()
+
+				mock.EXPECT().FreshCommits(ctx).Return(nil, nil)
+
+				return []string{}
+			},
+		},
+		{
+			name: "two fresh commits",
+			initMock: func(t *testing.T, mock *mocks.MockRepo, cacheDir string, ctx context.Context) []string {
+				t.Helper()
+
+				mock.EXPECT().FreshCommits(ctx).Return(
+					[]git.CommitInfo{
+						{
+							CommitID: "CID1",
+							DateTime: "D1",
+							Comment:  "Comment1",
+						},
+						{
+							CommitID: "CID2",
+							DateTime: "D2",
+							Comment:  "Comment2",
+						},
+					}, nil,
+				)
+				mock.EXPECT().CommitFiles(ctx, "CID1").Return([]string{"F10", "F11"}, nil)
+				mock.EXPECT().CommitFiles(ctx, "CID2").Return([]string{"F11", "F12"}, nil)
+
+				mustProxycachePut(t, cacheDir, gitpc.CategoryLastCommit, "F10")
+				mustProxycachePut(t, cacheDir, gitpc.CategoryLastCommit, "F11")
+				mustProxycachePut(t, cacheDir, gitpc.CategoryUpdates, "F11")
+
+				return []string{"F10", "F11", "F12"}
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			ctrl := gomock.NewController(t)
+			mock := mocks.NewMockRepo(ctrl)
+
+			cacheDir := t.TempDir()
+
+			mock.EXPECT().Fetch(ctx).Return(nil)
+			fetchedFiles := tc.initMock(t, mock, cacheDir, ctx)
+			mock.EXPECT().Pull(ctx).Return(nil)
+
+			gitCache := gitpc.New(mock, cacheDir)
+
+			if err := gitCache.PullRefresh(ctx); err != nil {
+				t.Error(err)
+			}
+
+			for _, file := range fetchedFiles {
+				for _, category := range []string{gitpc.CategoryLastCommit, gitpc.CategoryUpdates} {
+					exists, err := proxycache.KeyExists(cacheDir, category, file)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					if exists {
+						t.Errorf("file %v should not exists", file)
+					}
+				}
+			}
+		})
+	}
+}
+
+func mustProxycachePut(t *testing.T, cacheDir, category, key string) {
+	t.Helper()
+
+	if err := proxycache.Put(cacheDir, category, key, struct{}{}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func mustProxycacheKeyExists(t *testing.T, cacheDir, category, key string) bool {
 	t.Helper()
 
 	exists, err := proxycache.KeyExists(cacheDir, category, key)

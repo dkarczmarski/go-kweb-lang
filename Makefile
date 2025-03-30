@@ -24,6 +24,9 @@ dev-lint-all:
 dev-goimports:
 	goimports -w .
 
+dev-gofumpt:
+	gofumpt -w .
+
 dev-test-build:
 	go build -o go-kweb-lang .
 
