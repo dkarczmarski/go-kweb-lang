@@ -34,6 +34,10 @@ func NewPRMonitor(
 	}
 }
 
+const (
+	categoryLastLangMaxUpdatedAt = "github-last-lang-updated-at"
+)
+
 func (mon *PRMonitor) maxUpdatedAt(langCode string) (string, error) {
 	result, err := mon.gh.PRSearch(
 		PRSearchFilter{
@@ -60,7 +64,7 @@ func (mon *PRMonitor) lastMaxUpdatedAt(langCode string) (string, error) {
 	return proxycache.Get(
 		context.Background(),
 		mon.cacheDir,
-		"github-last-lang-updated-at",
+		categoryLastLangMaxUpdatedAt,
 		langCode,
 		nil,
 		func(ctx context.Context) (string, error) {
@@ -72,7 +76,7 @@ func (mon *PRMonitor) lastMaxUpdatedAt(langCode string) (string, error) {
 func (mon *PRMonitor) setLastMaxUpdatedAt(maxUpdatedAt, langCode string) error {
 	return proxycache.Put(
 		mon.cacheDir,
-		"github-lang-last-updated-at",
+		categoryLastLangMaxUpdatedAt,
 		langCode,
 		maxUpdatedAt,
 	)
