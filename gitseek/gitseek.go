@@ -4,6 +4,7 @@ package gitseek
 import (
 	"context"
 	"fmt"
+	"log"
 	"path/filepath"
 
 	"go-kweb-lang/git"
@@ -31,6 +32,7 @@ func New(gitRepo git.Repo) *GitSeek {
 	}
 }
 
+// CheckLang checks all files in the content/langCode directory for the given langCode.
 func (s *GitSeek) CheckLang(ctx context.Context, langCode string) ([]FileInfo, error) {
 	langRelPaths, err := s.gitRepo.ListFiles("/content/" + langCode)
 	if err != nil {
@@ -40,10 +42,16 @@ func (s *GitSeek) CheckLang(ctx context.Context, langCode string) ([]FileInfo, e
 	return s.CheckFiles(ctx, langRelPaths, langCode)
 }
 
+// CheckFiles examine selected files in the content/langCode directory for the given langCode
+// for corresponding updates in the content/en directory.
 func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCode string) ([]FileInfo, error) {
 	fileInfoList := make([]FileInfo, 0, len(langRelPaths))
 
-	for _, langRelPath := range langRelPaths {
+	langRelPathsLen := len(langRelPaths)
+
+	for i, langRelPath := range langRelPaths {
+		log.Printf("[%v][%v/%v] checking for updates for %v", langCode, i, langRelPathsLen, langRelPath)
+
 		var fileInfo FileInfo
 
 		originFilePath := repoOriginFilePath(langRelPath)
@@ -69,7 +77,7 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 			return nil, fmt.Errorf("error while finding commits after commit %s: %w",
 				langLastCommit.CommitID, err)
 		}
-		if len(originCommitsAfter) > 0 {
+		if exists && len(originCommitsAfter) > 0 {
 			fileInfo.OriginFileStatus = "MODIFIED"
 		}
 
@@ -91,8 +99,6 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 		}
 
 		fileInfoList = append(fileInfoList, fileInfo)
-
-		fmt.Printf("%+v\n", &fileInfo)
 	}
 
 	return fileInfoList, nil
