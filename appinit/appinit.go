@@ -168,11 +168,7 @@ func NewFilePRFinder() func(*Config) error {
 			return fmt.Errorf("param CacheDirPath is not set: %w", ErrBadConfiguration)
 		}
 
-		config.FilePRFinder = &pullreq.FilePRFinder{
-			GitHub:   gitHub,
-			CacheDir: cacheDirPath,
-			PerPage:  100,
-		}
+		config.FilePRFinder = pullreq.NewFilePRFinder(gitHub, cacheDirPath)
 
 		return nil
 	}

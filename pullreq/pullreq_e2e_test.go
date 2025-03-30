@@ -11,13 +11,16 @@ import (
 )
 
 func TestFilePRFinder_Update_E2E(t *testing.T) {
-	gh := github.New()
-	fpr := &pullreq.FilePRFinder{
-		GitHub:  gh,
-		PerPage: 10,
-	}
+	gitHub := github.New()
+	filePRFinder := pullreq.NewFilePRFinder(
+		gitHub,
+		t.TempDir(),
+		func(config *pullreq.FilePRFinderConfig) {
+			config.PerPage = 10
+		},
+	)
 
-	err := fpr.Update(context.Background(), "pl")
+	err := filePRFinder.Update(context.Background(), "pl")
 	if err != nil {
 		t.Fatal(err)
 	}

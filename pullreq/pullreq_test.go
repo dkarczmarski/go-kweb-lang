@@ -107,11 +107,13 @@ func TestFilePRFinder_Update(t *testing.T) {
 	mock.EXPECT().GetCommitFiles("C3").Return(&github.CommitFiles{Files: []string{"F1", "F4"}}, nil)
 	mock.EXPECT().GetCommitFiles("C4").Return(&github.CommitFiles{Files: []string{"F5"}}, nil)
 
-	filePRFinder := &pullreq.FilePRFinder{
-		GitHub:   mock,
-		CacheDir: t.TempDir(),
-		PerPage:  2,
-	}
+	filePRFinder := pullreq.NewFilePRFinder(
+		mock,
+		t.TempDir(),
+		func(config *pullreq.FilePRFinderConfig) {
+			config.PerPage = 2
+		},
+	)
 
 	err := filePRFinder.Update(context.Background(), langCode)
 	if err != nil {

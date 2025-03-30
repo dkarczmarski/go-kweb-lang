@@ -17,10 +17,31 @@ const (
 	categoryFilePrs     = "pr-fileprs"
 )
 
+type FilePRFinderConfig struct {
+	PerPage int
+}
+
 type FilePRFinder struct {
-	GitHub   github.GitHub
-	CacheDir string
-	PerPage  int
+	gitHub   github.GitHub
+	cacheDir string
+
+	perPage int
+}
+
+func NewFilePRFinder(gitHub github.GitHub, cacheDir string, opts ...func(config *FilePRFinderConfig)) *FilePRFinder {
+	config := FilePRFinderConfig{
+		PerPage: 100,
+	}
+
+	for _, opt := range opts {
+		opt(&config)
+	}
+
+	return &FilePRFinder{
+		gitHub:   gitHub,
+		cacheDir: cacheDir,
+		perPage:  config.PerPage,
+	}
 }
 
 func (p *FilePRFinder) fetchLangOpenedPRs(langCode string) ([]github.PRItem, error) {
@@ -28,7 +49,7 @@ func (p *FilePRFinder) fetchLangOpenedPRs(langCode string) ([]github.PRItem, err
 
 	var maxUpdatedAt string
 	for safetyCounter := 20; safetyCounter >= 0; safetyCounter-- {
-		result, err := p.GitHub.PRSearch(
+		result, err := p.gitHub.PRSearch(
 			github.PRSearchFilter{
 				LangCode:    langCode,
 				UpdatedFrom: maxUpdatedAt,
@@ -37,7 +58,7 @@ func (p *FilePRFinder) fetchLangOpenedPRs(langCode string) ([]github.PRItem, err
 			github.PageRequest{
 				Sort:    "updated",
 				Order:   "asc",
-				PerPage: p.PerPage,
+				PerPage: p.perPage,
 			},
 		)
 		if err != nil {
@@ -68,7 +89,7 @@ func (p *FilePRFinder) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]
 	key := fmt.Sprintf("%v", pr.Number)
 	commits, err := proxycache.Get(
 		ctx,
-		p.CacheDir,
+		p.cacheDir,
 		categoryPrCommits,
 		key,
 		func(cachedPrCommits prCommits) bool {
@@ -83,7 +104,7 @@ func (p *FilePRFinder) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]
 		func(ctx context.Context) (prCommits, error) {
 			log.Printf("fetching commit list for PR #%v", pr.Number)
 
-			commitIds, err := p.GitHub.GetPRCommits(pr.Number)
+			commitIds, err := p.gitHub.GetPRCommits(pr.Number)
 			if err != nil {
 				return prCommits{}, err
 			}
@@ -101,12 +122,12 @@ func (p *FilePRFinder) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]
 func (p *FilePRFinder) fetchCommitFiles(commitID string) (*github.CommitFiles, error) {
 	return proxycache.Get(
 		context.Background(), // todo:
-		p.CacheDir,
+		p.cacheDir,
 		categoryCommitFiles,
 		commitID,
 		nil,
 		func(ctx context.Context) (*github.CommitFiles, error) {
-			return p.GitHub.GetCommitFiles(commitID)
+			return p.gitHub.GetCommitFiles(commitID)
 		},
 	)
 }
@@ -194,7 +215,7 @@ func (p *FilePRFinder) storeAll(filePRs map[string][]int) error {
 
 func (p *FilePRFinder) store(path string, prs []int) error {
 	return proxycache.Put(
-		p.CacheDir,
+		p.cacheDir,
 		categoryFilePrs,
 		path,
 		prs,
@@ -204,7 +225,7 @@ func (p *FilePRFinder) store(path string, prs []int) error {
 func (p *FilePRFinder) load(path string) ([]int, error) {
 	return proxycache.Get(
 		context.Background(),
-		p.CacheDir,
+		p.cacheDir,
 		categoryFilePrs,
 		path,
 		nil,
