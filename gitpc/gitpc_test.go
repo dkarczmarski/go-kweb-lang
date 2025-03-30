@@ -1,9 +1,9 @@
-package gitcache_test
+package gitpc_test
 
 import (
 	"context"
 	"go-kweb-lang/git"
-	"go-kweb-lang/gitcache"
+	"go-kweb-lang/gitpc"
 	"go-kweb-lang/mocks"
 	"go-kweb-lang/proxycache"
 	"reflect"
@@ -65,9 +65,9 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 			}
 
 			cacheDir := t.TempDir()
-			gc := gitcache.New(mock, cacheDir)
+			gc := gitpc.New(mock, cacheDir)
 
-			category := gitcache.CategoryLastCommit
+			category := gitpc.CategoryLastCommit
 			key := path
 
 			tc.before(t, cacheDir, category, key)
@@ -146,9 +146,9 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 
 			cacheDir := t.TempDir()
 
-			gc := gitcache.New(mock, cacheDir)
+			gc := gitpc.New(mock, cacheDir)
 
-			category := gitcache.CategoryUpdates
+			category := gitpc.CategoryUpdates
 			key := path
 
 			tc.before(t, cacheDir, category, key)
@@ -223,9 +223,9 @@ func TestGitRepoCache_FindMergePoints(t *testing.T) {
 			}
 
 			cacheDir := t.TempDir()
-			gc := gitcache.New(mock, cacheDir)
+			gc := gitpc.New(mock, cacheDir)
 
-			category := gitcache.CategoryMergePoints
+			category := gitpc.CategoryMergePoints
 			key := commitID
 
 			tc.before(t, cacheDir, category, key)
@@ -259,7 +259,7 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 			before: func(t *testing.T, cacheDir, key string) {
 				t.Helper()
 
-				if err := proxycache.Put(cacheDir, gitcache.CategoryLastCommit, key, struct{}{}); err != nil {
+				if err := proxycache.Put(cacheDir, gitpc.CategoryLastCommit, key, struct{}{}); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -276,7 +276,7 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 			before: func(t *testing.T, cacheDir, key string) {
 				t.Helper()
 
-				if err := proxycache.Put(cacheDir, gitcache.CategoryUpdates, key, struct{}{}); err != nil {
+				if err := proxycache.Put(cacheDir, gitpc.CategoryUpdates, key, struct{}{}); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -297,7 +297,7 @@ func TestGitRepoCache_InvalidatePath(t *testing.T) {
 
 			cacheDir := t.TempDir()
 
-			gitCache := gitcache.New(mock, cacheDir)
+			gitCache := gitpc.New(mock, cacheDir)
 
 			samplePath := "dir1/path1"
 

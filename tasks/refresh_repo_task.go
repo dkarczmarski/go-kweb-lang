@@ -3,14 +3,14 @@ package tasks
 import (
 	"context"
 	"fmt"
-	"go-kweb-lang/gitcache"
+	"go-kweb-lang/gitpc"
 )
 
 type RefreshRepoTask struct {
-	gitRepoCache *gitcache.GitRepoCache
+	gitRepoCache *gitpc.GitRepoCache
 }
 
-func NewRefreshRepoTask(gitRepoCache *gitcache.GitRepoCache) *RefreshRepoTask {
+func NewRefreshRepoTask(gitRepoCache *gitpc.GitRepoCache) *RefreshRepoTask {
 	return &RefreshRepoTask{
 		gitRepoCache: gitRepoCache,
 	}

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"go-kweb-lang/git"
-	"go-kweb-lang/gitcache"
 	"go-kweb-lang/github"
+	"go-kweb-lang/gitpc"
 	"go-kweb-lang/langcnt"
 	"go-kweb-lang/pullreq"
 	"go-kweb-lang/tasks"
@@ -22,7 +22,7 @@ type Config struct {
 	Content                 *langcnt.Content
 	GitRepo                 git.Repo
 	TemplateData            *web.TemplateData
-	GitRepoCache            *gitcache.GitRepoCache
+	GitRepoCache            *gitpc.GitRepoCache
 	GitHub                  github.GitHub
 	PullRequests            *pullreq.PullRequests
 	RefreshRepoTask         *tasks.RefreshRepoTask
@@ -139,7 +139,7 @@ func NewRepoCache() func(*Config) error {
 			return fmt.Errorf("param CacheDirPath is not set: %w", ErrBadConfiguration)
 		}
 
-		config.GitRepoCache = gitcache.New(gitRepo, cacheDirPath)
+		config.GitRepoCache = gitpc.New(gitRepo, cacheDirPath)
 
 		return nil
 	}

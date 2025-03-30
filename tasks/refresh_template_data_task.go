@@ -3,7 +3,7 @@ package tasks
 import (
 	"context"
 	"fmt"
-	"go-kweb-lang/gitcache"
+	"go-kweb-lang/gitpc"
 	"go-kweb-lang/langcnt"
 	"go-kweb-lang/pullreq"
 	"go-kweb-lang/seek"
@@ -13,14 +13,14 @@ import (
 
 type RefreshTemplateDataTask struct {
 	content      *langcnt.Content
-	gitRepoCache *gitcache.GitRepoCache
+	gitRepoCache *gitpc.GitRepoCache
 	pullRequests *pullreq.PullRequests
 	templateData *web.TemplateData
 }
 
 func NewRefreshTemplateDataTask(
 	content *langcnt.Content,
-	gitRepoCache *gitcache.GitRepoCache,
+	gitRepoCache *gitpc.GitRepoCache,
 	pullRequests *pullreq.PullRequests,
 	templateData *web.TemplateData,
 ) *RefreshTemplateDataTask {

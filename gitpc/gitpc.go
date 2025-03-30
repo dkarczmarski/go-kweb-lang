@@ -1,5 +1,5 @@
 // Package gitcache is a cached wrapper for git repository.
-package gitcache
+package gitpc
 
 import (
 	"context"
