@@ -1,6 +1,7 @@
 package pullreq_test
 
 import (
+	"context"
 	"go-kweb-lang/github"
 	"go-kweb-lang/mocks"
 	"go-kweb-lang/pullreq"
@@ -112,7 +113,7 @@ func TestPullRequests_Update(t *testing.T) {
 		PerPage:  2,
 	}
 
-	err := prs.Update(langCode)
+	err := prs.Update(context.Background(), langCode)
 	if err != nil {
 		t.Fatal(err)
 	}

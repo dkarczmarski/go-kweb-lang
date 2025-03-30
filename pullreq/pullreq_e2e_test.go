@@ -3,6 +3,7 @@
 package pullreq_test
 
 import (
+	"context"
 	"go-kweb-lang/github"
 	"go-kweb-lang/pullreq"
 	"testing"
@@ -15,7 +16,7 @@ func TestPullRequests_Update_E2E(t *testing.T) {
 		PerPage: 10,
 	}
 
-	err := fpr.Update("pl")
+	err := fpr.Update(context.Background(), "pl")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,3 +1,4 @@
+// Package pullreq provides information about pull requests
 package pullreq
 
 import (
@@ -62,10 +63,10 @@ type prCommits struct {
 	CommitIds []string
 }
 
-func (p *PullRequests) fetchPRCommits(pr github.PRItem) ([]string, error) {
+func (p *PullRequests) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]string, error) {
 	key := fmt.Sprintf("%v", pr.Number)
 	commits, err := proxycache.Get(
-		context.Background(), // todo:
+		ctx,
 		p.CacheDir,
 		categoryPrCommits,
 		key,
@@ -127,7 +128,7 @@ func (p *PullRequests) convertToFilePRs(prsFiles map[int][]string) map[string][]
 	return filePRs
 }
 
-func (p *PullRequests) Update(langCode string) error {
+func (p *PullRequests) Update(ctx context.Context, langCode string) error {
 	log.Printf("[%v] updating the index of PR files", langCode)
 
 	prs, err := p.fetchLangOpenedPRs(langCode)
@@ -146,7 +147,7 @@ func (p *PullRequests) Update(langCode string) error {
 		log.Printf("[%v][%v/%v] getting commit ids for PR #%v",
 			langCode, prIndex, prsLen, pr.Number)
 
-		commitIds, err := p.fetchPRCommits(pr)
+		commitIds, err := p.fetchPRCommits(ctx, pr)
 		if err != nil {
 			return fmt.Errorf("error while getting commits for pr %v: %w", pr.Number, err)
 		}

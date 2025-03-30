@@ -24,7 +24,7 @@ func NewRefreshPRTask(
 }
 
 func (t *RefreshPRTask) Run(ctx context.Context, langCode string) error {
-	err := t.pullRequests.Update(langCode)
+	err := t.pullRequests.Update(ctx, langCode)
 	if err != nil {
 		return fmt.Errorf("error while updating PRs for lang %v: %w", langCode, err)
 	}
