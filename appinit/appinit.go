@@ -1,6 +1,7 @@
 package appinit
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -267,6 +268,12 @@ func NewRepoMonitor() func(*Config) error {
 	}
 }
 
+type githubOnPRUpdateTaskAdapter func(ctx context.Context) error
+
+func (f githubOnPRUpdateTaskAdapter) Run(ctx context.Context, langCode string) error {
+	return f(ctx)
+}
+
 func NewPRMonitor() func(*Config) error {
 	return func(config *Config) error {
 		gitHub := config.GitHub
@@ -289,12 +296,18 @@ func NewPRMonitor() func(*Config) error {
 			return fmt.Errorf("param RefreshPRTask is not set: %w", ErrBadConfiguration)
 		}
 
+		refreshTemplateDataTask := config.RefreshTemplateDataTask
+		if refreshTemplateDataTask == nil {
+			return fmt.Errorf("param RefreshTemplateDataTask is not set: %w", ErrBadConfiguration)
+		}
+
 		config.PRMonitor = github.NewPRMonitor(
 			gitHub,
 			cacheDirPath,
 			content,
 			[]github.OnPRUpdateTask{
 				refreshPRTask,
+				githubOnPRUpdateTaskAdapter(refreshTemplateDataTask.Run),
 			},
 		)
 
