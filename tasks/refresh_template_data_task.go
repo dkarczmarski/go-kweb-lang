@@ -66,7 +66,7 @@ func (t *RefreshTemplateDataTask) refreshLangModel(ctx context.Context, langCode
 	for _, seekerFileInfo := range seekerFileInfos {
 		file := filepath.Join("content", langCode, seekerFileInfo.LangRelPath)
 
-		prs, err := t.filePRFinder.ListPRs(file)
+		prs, err := t.filePRFinder.ListPR(file)
 		if err != nil {
 			// todo:
 			return err

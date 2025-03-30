@@ -120,19 +120,19 @@ func TestFilePRFinder_Update(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if numbers, err := filePRFinder.ListPRs("F1"); err != nil || !reflect.DeepEqual(numbers, []int{14, 12}) {
+	if numbers, err := filePRFinder.ListPR("F1"); err != nil || !reflect.DeepEqual(numbers, []int{14, 12}) {
 		t.Error(numbers, err)
 	}
-	if numbers, err := filePRFinder.ListPRs("F2"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
+	if numbers, err := filePRFinder.ListPR("F2"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
 		t.Error(numbers, err)
 	}
-	if numbers, err := filePRFinder.ListPRs("F3"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
+	if numbers, err := filePRFinder.ListPR("F3"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
 		t.Error(numbers, err)
 	}
-	if numbers, err := filePRFinder.ListPRs("F4"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
+	if numbers, err := filePRFinder.ListPR("F4"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
 		t.Error(numbers, err)
 	}
-	if numbers, err := filePRFinder.ListPRs("F5"); err != nil || !reflect.DeepEqual(numbers, []int{15}) {
+	if numbers, err := filePRFinder.ListPR("F5"); err != nil || !reflect.DeepEqual(numbers, []int{15}) {
 		t.Error(numbers, err)
 	}
 }

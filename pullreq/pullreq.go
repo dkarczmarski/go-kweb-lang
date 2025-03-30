@@ -149,6 +149,7 @@ func (p *FilePRFinder) convertToFilePRs(prsFiles map[int][]string) map[string][]
 	return filePRs
 }
 
+// Update updates the file-to-PR index for the given langCode.
 func (p *FilePRFinder) Update(ctx context.Context, langCode string) error {
 	log.Printf("[%v] updating the index of PR files", langCode)
 
@@ -235,6 +236,7 @@ func (p *FilePRFinder) load(path string) ([]int, error) {
 	)
 }
 
-func (p *FilePRFinder) ListPRs(path string) ([]int, error) {
+// ListPR lists PR numbers for the given path.
+func (p *FilePRFinder) ListPR(path string) ([]int, error) {
 	return p.load(path)
 }
