@@ -56,7 +56,7 @@ func (t *RefreshTemplateDataTask) Run(ctx context.Context) error {
 }
 
 func (t *RefreshTemplateDataTask) refreshLangModel(ctx context.Context, langCode string) error {
-	seeker := gitseek.NewGitLangSeeker(t.gitRepoProxyCache)
+	seeker := gitseek.New(t.gitRepoProxyCache)
 	seekerFileInfos, err := seeker.CheckLang(ctx, langCode)
 	if err != nil {
 		return fmt.Errorf("error while checking the content directory for the language code %s: %w", langCode, err)

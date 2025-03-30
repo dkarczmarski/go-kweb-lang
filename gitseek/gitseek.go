@@ -4,8 +4,9 @@ package gitseek
 import (
 	"context"
 	"fmt"
-	"go-kweb-lang/git"
 	"path/filepath"
+
+	"go-kweb-lang/git"
 )
 
 type FileInfo struct {
@@ -20,17 +21,17 @@ type OriginUpdate struct {
 	MergePoint git.CommitInfo
 }
 
-type GitLangSeeker struct {
+type GitSeek struct {
 	gitRepo git.Repo
 }
 
-func NewGitLangSeeker(gitRepo git.Repo) *GitLangSeeker {
-	return &GitLangSeeker{
+func New(gitRepo git.Repo) *GitSeek {
+	return &GitSeek{
 		gitRepo: gitRepo,
 	}
 }
 
-func (s *GitLangSeeker) CheckLang(ctx context.Context, langCode string) ([]FileInfo, error) {
+func (s *GitSeek) CheckLang(ctx context.Context, langCode string) ([]FileInfo, error) {
 	langRelPaths, err := s.gitRepo.ListFiles("/content/" + langCode)
 	if err != nil {
 		return nil, fmt.Errorf("error while listing content files for the language code %s: %w", langCode, err)
@@ -39,7 +40,7 @@ func (s *GitLangSeeker) CheckLang(ctx context.Context, langCode string) ([]FileI
 	return s.CheckFiles(ctx, langRelPaths, langCode)
 }
 
-func (s *GitLangSeeker) CheckFiles(ctx context.Context, langRelPaths []string, langCode string) ([]FileInfo, error) {
+func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCode string) ([]FileInfo, error) {
 	fileInfoList := make([]FileInfo, 0, len(langRelPaths))
 
 	for _, langRelPath := range langRelPaths {
