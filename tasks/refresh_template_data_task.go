@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 
 	"go-kweb-lang/gitpc"
+	"go-kweb-lang/gitseek"
 	"go-kweb-lang/langcnt"
 	"go-kweb-lang/pullreq"
-	"go-kweb-lang/seek"
 	"go-kweb-lang/web"
 )
 
@@ -56,7 +56,7 @@ func (t *RefreshTemplateDataTask) Run(ctx context.Context) error {
 }
 
 func (t *RefreshTemplateDataTask) refreshLangModel(ctx context.Context, langCode string) error {
-	seeker := seek.NewGitLangSeeker(t.gitRepoProxyCache)
+	seeker := gitseek.NewGitLangSeeker(t.gitRepoProxyCache)
 	seekerFileInfos, err := seeker.CheckLang(ctx, langCode)
 	if err != nil {
 		return fmt.Errorf("error while checking the content directory for the language code %s: %w", langCode, err)

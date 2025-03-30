@@ -3,7 +3,7 @@ package web
 import (
 	"fmt"
 	"go-kweb-lang/git"
-	"go-kweb-lang/seek"
+	"go-kweb-lang/gitseek"
 )
 
 type LangModel struct {
@@ -29,7 +29,7 @@ type CommitLinkModel struct {
 }
 
 type FileInfo struct {
-	seek.FileInfo
+	gitseek.FileInfo
 	PRs []int
 }
 

@@ -1,5 +1,5 @@
-// Package seek seeks for differences between the EN and other languages content
-package seek
+// Package gitseek seeks for differences between the EN and other languages content
+package gitseek
 
 import (
 	"context"
