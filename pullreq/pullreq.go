@@ -4,10 +4,11 @@ package pullreq
 import (
 	"context"
 	"fmt"
-	"go-kweb-lang/github"
-	"go-kweb-lang/proxycache"
 	"log"
 	"sort"
+
+	"go-kweb-lang/github"
+	"go-kweb-lang/proxycache"
 )
 
 const (
@@ -16,13 +17,13 @@ const (
 	categoryFilePrs     = "pr-fileprs"
 )
 
-type PullRequests struct {
+type FilePRFinder struct {
 	GitHub   github.GitHub
 	CacheDir string
 	PerPage  int
 }
 
-func (p *PullRequests) fetchLangOpenedPRs(langCode string) ([]github.PRItem, error) {
+func (p *FilePRFinder) fetchLangOpenedPRs(langCode string) ([]github.PRItem, error) {
 	var prs []github.PRItem
 
 	var maxUpdatedAt string
@@ -63,7 +64,7 @@ type prCommits struct {
 	CommitIds []string
 }
 
-func (p *PullRequests) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]string, error) {
+func (p *FilePRFinder) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]string, error) {
 	key := fmt.Sprintf("%v", pr.Number)
 	commits, err := proxycache.Get(
 		ctx,
@@ -90,7 +91,6 @@ func (p *PullRequests) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]
 			return prCommits{pr.UpdatedAt, commitIds}, nil
 		},
 	)
-
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (p *PullRequests) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]
 	return commits.CommitIds, nil
 }
 
-func (p *PullRequests) fetchCommitFiles(commitID string) (*github.CommitFiles, error) {
+func (p *FilePRFinder) fetchCommitFiles(commitID string) (*github.CommitFiles, error) {
 	return proxycache.Get(
 		context.Background(), // todo:
 		p.CacheDir,
@@ -111,7 +111,7 @@ func (p *PullRequests) fetchCommitFiles(commitID string) (*github.CommitFiles, e
 	)
 }
 
-func (p *PullRequests) convertToFilePRs(prsFiles map[int][]string) map[string][]int {
+func (p *FilePRFinder) convertToFilePRs(prsFiles map[int][]string) map[string][]int {
 	filePRs := make(map[string][]int)
 
 	for pr, files := range prsFiles {
@@ -128,7 +128,7 @@ func (p *PullRequests) convertToFilePRs(prsFiles map[int][]string) map[string][]
 	return filePRs
 }
 
-func (p *PullRequests) Update(ctx context.Context, langCode string) error {
+func (p *FilePRFinder) Update(ctx context.Context, langCode string) error {
 	log.Printf("[%v] updating the index of PR files", langCode)
 
 	prs, err := p.fetchLangOpenedPRs(langCode)
@@ -182,7 +182,7 @@ func (p *PullRequests) Update(ctx context.Context, langCode string) error {
 	return nil
 }
 
-func (p *PullRequests) storeAll(filePRs map[string][]int) error {
+func (p *FilePRFinder) storeAll(filePRs map[string][]int) error {
 	for path, prs := range filePRs {
 		if err := p.store(path, prs); err != nil {
 			return fmt.Errorf("error while storing PRs for file %v: %w", path, err)
@@ -192,7 +192,7 @@ func (p *PullRequests) storeAll(filePRs map[string][]int) error {
 	return nil
 }
 
-func (p *PullRequests) store(path string, prs []int) error {
+func (p *FilePRFinder) store(path string, prs []int) error {
 	return proxycache.Put(
 		p.CacheDir,
 		categoryFilePrs,
@@ -201,7 +201,7 @@ func (p *PullRequests) store(path string, prs []int) error {
 	)
 }
 
-func (p *PullRequests) load(path string) ([]int, error) {
+func (p *FilePRFinder) load(path string) ([]int, error) {
 	return proxycache.Get(
 		context.Background(),
 		p.CacheDir,
@@ -214,6 +214,6 @@ func (p *PullRequests) load(path string) ([]int, error) {
 	)
 }
 
-func (p *PullRequests) ListPRs(path string) ([]int, error) {
+func (p *FilePRFinder) ListPRs(path string) ([]int, error) {
 	return p.load(path)
 }

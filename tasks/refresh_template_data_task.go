@@ -15,20 +15,20 @@ import (
 type RefreshTemplateDataTask struct {
 	content           *langcnt.Content
 	gitRepoProxyCache *gitpc.ProxyCache
-	pullRequests      *pullreq.PullRequests
+	filePRFinder      *pullreq.FilePRFinder
 	templateData      *web.TemplateData
 }
 
 func NewRefreshTemplateDataTask(
 	content *langcnt.Content,
 	gitRepoProxyCache *gitpc.ProxyCache,
-	pullRequests *pullreq.PullRequests,
+	filePRFinder *pullreq.FilePRFinder,
 	templateData *web.TemplateData,
 ) *RefreshTemplateDataTask {
 	return &RefreshTemplateDataTask{
 		content:           content,
 		gitRepoProxyCache: gitRepoProxyCache,
-		pullRequests:      pullRequests,
+		filePRFinder:      filePRFinder,
 		templateData:      templateData,
 	}
 }
@@ -66,7 +66,7 @@ func (t *RefreshTemplateDataTask) refreshLangModel(ctx context.Context, langCode
 	for _, seekerFileInfo := range seekerFileInfos {
 		file := filepath.Join("content", langCode, seekerFileInfo.LangRelPath)
 
-		prs, err := t.pullRequests.ListPRs(file)
+		prs, err := t.filePRFinder.ListPRs(file)
 		if err != nil {
 			// todo:
 			return err

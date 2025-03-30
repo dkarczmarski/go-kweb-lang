@@ -9,22 +9,22 @@ import (
 )
 
 type RefreshPRTask struct {
-	pullRequests *pullreq.PullRequests
+	filePRFinder *pullreq.FilePRFinder
 	content      *langcnt.Content
 }
 
 func NewRefreshPRTask(
-	pullRequests *pullreq.PullRequests,
+	filePRFinder *pullreq.FilePRFinder,
 	content *langcnt.Content,
 ) *RefreshPRTask {
 	return &RefreshPRTask{
-		pullRequests: pullRequests,
+		filePRFinder: filePRFinder,
 		content:      content,
 	}
 }
 
 func (t *RefreshPRTask) Run(ctx context.Context, langCode string) error {
-	err := t.pullRequests.Update(ctx, langCode)
+	err := t.filePRFinder.Update(ctx, langCode)
 	if err != nil {
 		return fmt.Errorf("error while updating PRs for lang %v: %w", langCode, err)
 	}

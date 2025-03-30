@@ -4,14 +4,15 @@ package pullreq_test
 
 import (
 	"context"
+	"testing"
+
 	"go-kweb-lang/github"
 	"go-kweb-lang/pullreq"
-	"testing"
 )
 
-func TestPullRequests_Update_E2E(t *testing.T) {
+func TestFilePRFinder_Update_E2E(t *testing.T) {
 	gh := github.New()
-	fpr := &pullreq.PullRequests{
+	fpr := &pullreq.FilePRFinder{
 		GitHub:  gh,
 		PerPage: 10,
 	}

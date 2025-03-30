@@ -25,7 +25,7 @@ type Config struct {
 	TemplateData            *web.TemplateData
 	GitRepoProxyCache       *gitpc.ProxyCache
 	GitHub                  github.GitHub
-	PullRequests            *pullreq.PullRequests
+	FilePRFinder            *pullreq.FilePRFinder
 	RefreshRepoTask         *tasks.RefreshRepoTask
 	RefreshTemplateDataTask *tasks.RefreshTemplateDataTask
 	RefreshPRTask           *tasks.RefreshPRTask
@@ -156,7 +156,7 @@ func NewGitHub() func(*Config) error {
 	}
 }
 
-func NewPullRequests() func(*Config) error {
+func NewFilePRFinder() func(*Config) error {
 	return func(config *Config) error {
 		gitHub := config.GitHub
 		if gitHub == nil {
@@ -168,7 +168,7 @@ func NewPullRequests() func(*Config) error {
 			return fmt.Errorf("param CacheDirPath is not set: %w", ErrBadConfiguration)
 		}
 
-		config.PullRequests = &pullreq.PullRequests{
+		config.FilePRFinder = &pullreq.FilePRFinder{
 			GitHub:   gitHub,
 			CacheDir: cacheDirPath,
 			PerPage:  100,
@@ -203,9 +203,9 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 			return fmt.Errorf("param ProxyCache is not set: %w", ErrBadConfiguration)
 		}
 
-		prs := config.PullRequests
-		if prs == nil {
-			return fmt.Errorf("param PullRequests is not set: %w", ErrBadConfiguration)
+		filePRFinder := config.FilePRFinder
+		if filePRFinder == nil {
+			return fmt.Errorf("param FilePRFinder is not set: %w", ErrBadConfiguration)
 		}
 
 		templateData := config.TemplateData
@@ -216,7 +216,7 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 		config.RefreshTemplateDataTask = tasks.NewRefreshTemplateDataTask(
 			content,
 			gitRepoProxyCache,
-			prs,
+			filePRFinder,
 			templateData,
 		)
 
@@ -226,9 +226,9 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 
 func NewRefreshPRTask() func(*Config) error {
 	return func(config *Config) error {
-		prs := config.PullRequests
-		if prs == nil {
-			return fmt.Errorf("param PullRequests is not set: %w", ErrBadConfiguration)
+		filePRFinder := config.FilePRFinder
+		if filePRFinder == nil {
+			return fmt.Errorf("param FilePRFinder is not set: %w", ErrBadConfiguration)
 		}
 
 		content := config.Content
@@ -236,7 +236,7 @@ func NewRefreshPRTask() func(*Config) error {
 			return fmt.Errorf("param Content is not set: %w", ErrBadConfiguration)
 		}
 
-		config.RefreshPRTask = tasks.NewRefreshPRTask(prs, content)
+		config.RefreshPRTask = tasks.NewRefreshPRTask(filePRFinder, content)
 
 		return nil
 	}

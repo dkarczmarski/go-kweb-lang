@@ -5,10 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"go-kweb-lang/appinit"
-	"go-kweb-lang/git"
-	"go-kweb-lang/github"
-	"go-kweb-lang/tasks"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +12,11 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+
+	"go-kweb-lang/appinit"
+	"go-kweb-lang/git"
+	"go-kweb-lang/github"
+	"go-kweb-lang/tasks"
 )
 
 func createRepoIfNotExists(ctx context.Context, repoDirPath string, gitRepo git.Repo) error {
@@ -56,7 +57,7 @@ func runTasks(
 		return fmt.Errorf("error while running the refresh repository task: %w", err)
 	}
 	if err := refreshPRTask.RunAll(ctx); err != nil {
-		return fmt.Errorf("error while running the refresh repository task: %w", err) //todo
+		return fmt.Errorf("error while running the refresh repository task: %w", err) // todo
 	}
 	if err := refreshTemplateDataTask.Run(ctx); err != nil {
 		return fmt.Errorf("error while running the refresh template data task: %w", err)
@@ -86,11 +87,12 @@ func runChecks(
 		case <-time.After(delay):
 		}
 	}
-
 }
 
-var flagOnce = flag.Bool("once", false, "run synchronization once at startup")
-var flagInterval = flag.Int("interval", 0, "run repeatedly with delay of N minutes between runs")
+var (
+	flagOnce     = flag.Bool("once", false, "run synchronization once at startup")
+	flagInterval = flag.Int("interval", 0, "run repeatedly with delay of N minutes between runs")
+)
 
 func main() {
 	flag.Parse()
@@ -105,7 +107,7 @@ func main() {
 		appinit.NewRepo(),
 		appinit.NewRepoCache(),
 		appinit.NewGitHub(),
-		appinit.NewPullRequests(),
+		appinit.NewFilePRFinder(),
 		appinit.NewTemplateData(),
 		appinit.NewRefreshRepoTask(),
 		appinit.NewRefreshTemplateDataTask(),

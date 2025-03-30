@@ -2,20 +2,20 @@ package pullreq_test
 
 import (
 	"context"
+	"reflect"
+	"testing"
+
 	"go-kweb-lang/github"
 	"go-kweb-lang/mocks"
 	"go-kweb-lang/pullreq"
-	"reflect"
-	"testing"
 
 	"go.uber.org/mock/gomock"
 )
 
-func TestPullRequests_ListPRs(t *testing.T) {
-
+func TestFilePRFinder_ListPRs(t *testing.T) {
 }
 
-func TestPullRequests_Update(t *testing.T) {
+func TestFilePRFinder_Update(t *testing.T) {
 	langCode := "pl"
 
 	ctrl := gomock.NewController(t)
@@ -107,30 +107,30 @@ func TestPullRequests_Update(t *testing.T) {
 	mock.EXPECT().GetCommitFiles("C3").Return(&github.CommitFiles{Files: []string{"F1", "F4"}}, nil)
 	mock.EXPECT().GetCommitFiles("C4").Return(&github.CommitFiles{Files: []string{"F5"}}, nil)
 
-	prs := &pullreq.PullRequests{
+	filePRFinder := &pullreq.FilePRFinder{
 		GitHub:   mock,
 		CacheDir: t.TempDir(),
 		PerPage:  2,
 	}
 
-	err := prs.Update(context.Background(), langCode)
+	err := filePRFinder.Update(context.Background(), langCode)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if numbers, err := prs.ListPRs("F1"); err != nil || !reflect.DeepEqual(numbers, []int{14, 12}) {
+	if numbers, err := filePRFinder.ListPRs("F1"); err != nil || !reflect.DeepEqual(numbers, []int{14, 12}) {
 		t.Error(numbers, err)
 	}
-	if numbers, err := prs.ListPRs("F2"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
+	if numbers, err := filePRFinder.ListPRs("F2"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
 		t.Error(numbers, err)
 	}
-	if numbers, err := prs.ListPRs("F3"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
+	if numbers, err := filePRFinder.ListPRs("F3"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
 		t.Error(numbers, err)
 	}
-	if numbers, err := prs.ListPRs("F4"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
+	if numbers, err := filePRFinder.ListPRs("F4"); err != nil || !reflect.DeepEqual(numbers, []int{14}) {
 		t.Error(numbers, err)
 	}
-	if numbers, err := prs.ListPRs("F5"); err != nil || !reflect.DeepEqual(numbers, []int{15}) {
+	if numbers, err := filePRFinder.ListPRs("F5"); err != nil || !reflect.DeepEqual(numbers, []int{15}) {
 		t.Error(numbers, err)
 	}
 }
