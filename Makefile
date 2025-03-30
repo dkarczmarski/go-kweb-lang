@@ -12,6 +12,9 @@ test:
 dev-install-lint:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
+dev-install-gofumpt:
+	go install mvdan.cc/gofumpt@latest
+
 dev-lint:
 	golangci-lint run
 

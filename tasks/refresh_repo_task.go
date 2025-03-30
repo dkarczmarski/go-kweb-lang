@@ -7,10 +7,10 @@ import (
 )
 
 type RefreshRepoTask struct {
-	gitRepoCache *gitpc.GitRepoCache
+	gitRepoCache *gitpc.GitRepoProxyCache
 }
 
-func NewRefreshRepoTask(gitRepoCache *gitpc.GitRepoCache) *RefreshRepoTask {
+func NewRefreshRepoTask(gitRepoCache *gitpc.GitRepoProxyCache) *RefreshRepoTask {
 	return &RefreshRepoTask{
 		gitRepoCache: gitRepoCache,
 	}

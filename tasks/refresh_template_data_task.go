@@ -13,14 +13,14 @@ import (
 
 type RefreshTemplateDataTask struct {
 	content      *langcnt.Content
-	gitRepoCache *gitpc.GitRepoCache
+	gitRepoCache *gitpc.GitRepoProxyCache
 	pullRequests *pullreq.PullRequests
 	templateData *web.TemplateData
 }
 
 func NewRefreshTemplateDataTask(
 	content *langcnt.Content,
-	gitRepoCache *gitpc.GitRepoCache,
+	gitRepoCache *gitpc.GitRepoProxyCache,
 	pullRequests *pullreq.PullRequests,
 	templateData *web.TemplateData,
 ) *RefreshTemplateDataTask {

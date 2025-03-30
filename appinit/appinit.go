@@ -22,7 +22,7 @@ type Config struct {
 	Content                 *langcnt.Content
 	GitRepo                 git.Repo
 	TemplateData            *web.TemplateData
-	GitRepoCache            *gitpc.GitRepoCache
+	GitRepoCache            *gitpc.GitRepoProxyCache
 	GitHub                  github.GitHub
 	PullRequests            *pullreq.PullRequests
 	RefreshRepoTask         *tasks.RefreshRepoTask
@@ -181,7 +181,7 @@ func NewRefreshRepoTask() func(*Config) error {
 	return func(config *Config) error {
 		gitRepoCache := config.GitRepoCache
 		if gitRepoCache == nil {
-			return fmt.Errorf("param GitRepoCache is not set: %w", ErrBadConfiguration)
+			return fmt.Errorf("param GitRepoProxyCache is not set: %w", ErrBadConfiguration)
 		}
 
 		config.RefreshRepoTask = tasks.NewRefreshRepoTask(gitRepoCache)
@@ -199,7 +199,7 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 
 		gitRepoCache := config.GitRepoCache
 		if gitRepoCache == nil {
-			return fmt.Errorf("param GitRepoCache is not set: %w", ErrBadConfiguration)
+			return fmt.Errorf("param GitRepoProxyCache is not set: %w", ErrBadConfiguration)
 		}
 
 		prs := config.PullRequests

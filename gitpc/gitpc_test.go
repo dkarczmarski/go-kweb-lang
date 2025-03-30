@@ -2,12 +2,13 @@ package gitpc_test
 
 import (
 	"context"
+	"reflect"
+	"testing"
+
 	"go-kweb-lang/git"
 	"go-kweb-lang/gitpc"
 	"go-kweb-lang/mocks"
 	"go-kweb-lang/proxycache"
-	"reflect"
-	"testing"
 
 	"go.uber.org/mock/gomock"
 )
@@ -32,12 +33,14 @@ func TestGitRepoCache_FindFileLastCommit(t *testing.T) {
 			},
 			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
+
 				if proxycacheKeyExists(t, cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
+
 				if !proxycacheKeyExists(t, cacheDir, category, key) {
 					t.Errorf("cache key %s should exist", key)
 				}
@@ -112,12 +115,14 @@ func TestGitRepoCache_FindFileCommitsAfter(t *testing.T) {
 			},
 			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
+
 				if proxycacheKeyExists(t, cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
+
 				if !proxycacheKeyExists(t, cacheDir, category, key) {
 					t.Errorf("cache key %s should exist", key)
 				}
