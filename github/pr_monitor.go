@@ -3,9 +3,10 @@ package github
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"go-kweb-lang/langcnt"
 	"go-kweb-lang/proxycache"
-	"log"
 )
 
 type PRMonitor struct {
@@ -108,13 +109,13 @@ func (mon *PRMonitor) CheckLang(ctx context.Context, langCode string) (bool, err
 func (mon *PRMonitor) Check(ctx context.Context) error {
 	log.Printf("checking for PR changes")
 
-	langs, err := mon.langContent.Langs()
+	langCodes, err := mon.langContent.LangCodes()
 	if err != nil {
 		return fmt.Errorf("error while getting available languages: %w", err)
 	}
 
-	for _, lang := range langs {
-		if _, err := mon.CheckLang(ctx, lang); err != nil {
+	for _, langCode := range langCodes {
+		if _, err := mon.CheckLang(ctx, langCode); err != nil {
 			return fmt.Errorf("error while checking github for changes: %v", err)
 		}
 

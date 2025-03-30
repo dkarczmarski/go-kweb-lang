@@ -19,7 +19,7 @@ import (
 type Config struct {
 	RepoDirPath             string
 	CacheDirPath            string
-	AllowedLangs            []string
+	AllowedLangCodes        []string
 	Content                 *langcnt.Content
 	GitRepo                 git.Repo
 	TemplateData            *web.TemplateData
@@ -70,7 +70,7 @@ func GetEnv(withPrint bool) func(*Config) error {
 
 		config.RepoDirPath = repoDirPath
 		config.CacheDirPath = cacheDirPath
-		config.AllowedLangs = parseAllowedLangs(allowedLangs)
+		config.AllowedLangCodes = parseAllowedLangs(allowedLangs)
 
 		return nil
 	}
@@ -99,7 +99,7 @@ func NewContent() func(config *Config) error {
 		}
 
 		content := &langcnt.Content{RepoDir: repoDirPath}
-		content.SetAllowedLang(config.AllowedLangs)
+		content.SetAllowedLangCodes(config.AllowedLangCodes)
 
 		config.Content = content
 

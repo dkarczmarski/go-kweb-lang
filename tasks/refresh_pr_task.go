@@ -33,12 +33,12 @@ func (t *RefreshPRTask) Run(ctx context.Context, langCode string) error {
 }
 
 func (t *RefreshPRTask) RunAll(ctx context.Context) error {
-	langs, err := t.content.Langs()
+	langCodes, err := t.content.LangCodes()
 	if err != nil {
 		return fmt.Errorf("error while getting available languages: %w", err)
 	}
 
-	for _, langCode := range langs {
+	for _, langCode := range langCodes {
 		err := t.Run(ctx, langCode)
 		if err != nil {
 			return fmt.Errorf("error while updating PRs for lang %v: %w", langCode, err)

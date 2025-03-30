@@ -34,7 +34,7 @@ func NewRefreshTemplateDataTask(
 }
 
 func (t *RefreshTemplateDataTask) Run(ctx context.Context) error {
-	langs, err := t.content.Langs()
+	langCodes, err := t.content.LangCodes()
 	if err != nil {
 		return fmt.Errorf("error while getting available languages: %w", err)
 	}
@@ -46,8 +46,8 @@ func (t *RefreshTemplateDataTask) Run(ctx context.Context) error {
 
 	t.templateData.SetIndex(indexModel)
 
-	for _, lang := range langs {
-		if err := t.refreshLangModel(ctx, lang); err != nil {
+	for _, langCode := range langCodes {
+		if err := t.refreshLangModel(ctx, langCode); err != nil {
 			return err
 		}
 	}

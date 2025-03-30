@@ -11,26 +11,29 @@ import (
 type Content struct {
 	RepoDir string
 
-	allowedLang []string
+	allowedLangCodes []string
 }
 
-func (c *Content) SetAllowedLang(allowedLang []string) {
-	c.allowedLang = allowedLang
+// SetAllowedLangCodes sets a filter for available lang codes.
+func (c *Content) SetAllowedLangCodes(langCodes []string) {
+	c.allowedLangCodes = langCodes
 }
 
-func (c *Content) Langs() ([]string, error) {
+// LangCodes returns all lang codes based on the 'content' directory in the Kubernetes repository.
+// If a filter is set via SetAllowedLangCodes, it omits lang codes that are not in the filter.
+func (c *Content) LangCodes() ([]string, error) {
 	allLangs, err := listDirectories(filepath.Join(c.RepoDir, "content"))
 	if err != nil {
 		return nil, err
 	}
 
-	if len(c.allowedLang) == 0 {
+	if len(c.allowedLangCodes) == 0 {
 		return allLangs, nil
 	}
 
 	langs := make([]string, 0, len(allLangs))
 	for _, lang := range allLangs {
-		if !slices.Contains(c.allowedLang, lang) {
+		if !slices.Contains(c.allowedLangCodes, lang) {
 			continue
 		}
 
