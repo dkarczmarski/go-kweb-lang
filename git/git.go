@@ -28,6 +28,9 @@ type Repo interface {
 	// Create method do git clone with given url.
 	Create(ctx context.Context, url string) error
 
+	// Checkout checks out the revision specified by the commitID parameter.
+	Checkout(ctx context.Context, commitID string) error
+
 	// FileExists checks whether file exists in a repository.
 	FileExists(path string) (bool, error)
 
@@ -94,6 +97,20 @@ func (lr *localRepo) Create(ctx context.Context, url string) error {
 	)
 	if err != nil {
 		return fmt.Errorf("git command failed: %w", err)
+	}
+
+	return nil
+}
+
+func (lr *localRepo) Checkout(ctx context.Context, commitID string) error {
+	_, err := lr.runner.Exec(ctx, lr.path,
+		"git",
+		"checkout",
+		commitID,
+	)
+	if err != nil {
+		return fmt.Errorf("git command ( %v ) failed: %w",
+			fmt.Sprintf("git checkout %v", commitID), err)
 	}
 
 	return nil

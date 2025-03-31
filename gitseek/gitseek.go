@@ -19,7 +19,7 @@ type FileInfo struct {
 
 type OriginUpdate struct {
 	Commit     git.CommitInfo
-	MergePoint git.CommitInfo
+	MergePoint *git.CommitInfo
 }
 
 type GitSeek struct {
@@ -92,7 +92,8 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 			originUpdate.Commit = originCommitAfter
 
 			if len(mergePoints) > 0 {
-				originUpdate.MergePoint = mergePoints[len(mergePoints)-1] // todo: always the last? branch to branch to main possible?
+				mergePoint := mergePoints[len(mergePoints)-1]
+				originUpdate.MergePoint = &mergePoint // todo: always the last? branch to branch to main possible?
 			}
 
 			fileInfo.OriginUpdates = append(fileInfo.OriginUpdates, originUpdate)

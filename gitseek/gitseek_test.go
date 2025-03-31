@@ -2,9 +2,10 @@ package gitseek_test
 
 import (
 	"context"
-	"go-kweb-lang/git"
 	"reflect"
 	"testing"
+
+	"go-kweb-lang/git"
 
 	"go-kweb-lang/gitseek"
 	"go-kweb-lang/mocks"
@@ -30,7 +31,6 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 				mock.EXPECT().FileExists("content/en/path1").Return(false, nil)
 				mock.EXPECT().FindFileCommitsAfter(ctx, "content/en/path1", "CID1").
 					Return([]git.CommitInfo{}, nil)
-
 			},
 			expected: []gitseek.FileInfo{
 				{
@@ -93,7 +93,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 								DateTime: "DT2",
 								Comment:  "Comment2",
 							},
-							MergePoint: git.CommitInfo{
+							MergePoint: &git.CommitInfo{
 								CommitID: "CID4",
 								DateTime: "DT4",
 								Comment:  "Comment4",
@@ -177,7 +177,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 								DateTime: "DT2",
 								Comment:  "Comment2",
 							},
-							MergePoint: git.CommitInfo{
+							MergePoint: &git.CommitInfo{
 								CommitID: "CID4",
 								DateTime: "DT4",
 								Comment:  "Comment4",
@@ -199,7 +199,6 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 			gitSeek := gitseek.New(mock)
 
 			fileInfos, err := gitSeek.CheckFiles(ctx, []string{"path1"}, "pl")
-
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}

@@ -34,6 +34,11 @@ func (pc *ProxyCache) Create(ctx context.Context, url string) error {
 	return pc.gitRepo.Create(ctx, url)
 }
 
+// Checkout function is a plain proxy wrapper to git.Repo.
+func (pc *ProxyCache) Checkout(ctx context.Context, commitID string) error {
+	return pc.gitRepo.Checkout(ctx, commitID)
+}
+
 // FileExists function is a plain proxy wrapper to git.Repo.
 func (pc *ProxyCache) FileExists(path string) (bool, error) {
 	return pc.gitRepo.FileExists(path)

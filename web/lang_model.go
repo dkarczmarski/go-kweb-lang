@@ -54,9 +54,15 @@ func BuildLangModel(fileInfos []FileInfo) *LangModel {
 		fileModel.OriginStatus = fileInfo.OriginFileStatus
 
 		for _, originUpdate := range fileInfo.OriginUpdates {
+			var mergeCommit CommitLinkModel
+
+			if originUpdate.MergePoint != nil {
+				mergeCommit = toCommitLinkModel(*originUpdate.MergePoint)
+			}
+
 			fileModel.OriginUpdates = append(fileModel.OriginUpdates, OriginUpdate{
 				Commit:      toCommitLinkModel(originUpdate.Commit),
-				MergeCommit: toCommitLinkModel(originUpdate.MergePoint),
+				MergeCommit: mergeCommit,
 			})
 		}
 

@@ -41,6 +41,44 @@ func (m *MockRepo) EXPECT() *MockRepoMockRecorder {
 	return m.recorder
 }
 
+// Checkout mocks base method.
+func (m *MockRepo) Checkout(ctx context.Context, commitID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Checkout", ctx, commitID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Checkout indicates an expected call of Checkout.
+func (mr *MockRepoMockRecorder) Checkout(ctx, commitID any) *MockRepoCheckoutCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Checkout", reflect.TypeOf((*MockRepo)(nil).Checkout), ctx, commitID)
+	return &MockRepoCheckoutCall{Call: call}
+}
+
+// MockRepoCheckoutCall wrap *gomock.Call
+type MockRepoCheckoutCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoCheckoutCall) Return(arg0 error) *MockRepoCheckoutCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoCheckoutCall) Do(f func(context.Context, string) error) *MockRepoCheckoutCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoCheckoutCall) DoAndReturn(f func(context.Context, string) error) *MockRepoCheckoutCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // CommitFiles mocks base method.
 func (m *MockRepo) CommitFiles(ctx context.Context, commitID string) ([]string, error) {
 	m.ctrl.T.Helper()
