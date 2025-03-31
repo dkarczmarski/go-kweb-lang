@@ -16,6 +16,7 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 	ctx := context.Background()
 	repoDir := t.TempDir()
 	gitRepo := git.NewRepo(repoDir)
+
 	if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
 		t.Fatal(err)
 	}
@@ -44,12 +45,7 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 								DateTime: "2023-09-23T16:20:57-07:00",
 								Comment:  "add link for kubelet and cloud-controller-manager (#40931)",
 							},
-							// todo: this is not good. it should be nil. (#issue1)
-							MergePoint: &git.CommitInfo{
-								CommitID: "462a4f7700278d036ed290520c286e08d45d84e7",
-								DateTime: "2023-09-24T01:42:56-07:00",
-								Comment:  "Merge pull request #41260 from fyu17/patch-1",
-							},
+							MergePoint: nil,
 						},
 					},
 				},
