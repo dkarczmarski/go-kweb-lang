@@ -6,11 +6,12 @@ package git
 import (
 	"context"
 	"fmt"
-	"go-kweb-lang/git/internal"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"go-kweb-lang/git/internal"
 )
 
 // CommitInfo represents commit details.
@@ -30,6 +31,9 @@ type Repo interface {
 
 	// Checkout checks out the revision specified by the commitID parameter.
 	Checkout(ctx context.Context, commitID string) error
+
+	// MainBranchCommits lists all commits in the main branch
+	MainBranchCommits(ctx context.Context) ([]CommitInfo, error)
 
 	// FileExists checks whether file exists in a repository.
 	FileExists(path string) (bool, error)
@@ -116,6 +120,35 @@ func (lr *localRepo) Checkout(ctx context.Context, commitID string) error {
 	return nil
 }
 
+func (lr *localRepo) MainBranchCommits(ctx context.Context) ([]CommitInfo, error) {
+	out, err := lr.runner.Exec(ctx, lr.path,
+		"git",
+		"--no-pager",
+		"log",
+		"main",
+		"--pretty=format:%H %cd %s",
+		"--date=iso-strict",
+		"--first-parent",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("git command ( %v ) failed: %w",
+			"git --no-pager log main --pretty=format:\"%H %cd %s\" --date=iso-strict --first-parent", err)
+	}
+
+	if len(strings.TrimSpace(out)) == 0 {
+		return nil, nil
+	}
+
+	lines := outputToLines(out)
+	commits := make([]CommitInfo, 0, len(lines))
+
+	for _, line := range lines {
+		commits = append(commits, lineToCommitInfo(line))
+	}
+
+	return commits, nil
+}
+
 func (lr *localRepo) FileExists(path string) (bool, error) {
 	_, err := os.Stat(lr.path + "/" + path)
 	if os.IsNotExist(err) {
@@ -147,7 +180,6 @@ func (lr *localRepo) ListFiles(path string) ([]string, error) {
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to walk directory: %w", err)
 	}

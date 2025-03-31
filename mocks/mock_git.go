@@ -428,6 +428,45 @@ func (c *MockRepoListFilesCall) DoAndReturn(f func(string) ([]string, error)) *M
 	return c
 }
 
+// MainBranchCommits mocks base method.
+func (m *MockRepo) MainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MainBranchCommits", ctx)
+	ret0, _ := ret[0].([]git.CommitInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MainBranchCommits indicates an expected call of MainBranchCommits.
+func (mr *MockRepoMockRecorder) MainBranchCommits(ctx any) *MockRepoMainBranchCommitsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MainBranchCommits", reflect.TypeOf((*MockRepo)(nil).MainBranchCommits), ctx)
+	return &MockRepoMainBranchCommitsCall{Call: call}
+}
+
+// MockRepoMainBranchCommitsCall wrap *gomock.Call
+type MockRepoMainBranchCommitsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoMainBranchCommitsCall) Return(arg0 []git.CommitInfo, arg1 error) *MockRepoMainBranchCommitsCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoMainBranchCommitsCall) Do(f func(context.Context) ([]git.CommitInfo, error)) *MockRepoMainBranchCommitsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoMainBranchCommitsCall) DoAndReturn(f func(context.Context) ([]git.CommitInfo, error)) *MockRepoMainBranchCommitsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // Pull mocks base method.
 func (m *MockRepo) Pull(ctx context.Context) error {
 	m.ctrl.T.Helper()

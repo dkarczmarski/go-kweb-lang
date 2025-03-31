@@ -366,6 +366,8 @@ func TestProxyCache_PullRefresh(t *testing.T) {
 				mustProxycachePut(t, cacheDir, gitpc.CategoryLastCommit, "F11")
 				mustProxycachePut(t, cacheDir, gitpc.CategoryUpdates, "F11")
 
+				mustProxycachePut(t, cacheDir, gitpc.CategoryMainBranchCommits, "")
+
 				return []string{"F10", "F11", "F12"}
 			},
 		},
@@ -399,6 +401,10 @@ func TestProxyCache_PullRefresh(t *testing.T) {
 						t.Errorf("file %v should not exists", file)
 					}
 				}
+			}
+
+			if mustProxycacheKeyExists(t, cacheDir, gitpc.CategoryMainBranchCommits, "") {
+				t.Error("key should not exists")
 			}
 		})
 	}

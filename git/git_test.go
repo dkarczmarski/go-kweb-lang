@@ -2,10 +2,11 @@ package git_test
 
 import (
 	"context"
-	"go-kweb-lang/git"
 	"reflect"
 	"strings"
 	"testing"
+
+	"go-kweb-lang/git"
 )
 
 type testCommandRunner struct {
@@ -302,6 +303,84 @@ func TestLocalRepo_FindMergePoints(t *testing.T) {
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)
 			}
+			if !reflect.DeepEqual(commits, tc.expectedResult) {
+				t.Errorf("unexpected result\nactual   : %+v\nexptected: %+v", commits, tc.expectedResult)
+			}
+		})
+	}
+}
+
+func TestLocalRepo_MainBranchCommits(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		runnerOutput   string
+		runnerErr      error
+		expectedResult []git.CommitInfo
+	}{
+		{
+			name:           "no result",
+			runnerOutput:   "\n",
+			runnerErr:      nil,
+			expectedResult: nil,
+		},
+		{
+			name: "multiple lines result",
+			runnerOutput: "620d7f276c96789938869c67660d2f2aed42db49 2025-01-13T02:36:32-08:00 Merge pull request #48756 from sftim/20241118_localize_sidebar_tree_text\n" +
+				"d4ecebf3699b126405953b47ccfea43caba72a0b 2025-01-13T02:34:32-08:00 Merge pull request #49171 from yuto-kimura-g/fix/49116\n" +
+				"0e3a062280a55be00b533b258ee0e4c5e1f99f9d 2025-01-13T02:32:33-08:00 Merge pull request #49167 from shurup/upgrade-kubecon-section\n",
+			runnerErr: nil,
+			expectedResult: []git.CommitInfo{
+				{
+					CommitID: "620d7f276c96789938869c67660d2f2aed42db49",
+					DateTime: "2025-01-13T02:36:32-08:00",
+					Comment:  "Merge pull request #48756 from sftim/20241118_localize_sidebar_tree_text",
+				},
+				{
+					CommitID: "d4ecebf3699b126405953b47ccfea43caba72a0b",
+					DateTime: "2025-01-13T02:34:32-08:00",
+					Comment:  "Merge pull request #49171 from yuto-kimura-g/fix/49116",
+				},
+				{
+					CommitID: "0e3a062280a55be00b533b258ee0e4c5e1f99f9d",
+					DateTime: "2025-01-13T02:32:33-08:00",
+					Comment:  "Merge pull request #49167 from shurup/upgrade-kubecon-section",
+				},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			testRunner := &testCommandRunner{
+				output: tc.runnerOutput, err: tc.runnerErr,
+			}
+
+			repoDir := "/repo-dir"
+
+			repo := git.NewRepo(repoDir, func(config *git.NewRepoConfig) {
+				config.Runner = testRunner
+			})
+
+			commits, err := repo.MainBranchCommits(context.Background())
+
+			expectedWorkingDir := repoDir
+
+			if expectedWorkingDir != testRunner.WorkingDir {
+				t.Errorf("unexpected working dir\nactual   : %+v\nexptected: %+v",
+					testRunner.WorkingDir, expectedWorkingDir)
+			}
+
+			expectedCommand := "git --no-pager log main --pretty=format:%H %cd %s --date=iso-strict --first-parent"
+
+			if expectedCommand != testRunner.Command {
+				t.Errorf("unexpected command\nactual   : %+v\nexptected: %+v",
+					testRunner.Command, expectedCommand)
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
 			if !reflect.DeepEqual(commits, tc.expectedResult) {
 				t.Errorf("unexpected result\nactual   : %+v\nexptected: %+v", commits, tc.expectedResult)
 			}
