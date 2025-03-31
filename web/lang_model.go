@@ -31,7 +31,7 @@ type CommitLinkModel struct {
 
 type OriginUpdate struct {
 	Commit      CommitLinkModel
-	MergeCommit CommitLinkModel
+	MergeCommit *CommitLinkModel
 }
 
 type FileInfo struct {
@@ -54,16 +54,16 @@ func BuildLangModel(fileInfos []FileInfo) *LangModel {
 		fileModel.OriginStatus = fileInfo.OriginFileStatus
 
 		for _, originUpdate := range fileInfo.OriginUpdates {
-			var mergeCommit CommitLinkModel
-
-			if originUpdate.MergePoint != nil {
-				mergeCommit = toCommitLinkModel(*originUpdate.MergePoint)
+			originUpdateModel := OriginUpdate{
+				Commit: toCommitLinkModel(originUpdate.Commit),
 			}
 
-			fileModel.OriginUpdates = append(fileModel.OriginUpdates, OriginUpdate{
-				Commit:      toCommitLinkModel(originUpdate.Commit),
-				MergeCommit: mergeCommit,
-			})
+			if originUpdate.MergePoint != nil {
+				mergeCommit := toCommitLinkModel(*originUpdate.MergePoint)
+				originUpdateModel.MergeCommit = &mergeCommit
+			}
+
+			fileModel.OriginUpdates = append(fileModel.OriginUpdates, originUpdateModel)
 		}
 
 		var prLinks []LinkModel
