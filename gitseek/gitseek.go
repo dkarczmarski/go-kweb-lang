@@ -19,7 +19,7 @@ type FileInfo struct {
 
 type OriginUpdate struct {
 	Commit     git.CommitInfo
-	MergePoint git.CommitInfo
+	MergePoint *git.CommitInfo
 }
 
 type GitSeek struct {
@@ -46,6 +46,11 @@ func (s *GitSeek) CheckLang(ctx context.Context, langCode string) ([]FileInfo, e
 // for corresponding updates in the content/en directory.
 func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCode string) ([]FileInfo, error) {
 	fileInfoList := make([]FileInfo, 0, len(langRelPaths))
+
+	mainBranchCommits, err := s.gitRepo.MainBranchCommits(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	langRelPathsLen := len(langRelPaths)
 
@@ -82,17 +87,20 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 		}
 
 		for _, originCommitAfter := range originCommitsAfter {
-			mergePoints, err := s.gitRepo.FindMergePoints(ctx, originCommitAfter.CommitID)
-			if err != nil {
-				return nil, fmt.Errorf("error while finding merge points for the commit %s: %w",
-					originCommitAfter.CommitID, err)
+			var mergePoint *git.CommitInfo
+			if !containsCommit(mainBranchCommits, originCommitAfter.CommitID) {
+				mergePoints, err := s.gitRepo.FindMergePoints(ctx, originCommitAfter.CommitID)
+				if err != nil {
+					return nil, fmt.Errorf("error while finding merge points for the commit %s: %w",
+						originCommitAfter.CommitID, err)
+				}
+
+				mergePoint = findMergePoint(mainBranchCommits, mergePoints)
 			}
 
-			var originUpdate OriginUpdate
-			originUpdate.Commit = originCommitAfter
-
-			if len(mergePoints) > 0 {
-				originUpdate.MergePoint = mergePoints[len(mergePoints)-1] // todo: always the last? branch to branch to main possible?
+			originUpdate := OriginUpdate{
+				Commit:     originCommitAfter,
+				MergePoint: mergePoint,
 			}
 
 			fileInfo.OriginUpdates = append(fileInfo.OriginUpdates, originUpdate)
@@ -102,6 +110,34 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 	}
 
 	return fileInfoList, nil
+}
+
+func containsCommit(list []git.CommitInfo, commitID string) bool {
+	for i := range list {
+		if list[i].CommitID == commitID {
+			return true
+		}
+	}
+
+	return false
+}
+
+func findMergePoint(mainBranchCommits []git.CommitInfo, mergePoints []git.CommitInfo) *git.CommitInfo {
+	mergePointsLen := len(mergePoints)
+	if mergePointsLen == 0 {
+		return nil
+	}
+
+	for i := mergePointsLen - 1; 0 <= i; i-- {
+		mergePoint := mergePoints[i]
+		if containsCommit(mainBranchCommits, mergePoint.CommitID) {
+			return &mergePoint
+		}
+	}
+
+	log.Fatal("unexpected state: this should never happen")
+
+	return nil
 }
 
 func repoOriginFilePath(relPath string) string {

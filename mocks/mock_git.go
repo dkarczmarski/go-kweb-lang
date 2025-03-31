@@ -41,6 +41,44 @@ func (m *MockRepo) EXPECT() *MockRepoMockRecorder {
 	return m.recorder
 }
 
+// Checkout mocks base method.
+func (m *MockRepo) Checkout(ctx context.Context, commitID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Checkout", ctx, commitID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Checkout indicates an expected call of Checkout.
+func (mr *MockRepoMockRecorder) Checkout(ctx, commitID any) *MockRepoCheckoutCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Checkout", reflect.TypeOf((*MockRepo)(nil).Checkout), ctx, commitID)
+	return &MockRepoCheckoutCall{Call: call}
+}
+
+// MockRepoCheckoutCall wrap *gomock.Call
+type MockRepoCheckoutCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoCheckoutCall) Return(arg0 error) *MockRepoCheckoutCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoCheckoutCall) Do(f func(context.Context, string) error) *MockRepoCheckoutCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoCheckoutCall) DoAndReturn(f func(context.Context, string) error) *MockRepoCheckoutCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // CommitFiles mocks base method.
 func (m *MockRepo) CommitFiles(ctx context.Context, commitID string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -386,6 +424,45 @@ func (c *MockRepoListFilesCall) Do(f func(string) ([]string, error)) *MockRepoLi
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockRepoListFilesCall) DoAndReturn(f func(string) ([]string, error)) *MockRepoListFilesCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// MainBranchCommits mocks base method.
+func (m *MockRepo) MainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MainBranchCommits", ctx)
+	ret0, _ := ret[0].([]git.CommitInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MainBranchCommits indicates an expected call of MainBranchCommits.
+func (mr *MockRepoMockRecorder) MainBranchCommits(ctx any) *MockRepoMainBranchCommitsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MainBranchCommits", reflect.TypeOf((*MockRepo)(nil).MainBranchCommits), ctx)
+	return &MockRepoMainBranchCommitsCall{Call: call}
+}
+
+// MockRepoMainBranchCommitsCall wrap *gomock.Call
+type MockRepoMainBranchCommitsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoMainBranchCommitsCall) Return(arg0 []git.CommitInfo, arg1 error) *MockRepoMainBranchCommitsCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoMainBranchCommitsCall) Do(f func(context.Context) ([]git.CommitInfo, error)) *MockRepoMainBranchCommitsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoMainBranchCommitsCall) DoAndReturn(f func(context.Context) ([]git.CommitInfo, error)) *MockRepoMainBranchCommitsCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

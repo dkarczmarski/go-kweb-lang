@@ -2,9 +2,10 @@ package internal_test
 
 import (
 	"context"
-	"go-kweb-lang/git/internal"
 	"strings"
 	"testing"
+
+	"go-kweb-lang/git/internal"
 )
 
 func TestStdCommandRunner_Exec(t *testing.T) {

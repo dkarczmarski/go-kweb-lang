@@ -7,8 +7,7 @@ import (
 	"os/exec"
 )
 
-type StdCommandRunner struct {
-}
+type StdCommandRunner struct{}
 
 func (cr *StdCommandRunner) Exec(ctx context.Context, workingDir string, command string, args ...string) (string, error) {
 	var out bytes.Buffer

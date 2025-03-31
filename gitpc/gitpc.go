@@ -12,9 +12,10 @@ import (
 
 // todo: should it be private ?
 const (
-	CategoryLastCommit  = "git-file-last-commit"
-	CategoryUpdates     = "git-file-updates"
-	CategoryMergePoints = "git-merge-points"
+	CategoryLastCommit        = "git-file-last-commit"
+	CategoryUpdates           = "git-file-updates"
+	CategoryMergePoints       = "git-merge-points"
+	CategoryMainBranchCommits = "git-main-branch-commits"
 )
 
 type ProxyCache struct {
@@ -32,6 +33,29 @@ func New(gitRepo git.Repo, cacheDir string) *ProxyCache {
 // Create function is a plain proxy wrapper to git.Repo.
 func (pc *ProxyCache) Create(ctx context.Context, url string) error {
 	return pc.gitRepo.Create(ctx, url)
+}
+
+// Checkout function is a plain proxy wrapper to git.Repo.
+func (pc *ProxyCache) Checkout(ctx context.Context, commitID string) error {
+	return pc.gitRepo.Checkout(ctx, commitID)
+}
+
+// MainBranchCommits function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) MainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
+	return proxycache.Get(
+		ctx,
+		pc.cacheDir,
+		CategoryMainBranchCommits,
+		"",
+		nil,
+		func(ctx context.Context) ([]git.CommitInfo, error) {
+			return pc.gitRepo.MainBranchCommits(ctx)
+		},
+	)
+}
+
+func (pc *ProxyCache) invalidateMainBranchCommits() error {
+	return proxycache.InvalidateKey(pc.cacheDir, CategoryMainBranchCommits, "")
 }
 
 // FileExists function is a plain proxy wrapper to git.Repo.
@@ -152,6 +176,12 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 
 	if err := pc.gitRepo.Pull(ctx); err != nil {
 		return fmt.Errorf("git pull error: %w", err)
+	}
+
+	if len(freshCommits) > 0 {
+		if err := pc.invalidateMainBranchCommits(); err != nil {
+			return fmt.Errorf("error while invalidating main branch commits: %w", err)
+		}
 	}
 
 	return nil
