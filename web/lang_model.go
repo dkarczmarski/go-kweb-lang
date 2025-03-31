@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+
 	"go-kweb-lang/git"
 	"go-kweb-lang/gitseek"
 )
@@ -14,7 +15,7 @@ type FileModel struct {
 	LangRelPath    LinkModel
 	LangLastCommit git.CommitInfo
 	OriginStatus   string
-	OriginUpdates  []CommitLinkModel
+	OriginUpdates  []OriginUpdate
 	PRs            []LinkModel
 }
 
@@ -24,8 +25,13 @@ type FileLinkModel struct {
 }
 
 type CommitLinkModel struct {
-	Link   LinkModel
-	Commit git.CommitInfo
+	Link       LinkModel
+	CommitInfo git.CommitInfo
+}
+
+type OriginUpdate struct {
+	Commit      CommitLinkModel
+	MergeCommit CommitLinkModel
 }
 
 type FileInfo struct {
@@ -47,14 +53,11 @@ func BuildLangModel(fileInfos []FileInfo) *LangModel {
 		fileModel.LangLastCommit = fileInfo.LangCommit
 		fileModel.OriginStatus = fileInfo.OriginFileStatus
 
-		mergePoints := make(map[string]interface{})
 		for _, originUpdate := range fileInfo.OriginUpdates {
-			if _, ok := mergePoints[originUpdate.MergePoint.CommitID]; ok {
-				continue
-			}
-
-			fileModel.OriginUpdates = append(fileModel.OriginUpdates, toCommitLinkModel(originUpdate.MergePoint))
-			mergePoints[originUpdate.MergePoint.CommitID] = struct{}{}
+			fileModel.OriginUpdates = append(fileModel.OriginUpdates, OriginUpdate{
+				Commit:      toCommitLinkModel(originUpdate.Commit),
+				MergeCommit: toCommitLinkModel(originUpdate.MergePoint),
+			})
 		}
 
 		var prLinks []LinkModel
@@ -81,7 +84,7 @@ func toLangFileLinkModel(langRelPath string) LinkModel {
 
 func toCommitLinkModel(commit git.CommitInfo) CommitLinkModel {
 	return CommitLinkModel{
-		Link:   toLinkModel(commit.CommitID),
-		Commit: commit,
+		Link:       toLinkModel(commit.CommitID),
+		CommitInfo: commit,
 	}
 }

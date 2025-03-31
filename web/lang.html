@@ -13,8 +13,8 @@
     <thead>
     <tr>
         <th scope="col">Lang<br/>RelPath</th>
-        <th scope="col">Origin<br/>Status</th>
-        <th scope="col">Origin<br/>Updates</th>
+        <th scope="col">EN<br/>Status</th>
+        <th scope="col">EN<br/>Updates</th>
         <th scope="col">Lang<br/>PR</th>
     </tr>
     </thead>
@@ -30,7 +30,8 @@
             <ul>
                 {{range .OriginUpdates}}
                 <li>
-                    <a href="{{ .Link.URL }}">{{ .Commit.Comment }}</a> {{ truncate .Commit.DateTime 10 }}
+                    Commit: <a href="{{ .Commit.Link.URL }}">{{ .Commit.CommitInfo.Comment }}</a> {{ truncate .Commit.CommitInfo.DateTime 10 }} <br/>
+                    Merge Commit: <a href="{{ .MergeCommit.Link.URL }}">{{ .MergeCommit.CommitInfo.Comment }}</a> {{ truncate .MergeCommit.CommitInfo.DateTime 10 }}
                 </li>
                 {{end}}
             </ul>
