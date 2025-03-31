@@ -45,7 +45,9 @@ func BuildLangModel(fileInfos []FileInfo) *LangModel {
 	for _, fileInfo := range fileInfos {
 		var fileModel FileModel
 
-		if len(fileInfo.OriginFileStatus) == 0 && len(fileInfo.OriginUpdates) == 0 {
+		if len(fileInfo.OriginFileStatus) == 0 &&
+			len(fileInfo.OriginUpdates) == 0 &&
+			len(fileInfo.PRs) == 0 {
 			continue
 		}
 
