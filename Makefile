@@ -28,7 +28,7 @@ dev-gofumpt:
 	gofumpt -w .
 
 dev-test-build:
-	go build -o go-kweb-lang .
+	go build -o go-kweb-lang ./cmd
 
 dev-test-run:
 	ALLOWED_LANGS=pl ./go-kweb-lang --once
@@ -55,6 +55,7 @@ dev-test-docker-run:
 		-v kweb-repo:/app/kubernetes-website \
 		-e CACHE_DIR=/app/cache \
 		-e REPO_DIR=/app/kubernetes-website \
+		-e GITHUB_TOKEN=$$(cat .github-token.txt) \
 		-e ALLOWED_LANGS=pl \
 		-p 127.0.0.1:8080:8080 \
 		kweb-test \
