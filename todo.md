@@ -30,3 +30,16 @@ $ git --no-pager log main --pretty=format:"%H %cd %s" --date=iso-strict --first-
 $ git --no-pager log main --pretty=format:"%H %cd %s" --date=iso-strict --first-parent | grep 9ae1e9c13d69c5164c84ba10f1060d5f9d541214
 (no result)
 ```
+
+## issue 2
+
+after the change in the file selection condition, 
+files that have only a PR with no update can now appear on the list.
+the issue is that a PR may appear on the list even after it's closed, 
+because it's still treated as open. 
+this happens because we fetch only open PRs, and there's no cleanup mechanism.
+
+## issue 3
+
+when we detect updates, it's better to use the date of the fork point 
+rather than the commit date in the branch. 
