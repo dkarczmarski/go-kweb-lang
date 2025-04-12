@@ -3,9 +3,10 @@
 package github_test
 
 import (
-	"go-kweb-lang/github"
 	"log"
 	"testing"
+
+	"go-kweb-lang/github"
 )
 
 func TestGitHub_GetCommitFiles_E2E(t *testing.T) {

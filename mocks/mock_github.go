@@ -42,18 +42,18 @@ func (m *MockGitHub) EXPECT() *MockGitHubMockRecorder {
 }
 
 // GetCommitFiles mocks base method.
-func (m *MockGitHub) GetCommitFiles(commitID string) (*github.CommitFiles, error) {
+func (m *MockGitHub) GetCommitFiles(ctx context.Context, commitID string) (*github.CommitFiles, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCommitFiles", commitID)
+	ret := m.ctrl.Call(m, "GetCommitFiles", ctx, commitID)
 	ret0, _ := ret[0].(*github.CommitFiles)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetCommitFiles indicates an expected call of GetCommitFiles.
-func (mr *MockGitHubMockRecorder) GetCommitFiles(commitID any) *MockGitHubGetCommitFilesCall {
+func (mr *MockGitHubMockRecorder) GetCommitFiles(ctx, commitID any) *MockGitHubGetCommitFilesCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommitFiles", reflect.TypeOf((*MockGitHub)(nil).GetCommitFiles), commitID)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommitFiles", reflect.TypeOf((*MockGitHub)(nil).GetCommitFiles), ctx, commitID)
 	return &MockGitHubGetCommitFilesCall{Call: call}
 }
 
@@ -69,13 +69,13 @@ func (c *MockGitHubGetCommitFilesCall) Return(arg0 *github.CommitFiles, arg1 err
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockGitHubGetCommitFilesCall) Do(f func(string) (*github.CommitFiles, error)) *MockGitHubGetCommitFilesCall {
+func (c *MockGitHubGetCommitFilesCall) Do(f func(context.Context, string) (*github.CommitFiles, error)) *MockGitHubGetCommitFilesCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockGitHubGetCommitFilesCall) DoAndReturn(f func(string) (*github.CommitFiles, error)) *MockGitHubGetCommitFilesCall {
+func (c *MockGitHubGetCommitFilesCall) DoAndReturn(f func(context.Context, string) (*github.CommitFiles, error)) *MockGitHubGetCommitFilesCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -120,18 +120,18 @@ func (c *MockGitHubGetLatestCommitCall) DoAndReturn(f func(context.Context) (*gi
 }
 
 // GetPRCommits mocks base method.
-func (m *MockGitHub) GetPRCommits(prNumber int) ([]string, error) {
+func (m *MockGitHub) GetPRCommits(ctx context.Context, prNumber int) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPRCommits", prNumber)
+	ret := m.ctrl.Call(m, "GetPRCommits", ctx, prNumber)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetPRCommits indicates an expected call of GetPRCommits.
-func (mr *MockGitHubMockRecorder) GetPRCommits(prNumber any) *MockGitHubGetPRCommitsCall {
+func (mr *MockGitHubMockRecorder) GetPRCommits(ctx, prNumber any) *MockGitHubGetPRCommitsCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPRCommits", reflect.TypeOf((*MockGitHub)(nil).GetPRCommits), prNumber)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPRCommits", reflect.TypeOf((*MockGitHub)(nil).GetPRCommits), ctx, prNumber)
 	return &MockGitHubGetPRCommitsCall{Call: call}
 }
 
@@ -147,30 +147,30 @@ func (c *MockGitHubGetPRCommitsCall) Return(arg0 []string, arg1 error) *MockGitH
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockGitHubGetPRCommitsCall) Do(f func(int) ([]string, error)) *MockGitHubGetPRCommitsCall {
+func (c *MockGitHubGetPRCommitsCall) Do(f func(context.Context, int) ([]string, error)) *MockGitHubGetPRCommitsCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockGitHubGetPRCommitsCall) DoAndReturn(f func(int) ([]string, error)) *MockGitHubGetPRCommitsCall {
+func (c *MockGitHubGetPRCommitsCall) DoAndReturn(f func(context.Context, int) ([]string, error)) *MockGitHubGetPRCommitsCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // PRSearch mocks base method.
-func (m *MockGitHub) PRSearch(filter github.PRSearchFilter, page github.PageRequest) (*github.PRSearchResult, error) {
+func (m *MockGitHub) PRSearch(ctx context.Context, filter github.PRSearchFilter, page github.PageRequest) (*github.PRSearchResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PRSearch", filter, page)
+	ret := m.ctrl.Call(m, "PRSearch", ctx, filter, page)
 	ret0, _ := ret[0].(*github.PRSearchResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PRSearch indicates an expected call of PRSearch.
-func (mr *MockGitHubMockRecorder) PRSearch(filter, page any) *MockGitHubPRSearchCall {
+func (mr *MockGitHubMockRecorder) PRSearch(ctx, filter, page any) *MockGitHubPRSearchCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PRSearch", reflect.TypeOf((*MockGitHub)(nil).PRSearch), filter, page)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PRSearch", reflect.TypeOf((*MockGitHub)(nil).PRSearch), ctx, filter, page)
 	return &MockGitHubPRSearchCall{Call: call}
 }
 
@@ -186,13 +186,13 @@ func (c *MockGitHubPRSearchCall) Return(arg0 *github.PRSearchResult, arg1 error)
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockGitHubPRSearchCall) Do(f func(github.PRSearchFilter, github.PageRequest) (*github.PRSearchResult, error)) *MockGitHubPRSearchCall {
+func (c *MockGitHubPRSearchCall) Do(f func(context.Context, github.PRSearchFilter, github.PageRequest) (*github.PRSearchResult, error)) *MockGitHubPRSearchCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockGitHubPRSearchCall) DoAndReturn(f func(github.PRSearchFilter, github.PageRequest) (*github.PRSearchResult, error)) *MockGitHubPRSearchCall {
+func (c *MockGitHubPRSearchCall) DoAndReturn(f func(context.Context, github.PRSearchFilter, github.PageRequest) (*github.PRSearchResult, error)) *MockGitHubPRSearchCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

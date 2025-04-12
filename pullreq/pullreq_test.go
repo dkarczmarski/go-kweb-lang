@@ -16,6 +16,8 @@ func TestFilePRFinder_ListPRs(t *testing.T) {
 }
 
 func TestFilePRFinder_Update(t *testing.T) {
+	ctx := context.Background()
+
 	langCode := "pl"
 
 	ctrl := gomock.NewController(t)
@@ -23,6 +25,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 
 	mock.EXPECT().
 		PRSearch(
+			ctx,
 			github.PRSearchFilter{
 				LangCode:    langCode,
 				UpdatedFrom: "",
@@ -53,6 +56,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 
 	mock.EXPECT().
 		PRSearch(
+			ctx,
 			github.PRSearchFilter{
 				LangCode:    langCode,
 				UpdatedFrom: "D003",
@@ -79,6 +83,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 
 	mock.EXPECT().
 		PRSearch(
+			ctx,
 			github.PRSearchFilter{
 				LangCode:    langCode,
 				UpdatedFrom: "D004",
@@ -98,14 +103,14 @@ func TestFilePRFinder_Update(t *testing.T) {
 			nil,
 		).Times(1)
 
-	mock.EXPECT().GetPRCommits(12).Return([]string{"C1"}, nil)
-	mock.EXPECT().GetPRCommits(14).Return([]string{"C2", "C3"}, nil)
-	mock.EXPECT().GetPRCommits(15).Return([]string{"C4"}, nil)
+	mock.EXPECT().GetPRCommits(ctx, 12).Return([]string{"C1"}, nil)
+	mock.EXPECT().GetPRCommits(ctx, 14).Return([]string{"C2", "C3"}, nil)
+	mock.EXPECT().GetPRCommits(ctx, 15).Return([]string{"C4"}, nil)
 
-	mock.EXPECT().GetCommitFiles("C1").Return(&github.CommitFiles{Files: []string{"F1"}}, nil)
-	mock.EXPECT().GetCommitFiles("C2").Return(&github.CommitFiles{Files: []string{"F2", "F3"}}, nil)
-	mock.EXPECT().GetCommitFiles("C3").Return(&github.CommitFiles{Files: []string{"F1", "F4"}}, nil)
-	mock.EXPECT().GetCommitFiles("C4").Return(&github.CommitFiles{Files: []string{"F5"}}, nil)
+	mock.EXPECT().GetCommitFiles(ctx, "C1").Return(&github.CommitFiles{Files: []string{"F1"}}, nil)
+	mock.EXPECT().GetCommitFiles(ctx, "C2").Return(&github.CommitFiles{Files: []string{"F2", "F3"}}, nil)
+	mock.EXPECT().GetCommitFiles(ctx, "C3").Return(&github.CommitFiles{Files: []string{"F1", "F4"}}, nil)
+	mock.EXPECT().GetCommitFiles(ctx, "C4").Return(&github.CommitFiles{Files: []string{"F5"}}, nil)
 
 	filePRFinder := pullreq.NewFilePRFinder(
 		mock,

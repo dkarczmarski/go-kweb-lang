@@ -42,11 +42,11 @@ type CommitFiles struct {
 type GitHub interface {
 	GetLatestCommit(ctx context.Context) (*CommitInfo, error)
 
-	PRSearch(filter PRSearchFilter, page PageRequest) (*PRSearchResult, error)
+	PRSearch(ctx context.Context, filter PRSearchFilter, page PageRequest) (*PRSearchResult, error)
 
-	GetPRCommits(prNumber int) ([]string, error)
+	GetPRCommits(ctx context.Context, prNumber int) ([]string, error)
 
-	GetCommitFiles(commitID string) (*CommitFiles, error)
+	GetCommitFiles(ctx context.Context, commitID string) (*CommitFiles, error)
 }
 
 func New(opts ...func(*ClientConfig)) GitHub {

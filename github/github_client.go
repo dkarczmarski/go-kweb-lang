@@ -1,11 +1,14 @@
 package github
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -51,24 +54,14 @@ func NewClient(opts ...func(*ClientConfig)) *Client {
 }
 
 func (gh *Client) GetLatestCommit(ctx context.Context) (*CommitInfo, error) {
-	return gh.getCommit(ctx, fmt.Sprintf("%v/repos/kubernetes/website/commits?per_page=1", gh.BaseURL))
-}
+	urlStr := fmt.Sprintf("%v/repos/kubernetes/website/commits?per_page=1", gh.BaseURL)
 
-func (gh *Client) getCommit(ctx context.Context, url string) (*CommitInfo, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	resp, err := gh.httpGet(ctx, urlStr)
 	if err != nil {
-		return nil, fmt.Errorf("request creation error: %w", err)
+		return nil, err
 	}
 
-	resp, err := gh.HTTPClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("HTTP request error: %w", err)
-	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitHub API http code: %d", resp.StatusCode)
-	}
 
 	var commits []commitResponse
 	if err := json.NewDecoder(resp.Body).Decode(&commits); err != nil {
@@ -96,27 +89,24 @@ type commitResponse struct {
 	} `json:"commit"`
 }
 
-func (gh *Client) PRSearch(filter PRSearchFilter, page PageRequest) (*PRSearchResult, error) {
+func (gh *Client) PRSearch(ctx context.Context, filter PRSearchFilter, page PageRequest) (*PRSearchResult, error) {
 	urlStr := gh.buildPRSearchURL(filter, page)
 
-	resp, err := gh.HTTPClient.Get(urlStr)
+	resp, err := gh.httpGet(ctx, urlStr)
 	if err != nil {
-		return nil, fmt.Errorf("error while sending request to GitHub API: %v", err)
+		return nil, err
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error while reading GitHub API response: status %s", resp.Status)
-	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error while reading response body: %v", err)
+		return nil, fmt.Errorf("error while reading response body: %w", err)
 	}
 
 	var result PRSearchResult
 	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, fmt.Errorf("error while parsing JSON response: %v", err)
+		return nil, fmt.Errorf("error while parsing JSON response: %w", err)
 	}
 
 	return &result, nil
@@ -163,7 +153,7 @@ func (gh *Client) buildPRSearchURL(filter PRSearchFilter, page PageRequest) stri
 
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		log.Fatal(fmt.Errorf("error while parsing base URL: %v", err))
+		log.Fatal(fmt.Errorf("error while parsing base URL: %w", err))
 	}
 
 	u.RawQuery = fmt.Sprintf("q=%s&%s", q, query.Encode())
@@ -171,28 +161,19 @@ func (gh *Client) buildPRSearchURL(filter PRSearchFilter, page PageRequest) stri
 	return u.String()
 }
 
-func (gh *Client) GetPRCommits(prNumber int) ([]string, error) {
+func (gh *Client) GetPRCommits(ctx context.Context, prNumber int) ([]string, error) {
 	urlStr := fmt.Sprintf("%v/repos/kubernetes/website/pulls/%d/commits", gh.BaseURL, prNumber)
 
-	req, err := http.NewRequest("GET", urlStr, nil)
+	resp, err := gh.httpGet(ctx, urlStr)
 	if err != nil {
-		return nil, fmt.Errorf("error while creating request: %v", err)
+		return nil, err
 	}
 
-	resp, err := gh.HTTPClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error while sending request: %v", err)
-	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("error while reading response: status %s\nBody: %s", resp.Status, string(body))
-	}
 
 	var commits []commitItem
 	if err := json.NewDecoder(resp.Body).Decode(&commits); err != nil {
-		return nil, fmt.Errorf("error while decoding JSON: %v", err)
+		return nil, fmt.Errorf("error while decoding JSON: %w", err)
 	}
 
 	var commitIDs []string
@@ -207,28 +188,19 @@ type commitItem struct {
 	SHA string `json:"sha"`
 }
 
-func (gh *Client) GetCommitFiles(commitID string) (*CommitFiles, error) {
+func (gh *Client) GetCommitFiles(ctx context.Context, commitID string) (*CommitFiles, error) {
 	urlStr := fmt.Sprintf("%v/repos/kubernetes/website/commits/%s", gh.BaseURL, commitID)
 
-	req, err := http.NewRequest("GET", urlStr, nil)
+	resp, err := gh.httpGet(ctx, urlStr)
 	if err != nil {
-		return nil, fmt.Errorf("error while creating request: %v", err)
+		return nil, err
 	}
 
-	resp, err := gh.HTTPClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error while sending request: %v", err)
-	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("error while reading response: status %s\nbody: %s", resp.Status, string(body))
-	}
 
 	var detail commitModel
 	if err := json.NewDecoder(resp.Body).Decode(&detail); err != nil {
-		return nil, fmt.Errorf("error while decoding JSON: %v", err)
+		return nil, fmt.Errorf("error while decoding JSON: %w", err)
 	}
 
 	var files []string
@@ -247,4 +219,78 @@ type commitModel struct {
 	Files []struct {
 		Filename string `json:"filename"`
 	} `json:"files"`
+}
+
+func (gh *Client) httpGet(ctx context.Context, urlStr string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating request: %w", err)
+	}
+
+	resp, err := gh.HTTPClient.Do(req)
+	if err != nil {
+		if isTimeoutErr(err) {
+			err = wrapRetryableErr(err)
+		}
+
+		return nil, fmt.Errorf("error while sending request: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		defer resp.Body.Close()
+
+		body, _ := io.ReadAll(resp.Body)
+
+		if isRateLimitError(resp, body) {
+			err = wrapRetryableErr(errors.New("API rate limit exceeded"))
+		}
+
+		return nil, fmt.Errorf("error while reading response: %w\nstatus: %s\nbody: %s",
+			err, resp.Status, string(body))
+	}
+
+	return resp, err
+}
+
+func isTimeoutErr(err error) bool {
+	var netErr net.Error
+	return errors.As(err, &netErr) && netErr.Timeout()
+}
+
+func isRateLimitError(resp *http.Response, body []byte) bool {
+	if resp == nil {
+		return false
+	}
+
+	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
+		if remaining := resp.Header.Get("X-RateLimit-Remaining"); remaining == "0" {
+			return true
+		}
+
+		if len(body) > 0 && bytes.Contains(body, []byte("rate limit exceeded")) {
+			return true
+		}
+	}
+
+	return false
+}
+
+type retryErr struct {
+	err error
+}
+
+func (e *retryErr) Error() string {
+	return e.err.Error()
+}
+
+func (e *retryErr) Unwrap() error {
+	return e.err
+}
+
+func (e *retryErr) IsRetryable() bool {
+	return true
+}
+
+func wrapRetryableErr(err error) error {
+	return &retryErr{err}
 }

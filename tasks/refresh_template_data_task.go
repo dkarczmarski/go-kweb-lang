@@ -68,8 +68,7 @@ func (t *RefreshTemplateDataTask) refreshLangModel(ctx context.Context, langCode
 
 		prs, err := t.filePRFinder.ListPR(file)
 		if err != nil {
-			// todo:
-			return err
+			return fmt.Errorf("error while fetching pull requests: %w", err)
 		}
 
 		fileInfo := web.FileInfo{

@@ -1,13 +1,15 @@
 package github_test
 
 import (
+	"context"
 	_ "embed"
-	"go-kweb-lang/github"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"testing"
+
+	"go-kweb-lang/github"
 )
 
 //go:embed testdata/TestGitHub_GetCommitFiles.txt
@@ -35,6 +37,8 @@ func TestGitHub_GetCommitFiles_INT(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+
 			mockServer := newMockServer(t, tc.expectedURL, url.Values{}, tc.response)
 			defer mockServer.Close()
 
@@ -43,7 +47,7 @@ func TestGitHub_GetCommitFiles_INT(t *testing.T) {
 				BaseURL:    mockServer.URL,
 			}
 
-			actualResult, err := gh.GetCommitFiles(tc.commitID)
+			actualResult, err := gh.GetCommitFiles(ctx, tc.commitID)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -74,6 +78,8 @@ func TestGitHub_GetPRCommits_INT(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+
 			mockServer := newMockServer(t, tc.expectedURL, url.Values{}, tc.response)
 			defer mockServer.Close()
 
@@ -82,7 +88,7 @@ func TestGitHub_GetPRCommits_INT(t *testing.T) {
 				BaseURL:    mockServer.URL,
 			}
 
-			actualResult, err := gh.GetPRCommits(tc.prNumber)
+			actualResult, err := gh.GetPRCommits(ctx, tc.prNumber)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -139,6 +145,8 @@ func TestGitHub_PRSearch_INT(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+
 			mockServer := newMockServer(t, tc.expectedURL, tc.expectedQueryParams, tc.response)
 			defer mockServer.Close()
 
@@ -147,7 +155,7 @@ func TestGitHub_PRSearch_INT(t *testing.T) {
 				BaseURL:    mockServer.URL,
 			}
 
-			actualResult, err := gh.PRSearch(tc.filter, tc.page)
+			actualResult, err := gh.PRSearch(ctx, tc.filter, tc.page)
 			if err != nil {
 				t.Fatal(err)
 			}

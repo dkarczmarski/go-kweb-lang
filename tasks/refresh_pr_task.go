@@ -31,25 +31,3 @@ func (t *RefreshPRTask) Run(ctx context.Context, langCode string) error {
 
 	return nil
 }
-
-func (t *RefreshPRTask) RunAll(ctx context.Context) error {
-	langCodes, err := t.content.LangCodes()
-	if err != nil {
-		return fmt.Errorf("error while getting available languages: %w", err)
-	}
-
-	for _, langCode := range langCodes {
-		err := t.Run(ctx, langCode)
-		if err != nil {
-			return fmt.Errorf("error while updating PRs for lang %v: %w", langCode, err)
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-	}
-
-	return nil
-}

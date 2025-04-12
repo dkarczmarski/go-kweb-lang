@@ -1,7 +1,6 @@
 package appinit
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -30,8 +29,8 @@ type Config struct {
 	RefreshRepoTask         *tasks.RefreshRepoTask
 	RefreshTemplateDataTask *tasks.RefreshTemplateDataTask
 	RefreshPRTask           *tasks.RefreshPRTask
-	RepoMonitor             *github.RepoMonitor
-	PRMonitor               *github.PRMonitor
+	RefreshTask             *tasks.RefreshTask
+	GitHubMonitor           *github.Monitor
 	Server                  *web.Server
 }
 
@@ -239,56 +238,11 @@ func NewRefreshPRTask() func(*Config) error {
 	}
 }
 
-func NewRepoMonitor() func(*Config) error {
+func NewRefreshTask() func(*Config) error {
 	return func(config *Config) error {
-		gitHub := config.GitHub
-		if gitHub == nil {
-			return fmt.Errorf("param GitHub is not set: %w", ErrBadConfiguration)
-		}
-
 		refreshRepoTask := config.RefreshRepoTask
 		if refreshRepoTask == nil {
 			return fmt.Errorf("param RefreshRepoTask is not set: %w", ErrBadConfiguration)
-		}
-
-		refreshTemplateDataTask := config.RefreshTemplateDataTask
-		if refreshTemplateDataTask == nil {
-			return fmt.Errorf("param RefreshTemplateDataTask is not set: %w", ErrBadConfiguration)
-		}
-
-		config.RepoMonitor = github.NewRepoMonitor(
-			gitHub,
-			[]github.OnUpdateTask{
-				refreshRepoTask,
-				refreshTemplateDataTask,
-			},
-		)
-
-		return nil
-	}
-}
-
-type githubOnPRUpdateTaskAdapter func(ctx context.Context) error
-
-func (f githubOnPRUpdateTaskAdapter) Run(ctx context.Context, langCode string) error {
-	return f(ctx)
-}
-
-func NewPRMonitor() func(*Config) error {
-	return func(config *Config) error {
-		gitHub := config.GitHub
-		if gitHub == nil {
-			return fmt.Errorf("param GitHub is not set: %w", ErrBadConfiguration)
-		}
-
-		cacheDirPath := config.CacheDirPath
-		if len(cacheDirPath) == 0 {
-			return fmt.Errorf("param CacheDirPath is not set: %w", ErrBadConfiguration)
-		}
-
-		content := config.Content
-		if content == nil {
-			return fmt.Errorf("param Content is not set: %w", ErrBadConfiguration)
 		}
 
 		refreshPRTask := config.RefreshPRTask
@@ -301,14 +255,33 @@ func NewPRMonitor() func(*Config) error {
 			return fmt.Errorf("param RefreshTemplateDataTask is not set: %w", ErrBadConfiguration)
 		}
 
-		config.PRMonitor = github.NewPRMonitor(
-			gitHub,
-			cacheDirPath,
+		config.RefreshTask = tasks.NewRefreshTask(refreshRepoTask, refreshPRTask, refreshTemplateDataTask)
+
+		return nil
+	}
+}
+
+func NewGitHubMonitor() func(*Config) error {
+	return func(config *Config) error {
+		gh := config.GitHub
+		if gh == nil {
+			return fmt.Errorf("param GitHub is not set: %w", ErrBadConfiguration)
+		}
+
+		content := config.Content
+		if content == nil {
+			return fmt.Errorf("param Content is not set: %w", ErrBadConfiguration)
+		}
+
+		cacheDirPath := config.CacheDirPath
+		if len(cacheDirPath) == 0 {
+			return fmt.Errorf("param CacheDirPath is not set: %w", ErrBadConfiguration)
+		}
+
+		config.GitHubMonitor = github.NewMonitor(
+			gh,
 			content,
-			[]github.OnPRUpdateTask{
-				refreshPRTask,
-				githubOnPRUpdateTaskAdapter(refreshTemplateDataTask.Run),
-			},
+			github.NewMonitorFileStorage(cacheDirPath),
 		)
 
 		return nil

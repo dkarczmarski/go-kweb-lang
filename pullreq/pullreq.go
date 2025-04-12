@@ -44,12 +44,13 @@ func NewFilePRFinder(gitHub github.GitHub, cacheDir string, opts ...func(config 
 	}
 }
 
-func (p *FilePRFinder) fetchLangOpenedPRs(langCode string) ([]github.PRItem, error) {
+func (p *FilePRFinder) fetchLangOpenedPRs(ctx context.Context, langCode string) ([]github.PRItem, error) {
 	var prs []github.PRItem
 
 	var maxUpdatedAt string
 	for safetyCounter := 20; safetyCounter >= 0; safetyCounter-- {
 		result, err := p.gitHub.PRSearch(
+			ctx,
 			github.PRSearchFilter{
 				LangCode:    langCode,
 				UpdatedFrom: maxUpdatedAt,
@@ -104,7 +105,7 @@ func (p *FilePRFinder) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]
 		func(ctx context.Context) (prCommits, error) {
 			log.Printf("fetching commit list for PR #%v", pr.Number)
 
-			commitIds, err := p.gitHub.GetPRCommits(pr.Number)
+			commitIds, err := p.gitHub.GetPRCommits(ctx, pr.Number)
 			if err != nil {
 				return prCommits{}, err
 			}
@@ -119,15 +120,15 @@ func (p *FilePRFinder) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]
 	return commits.CommitIds, nil
 }
 
-func (p *FilePRFinder) fetchCommitFiles(commitID string) (*github.CommitFiles, error) {
+func (p *FilePRFinder) fetchCommitFiles(ctx context.Context, commitID string) (*github.CommitFiles, error) {
 	return proxycache.Get(
-		context.Background(), // todo:
+		ctx,
 		p.cacheDir,
 		categoryCommitFiles,
 		commitID,
 		nil,
 		func(ctx context.Context) (*github.CommitFiles, error) {
-			return p.gitHub.GetCommitFiles(commitID)
+			return p.gitHub.GetCommitFiles(ctx, commitID)
 		},
 	)
 }
@@ -153,7 +154,7 @@ func (p *FilePRFinder) convertToFilePRs(prsFiles map[int][]string) map[string][]
 func (p *FilePRFinder) Update(ctx context.Context, langCode string) error {
 	log.Printf("[%v] updating the index of PR files", langCode)
 
-	prs, err := p.fetchLangOpenedPRs(langCode)
+	prs, err := p.fetchLangOpenedPRs(ctx, langCode)
 	if err != nil {
 		return fmt.Errorf("error while getting pull requests: %w", err)
 	}
@@ -183,7 +184,7 @@ func (p *FilePRFinder) Update(ctx context.Context, langCode string) error {
 			log.Printf("[%v][%v/%v][%v/%v] getting file list for commit: %v",
 				langCode, prIndex, prsLen, commitIndex, commitIdsLen, commitID)
 
-			commitFiles, err := p.fetchCommitFiles(commitID)
+			commitFiles, err := p.fetchCommitFiles(ctx, commitID)
 			if err != nil {
 				return fmt.Errorf("error while getting files for commit id %v: %w", commitID, err)
 			}

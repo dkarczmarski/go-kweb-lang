@@ -13,10 +13,17 @@ import (
 	"syscall"
 	"time"
 
+	"go-kweb-lang/github"
+	"go-kweb-lang/langcnt"
+	"go-kweb-lang/tasks"
+
 	"go-kweb-lang/appinit"
 	"go-kweb-lang/git"
-	"go-kweb-lang/github"
-	"go-kweb-lang/tasks"
+)
+
+var (
+	flagOnce     = flag.Bool("once", false, "run synchronization once at startup")
+	flagInterval = flag.Int("interval", 0, "run repeatedly with delay of N minutes between runs")
 )
 
 func createRepoIfNotExists(ctx context.Context, repoDirPath string, gitRepo git.Repo) error {
@@ -47,52 +54,31 @@ func fileExists(path string) (bool, error) {
 	return true, nil
 }
 
-func runTasks(
-	ctx context.Context,
-	refreshRepoTask *tasks.RefreshRepoTask,
-	refreshPRTask *tasks.RefreshPRTask,
-	refreshTemplateDataTask *tasks.RefreshTemplateDataTask,
-) error {
-	if err := refreshRepoTask.Run(ctx); err != nil {
-		return fmt.Errorf("error while running the refresh repository task: %w", err)
-	}
-	if err := refreshPRTask.RunAll(ctx); err != nil {
-		return fmt.Errorf("error while running the refresh repository task: %w", err) // todo
-	}
-	if err := refreshTemplateDataTask.Run(ctx); err != nil {
-		return fmt.Errorf("error while running the refresh template data task: %w", err)
+func runOnce(ctx context.Context, content *langcnt.Content, refreshTask *tasks.RefreshTask) {
+	langCodes, err := content.LangCodes()
+	if err != nil {
+		log.Fatal(fmt.Errorf("error while getting available languages: %w", err))
 	}
 
-	return nil
+	if err := refreshTask.OnUpdate(ctx, true, langCodes); err != nil {
+		log.Fatal(err)
+	}
 }
 
-func runChecks(
+func runInterval(
 	ctx context.Context,
+	gitHubMonitor *github.Monitor,
+	refreshTask *tasks.RefreshTask,
 	delay time.Duration,
-	repoMonitor *github.RepoMonitor,
-	prMonitor *github.PRMonitor,
 ) {
-	for {
-		if err := repoMonitor.CheckRepo(ctx); err != nil {
-			log.Printf("error while checking github for changes: %v", err)
+	if err := gitHubMonitor.StartIntervalCheck(ctx, delay, refreshTask); err != nil {
+		if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+			log.Fatal(err)
 		}
 
-		if err := prMonitor.Check(ctx); err != nil {
-			log.Printf("error while cheking for PR updates: %v", err)
-		}
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(delay):
-		}
+		log.Println("context cancelled or deadline exceeded:", err)
 	}
 }
-
-var (
-	flagOnce     = flag.Bool("once", false, "run synchronization once at startup")
-	flagInterval = flag.Int("interval", 0, "run repeatedly with delay of N minutes between runs")
-)
 
 func main() {
 	flag.Parse()
@@ -112,30 +98,29 @@ func main() {
 		appinit.NewRefreshRepoTask(),
 		appinit.NewRefreshTemplateDataTask(),
 		appinit.NewRefreshPRTask(),
-		appinit.NewRepoMonitor(),
-		appinit.NewPRMonitor(),
+		appinit.NewRefreshTask(),
+		appinit.NewGitHubMonitor(),
 		appinit.NewServer(),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	repoDirPath := cfg.RepoDirPath
-	gitRepo := cfg.GitRepo
-	if err := createRepoIfNotExists(ctx, repoDirPath, gitRepo); err != nil {
+	if err := createRepoIfNotExists(ctx, cfg.RepoDirPath, cfg.GitRepo); err != nil {
 		log.Fatal(err)
 	}
 
-	if *flagOnce {
-		if err := runTasks(ctx, cfg.RefreshRepoTask, cfg.RefreshPRTask, cfg.RefreshTemplateDataTask); err != nil {
-			log.Fatal(err)
-		}
+	if *flagOnce && *flagInterval == 0 {
+		runOnce(ctx, cfg.Content, cfg.RefreshTask)
 	}
 
 	if *flagInterval > 0 {
-		delay := time.Minute * time.Duration(*flagInterval)
-
-		go runChecks(ctx, delay, cfg.RepoMonitor, cfg.PRMonitor)
+		go runInterval(
+			ctx,
+			cfg.GitHubMonitor,
+			cfg.RefreshTask,
+			time.Minute*time.Duration(*flagInterval),
+		)
 	}
 
 	server := cfg.Server
