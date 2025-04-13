@@ -13,20 +13,20 @@ import (
 )
 
 type RefreshTemplateDataTask struct {
-	content           *langcnt.Content
+	langCodesProvider *langcnt.LangCodesProvider
 	gitRepoProxyCache *gitpc.ProxyCache
 	filePRFinder      *pullreq.FilePRFinder
 	templateData      *web.TemplateData
 }
 
 func NewRefreshTemplateDataTask(
-	content *langcnt.Content,
+	langCodesProvider *langcnt.LangCodesProvider,
 	gitRepoProxyCache *gitpc.ProxyCache,
 	filePRFinder *pullreq.FilePRFinder,
 	templateData *web.TemplateData,
 ) *RefreshTemplateDataTask {
 	return &RefreshTemplateDataTask{
-		content:           content,
+		langCodesProvider: langCodesProvider,
 		gitRepoProxyCache: gitRepoProxyCache,
 		filePRFinder:      filePRFinder,
 		templateData:      templateData,
@@ -34,12 +34,12 @@ func NewRefreshTemplateDataTask(
 }
 
 func (t *RefreshTemplateDataTask) Run(ctx context.Context) error {
-	langCodes, err := t.content.LangCodes()
+	langCodes, err := t.langCodesProvider.LangCodes()
 	if err != nil {
 		return fmt.Errorf("error while getting available languages: %w", err)
 	}
 
-	indexModel, err := web.BuildIndexModel(t.content)
+	indexModel, err := web.BuildIndexModel(t.langCodesProvider)
 	if err != nil {
 		return fmt.Errorf("error while building index web model: %w", err)
 	}

@@ -6,7 +6,7 @@ import (
 	"go-kweb-lang/langcnt"
 )
 
-func BuildIndexModel(content *langcnt.Content) ([]LinkModel, error) {
+func BuildIndexModel(content *langcnt.LangCodesProvider) ([]LinkModel, error) {
 	langCodes, err := content.LangCodes()
 	if err != nil {
 		return nil, fmt.Errorf("error while getting available languages: %w", err)

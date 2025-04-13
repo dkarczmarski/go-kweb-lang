@@ -60,8 +60,8 @@ func fileExists(path string) (bool, error) {
 	return true, nil
 }
 
-func runOnce(ctx context.Context, content *langcnt.Content, refreshTask *tasks.RefreshTask) {
-	langCodes, err := content.LangCodes()
+func runOnce(ctx context.Context, langCodesProvider *langcnt.LangCodesProvider, refreshTask *tasks.RefreshTask) {
+	langCodes, err := langCodesProvider.LangCodes()
 	if err != nil {
 		log.Fatal(fmt.Errorf("error while getting available languages: %w", err))
 	}
@@ -94,7 +94,7 @@ func Run(ctx context.Context, cfg *appinit.Config) error {
 	}
 
 	if cfg.RunOnce && cfg.RunInterval == 0 {
-		runOnce(ctx, cfg.Content, cfg.RefreshTask)
+		runOnce(ctx, cfg.LangCodesProvider, cfg.RefreshTask)
 	}
 
 	if cfg.RunInterval > 0 {
@@ -144,7 +144,7 @@ func main() {
 		appinit.ReadGitHubTokenFile(true, true),
 
 		// create components
-		appinit.NewContent(),
+		appinit.NewLangCodesProvider(),
 		appinit.NewRepo(),
 		appinit.NewRepoCache(),
 		appinit.NewGitHub(),

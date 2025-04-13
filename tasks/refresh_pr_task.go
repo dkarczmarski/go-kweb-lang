@@ -9,17 +9,17 @@ import (
 )
 
 type RefreshPRTask struct {
-	filePRFinder *pullreq.FilePRFinder
-	content      *langcnt.Content
+	filePRFinder      *pullreq.FilePRFinder
+	langCodesProvider *langcnt.LangCodesProvider
 }
 
 func NewRefreshPRTask(
 	filePRFinder *pullreq.FilePRFinder,
-	content *langcnt.Content,
+	langCodesProvider *langcnt.LangCodesProvider,
 ) *RefreshPRTask {
 	return &RefreshPRTask{
-		filePRFinder: filePRFinder,
-		content:      content,
+		filePRFinder:      filePRFinder,
+		langCodesProvider: langCodesProvider,
 	}
 }
 

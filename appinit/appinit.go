@@ -25,7 +25,7 @@ type Config struct {
 	RunInterval             int
 	GitHubToken             string
 	GitHubTokenFile         string
-	Content                 *langcnt.Content
+	LangCodesProvider       *langcnt.LangCodesProvider
 	GitRepo                 git.Repo
 	TemplateData            *web.TemplateData
 	GitRepoProxyCache       *gitpc.ProxyCache
@@ -203,17 +203,17 @@ func ReadGitHubTokenFile(skipFileNotExist, skipEmptyFile bool) func(*Config) err
 	}
 }
 
-func NewContent() func(config *Config) error {
+func NewLangCodesProvider() func(config *Config) error {
 	return func(config *Config) error {
 		repoDirPath := config.RepoDir
 		if len(repoDirPath) == 0 {
 			return fmt.Errorf("param RepoDir is not set: %w", ErrBadConfiguration)
 		}
 
-		content := &langcnt.Content{RepoDir: repoDirPath}
-		content.SetLangCodes(config.LangCodes)
+		langCodesProvider := &langcnt.LangCodesProvider{RepoDir: repoDirPath}
+		langCodesProvider.SetLangCodesFilter(config.LangCodes)
 
-		config.Content = content
+		config.LangCodesProvider = langCodesProvider
 
 		return nil
 	}
@@ -301,9 +301,9 @@ func NewRefreshRepoTask() func(*Config) error {
 
 func NewRefreshTemplateDataTask() func(*Config) error {
 	return func(config *Config) error {
-		content := config.Content
-		if content == nil {
-			return fmt.Errorf("param Content is not set: %w", ErrBadConfiguration)
+		langCodesProvider := config.LangCodesProvider
+		if langCodesProvider == nil {
+			return fmt.Errorf("param LangCodesProvider is not set: %w", ErrBadConfiguration)
 		}
 
 		gitRepoProxyCache := config.GitRepoProxyCache
@@ -322,7 +322,7 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 		}
 
 		config.RefreshTemplateDataTask = tasks.NewRefreshTemplateDataTask(
-			content,
+			langCodesProvider,
 			gitRepoProxyCache,
 			filePRFinder,
 			templateData,
@@ -339,12 +339,12 @@ func NewRefreshPRTask() func(*Config) error {
 			return fmt.Errorf("param FilePRFinder is not set: %w", ErrBadConfiguration)
 		}
 
-		content := config.Content
-		if content == nil {
-			return fmt.Errorf("param Content is not set: %w", ErrBadConfiguration)
+		langCodesProvider := config.LangCodesProvider
+		if langCodesProvider == nil {
+			return fmt.Errorf("param LangCodesProvider is not set: %w", ErrBadConfiguration)
 		}
 
-		config.RefreshPRTask = tasks.NewRefreshPRTask(filePRFinder, content)
+		config.RefreshPRTask = tasks.NewRefreshPRTask(filePRFinder, langCodesProvider)
 
 		return nil
 	}
@@ -380,9 +380,9 @@ func NewGitHubMonitor() func(*Config) error {
 			return fmt.Errorf("param GitHub is not set: %w", ErrBadConfiguration)
 		}
 
-		content := config.Content
-		if content == nil {
-			return fmt.Errorf("param Content is not set: %w", ErrBadConfiguration)
+		langCodesProvider := config.LangCodesProvider
+		if langCodesProvider == nil {
+			return fmt.Errorf("param LangCodesProvider is not set: %w", ErrBadConfiguration)
 		}
 
 		cacheDirPath := config.CacheDir
@@ -392,7 +392,7 @@ func NewGitHubMonitor() func(*Config) error {
 
 		config.GitHubMonitor = github.NewMonitor(
 			gh,
-			content,
+			langCodesProvider,
 			github.NewMonitorFileStorage(cacheDirPath),
 		)
 
