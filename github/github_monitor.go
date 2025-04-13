@@ -227,6 +227,8 @@ func (mon *Monitor) prUpdatedLangCodes(ctx context.Context) ([]string, error) {
 		}
 	}
 
+	log.Printf("finished checking for PR changes")
+
 	return updatedLangCodes, nil
 }
 

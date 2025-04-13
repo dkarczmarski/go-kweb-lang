@@ -98,6 +98,10 @@ func Run(ctx context.Context, cfg *appinit.Config) error {
 	}
 
 	if cfg.RunInterval > 0 {
+		if err := cfg.RefreshTemplateDataTask.Run(ctx); err != nil {
+			return fmt.Errorf("error while refreshing web model: %w", err)
+		}
+
 		go runInterval(
 			ctx,
 			cfg.GitHubMonitor,
