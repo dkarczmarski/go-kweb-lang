@@ -14,13 +14,13 @@ type Content struct {
 	allowedLangCodes []string
 }
 
-// SetAllowedLangCodes sets a filter for available lang codes.
-func (c *Content) SetAllowedLangCodes(langCodes []string) {
+// SetLangCodes sets a filter for available lang codes.
+func (c *Content) SetLangCodes(langCodes []string) {
 	c.allowedLangCodes = langCodes
 }
 
 // LangCodes returns all lang codes based on the 'content' directory in the Kubernetes repository.
-// If a filter is set via SetAllowedLangCodes, it omits lang codes that are not in the filter.
+// If a filter is set via SetLangCodes, it omits lang codes that are not in the filter.
 func (c *Content) LangCodes() ([]string, error) {
 	allLangs, err := listDirectories(filepath.Join(c.RepoDir, "content"))
 	if err != nil {

@@ -31,10 +31,10 @@ dev-test-build:
 	go build -o go-kweb-lang ./cmd
 
 dev-test-run:
-	ALLOWED_LANGS=pl ./go-kweb-lang --once
+	LANG_CODES=pl ./go-kweb-lang --run-once
 
 dev-test-run-interval:
-	ALLOWED_LANGS=pl ./go-kweb-lang --interval 1
+	LANG_CODES=pl ./go-kweb-lang --run-interval 1
 
 dev-test-docker-build:
 	docker build -t kweb-test .
@@ -56,7 +56,7 @@ dev-test-docker-run:
 		-e CACHE_DIR=/app/cache \
 		-e REPO_DIR=/app/kubernetes-website \
 		-e GITHUB_TOKEN=$$(cat .github-token.txt) \
-		-e ALLOWED_LANGS=pl \
+		-e LANG_CODES=pl \
 		-p 127.0.0.1:8080:8080 \
 		kweb-test \
-		/app/go-kweb-lang --once
+		/app/go-kweb-lang --run-once

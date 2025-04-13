@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"go-kweb-lang/git"
@@ -17,9 +18,13 @@ import (
 )
 
 type Config struct {
-	RepoDirPath             string
-	CacheDirPath            string
-	AllowedLangCodes        []string
+	RepoDir                 string
+	CacheDir                string
+	LangCodes               []string
+	RunOnce                 bool
+	RunInterval             int
+	GitHubToken             string
+	GitHubTokenFile         string
 	Content                 *langcnt.Content
 	GitRepo                 git.Repo
 	TemplateData            *web.TemplateData
@@ -48,58 +53,165 @@ func Init(opts ...func(config *Config) error) (*Config, error) {
 	return &config, nil
 }
 
-func getEnvOrDefault(key, defaultValue string) string {
-	value, ok := os.LookupEnv(key)
-	if !ok {
-		return defaultValue
-	}
-	return value
-}
-
-func GetEnv(withPrint bool) func(*Config) error {
+func SetDefaultParams() func(*Config) error {
 	return func(config *Config) error {
-		repoDirPath := getEnvOrDefault("REPO_DIR", "../kubernetes-website")
-		cacheDirPath := getEnvOrDefault("CACHE_DIR", "./cache")
-		allowedLangs := getEnvOrDefault("ALLOWED_LANGS", "")
-
-		if withPrint {
-			log.Printf("REPO_DIR: %s", repoDirPath)
-			log.Printf("CACHE_DIR: %s", cacheDirPath)
-			log.Printf("ALLOWED_LANGS: %s", allowedLangs)
-		}
-
-		config.RepoDirPath = repoDirPath
-		config.CacheDirPath = cacheDirPath
-		config.AllowedLangCodes = parseAllowedLangs(allowedLangs)
+		config.RepoDir = "../kubernetes-website"
+		config.CacheDir = "./.appdata/cache"
+		config.GitHubTokenFile = ".github-token.txt"
 
 		return nil
 	}
 }
 
-func parseAllowedLangs(s string) []string {
+func getEnvValue(key string, consumer func(value string)) {
+	value, ok := os.LookupEnv(key)
+	if ok {
+		consumer(value)
+	}
+}
+
+func ParseEnvParams() func(*Config) error {
+	return func(config *Config) error {
+		getEnvValue("REPO_DIR", func(value string) {
+			config.RepoDir = value
+		})
+		getEnvValue("CACHE_DIR", func(value string) {
+			config.CacheDir = value
+		})
+		getEnvValue("LANG_CODES", func(value string) {
+			config.LangCodes = parseLangCodes(value)
+		})
+		getEnvValue("RUN_ONCE", func(value string) {
+			config.RunOnce, _ = strconv.ParseBool(value)
+		})
+		getEnvValue("RUN_INTERVAL", func(value string) {
+			config.RunInterval, _ = strconv.Atoi(value)
+		})
+		getEnvValue("GITHUB_TOKEN", func(value string) {
+			config.GitHubToken = value
+		})
+		getEnvValue("GITHUB_TOKEN_FILE", func(value string) {
+			config.GitHubTokenFile = value
+		})
+
+		return nil
+	}
+}
+
+func ParseFlagParams(
+	flagRepoDir *string,
+	flagCacheDir *string,
+	flagLangCodes *string,
+	flagOnce *bool,
+	flagInterval *int,
+	flagGitHubToken *string,
+	flagGitHubTokenFile *string,
+) func(*Config) error {
+	return func(config *Config) error {
+		if len(*flagLangCodes) > 0 {
+			config.LangCodes = parseLangCodes(*flagLangCodes)
+		}
+
+		if len(*flagRepoDir) > 0 {
+			config.RepoDir = *flagRepoDir
+		}
+
+		if len(*flagCacheDir) > 0 {
+			config.CacheDir = *flagCacheDir
+		}
+
+		// it can only be overridden to true
+		if *flagOnce {
+			config.RunOnce = *flagOnce
+		}
+
+		// it can only be overridden with a non-zero value
+		if *flagInterval > 0 {
+			config.RunInterval = *flagInterval
+		}
+
+		if len(*flagGitHubToken) > 0 {
+			config.GitHubToken = *flagGitHubToken
+		}
+
+		if len(*flagGitHubTokenFile) > 0 {
+			config.GitHubTokenFile = *flagGitHubTokenFile
+		}
+
+		return nil
+	}
+}
+
+func ShowParams(withPrint bool) func(*Config) error {
+	return func(config *Config) error {
+		if withPrint {
+			log.Printf("LANG_CODES: %s", config.LangCodes)
+			log.Printf("REPO_DIR: %s", config.RepoDir)
+			log.Printf("CACHE_DIR: %s", config.CacheDir)
+			log.Printf("RUN_ONCE: %v", config.RunOnce)
+			log.Printf("RUN_INTERVAL: %v", config.RunInterval)
+			log.Printf("GITHUB_TOKEN: %s", config.GitHubToken)
+			log.Printf("GITHUB_TOKEN_FILE: %s", config.GitHubTokenFile)
+		}
+
+		return nil
+	}
+}
+
+func parseLangCodes(s string) []string {
 	if len(strings.TrimSpace(s)) == 0 {
 		return nil
 	}
 
 	subs := strings.Split(s, ",")
-	allowedLangs := make([]string, 0, len(subs))
+	allowedLangCodes := make([]string, 0, len(subs))
 
 	for _, sub := range subs {
-		allowedLangs = append(allowedLangs, strings.TrimSpace(sub))
+		allowedLangCodes = append(allowedLangCodes, strings.TrimSpace(sub))
 	}
 
-	return allowedLangs
+	return allowedLangCodes
+}
+
+func ReadGitHubTokenFile(skipFileNotExist, skipEmptyFile bool) func(*Config) error {
+	return func(config *Config) error {
+		if len(config.GitHubTokenFile) > 0 {
+			b, err := os.ReadFile(config.GitHubTokenFile)
+			if err != nil {
+				if skipFileNotExist && os.IsNotExist(err) {
+					log.Printf("github token file does not exists")
+
+					return nil
+				}
+
+				return fmt.Errorf("error while reading github token file %v: %w",
+					config.GitHubTokenFile, err)
+			}
+
+			value := string(b)
+
+			if skipEmptyFile && len(strings.TrimSpace(value)) == 0 {
+				log.Printf("github token file is empty")
+
+				return nil
+			}
+
+			config.GitHubToken = value
+		}
+
+		return nil
+	}
 }
 
 func NewContent() func(config *Config) error {
 	return func(config *Config) error {
-		repoDirPath := config.RepoDirPath
+		repoDirPath := config.RepoDir
 		if len(repoDirPath) == 0 {
-			return fmt.Errorf("param RepoDirPath is not set: %w", ErrBadConfiguration)
+			return fmt.Errorf("param RepoDir is not set: %w", ErrBadConfiguration)
 		}
 
 		content := &langcnt.Content{RepoDir: repoDirPath}
-		content.SetAllowedLangCodes(config.AllowedLangCodes)
+		content.SetLangCodes(config.LangCodes)
 
 		config.Content = content
 
@@ -109,9 +221,9 @@ func NewContent() func(config *Config) error {
 
 func NewRepo() func(*Config) error {
 	return func(config *Config) error {
-		repoDirPath := config.RepoDirPath
+		repoDirPath := config.RepoDir
 		if len(repoDirPath) == 0 {
-			return fmt.Errorf("param RepoDirPath is not set: %w", ErrBadConfiguration)
+			return fmt.Errorf("param RepoDir is not set: %w", ErrBadConfiguration)
 		}
 
 		config.GitRepo = git.NewRepo(repoDirPath)
@@ -135,9 +247,9 @@ func NewRepoCache() func(*Config) error {
 			return fmt.Errorf("param GitRepo is not set: %w", ErrBadConfiguration)
 		}
 
-		cacheDirPath := config.CacheDirPath
+		cacheDirPath := config.CacheDir
 		if len(cacheDirPath) == 0 {
-			return fmt.Errorf("param CacheDirPath is not set: %w", ErrBadConfiguration)
+			return fmt.Errorf("param CacheDir is not set: %w", ErrBadConfiguration)
 		}
 
 		config.GitRepoProxyCache = gitpc.New(gitRepo, cacheDirPath)
@@ -148,8 +260,8 @@ func NewRepoCache() func(*Config) error {
 
 func NewGitHub() func(*Config) error {
 	return func(config *Config) error {
-		config.GitHub = github.New(func(config *github.ClientConfig) {
-			config.Token = os.Getenv("GITHUB_TOKEN")
+		config.GitHub = github.New(func(githubConfig *github.ClientConfig) {
+			githubConfig.Token = config.GitHubToken
 		})
 
 		return nil
@@ -163,9 +275,9 @@ func NewFilePRFinder() func(*Config) error {
 			return fmt.Errorf("param GitHub is not set: %w", ErrBadConfiguration)
 		}
 
-		cacheDirPath := config.CacheDirPath
+		cacheDirPath := config.CacheDir
 		if len(cacheDirPath) == 0 {
-			return fmt.Errorf("param CacheDirPath is not set: %w", ErrBadConfiguration)
+			return fmt.Errorf("param CacheDir is not set: %w", ErrBadConfiguration)
 		}
 
 		config.FilePRFinder = pullreq.NewFilePRFinder(gitHub, cacheDirPath)
@@ -273,9 +385,9 @@ func NewGitHubMonitor() func(*Config) error {
 			return fmt.Errorf("param Content is not set: %w", ErrBadConfiguration)
 		}
 
-		cacheDirPath := config.CacheDirPath
+		cacheDirPath := config.CacheDir
 		if len(cacheDirPath) == 0 {
-			return fmt.Errorf("param CacheDirPath is not set: %w", ErrBadConfiguration)
+			return fmt.Errorf("param CacheDir is not set: %w", ErrBadConfiguration)
 		}
 
 		config.GitHubMonitor = github.NewMonitor(

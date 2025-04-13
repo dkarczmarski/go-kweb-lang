@@ -22,8 +22,14 @@ import (
 )
 
 var (
-	flagOnce     = flag.Bool("once", false, "run synchronization once at startup")
-	flagInterval = flag.Int("interval", 0, "run repeatedly with delay of N minutes between runs")
+	flagRepoDir  = flag.String("repo-dir", "", "kubernetes website repository directory path")
+	flagCacheDir = flag.String("cache-dir", "",
+		"cache directory path")
+	flagLangCodes       = flag.String("lang-codes", "", "allowed lang codes")
+	flagRunOnce         = flag.Bool("run-once", false, "run synchronization once at startup")
+	flagRunInterval     = flag.Int("run-interval", 0, "run repeatedly with delay of N minutes between runs")
+	flagGitHubToken     = flag.String("github-token", "", "github api access token")
+	flagGitHubTokenFile = flag.String("github-token-file", "", "file path with github api access token")
 )
 
 func createRepoIfNotExists(ctx context.Context, repoDirPath string, gitRepo git.Repo) error {
@@ -80,46 +86,23 @@ func runInterval(
 	}
 }
 
-func main() {
-	flag.Parse()
+func Run(ctx context.Context, cfg *appinit.Config) error {
+	ctx, _ = signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 
-	log.Printf("run once: %v, interval: %v", *flagOnce, *flagInterval)
-
-	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-
-	cfg, err := appinit.Init(
-		appinit.GetEnv(true),
-		appinit.NewContent(),
-		appinit.NewRepo(),
-		appinit.NewRepoCache(),
-		appinit.NewGitHub(),
-		appinit.NewFilePRFinder(),
-		appinit.NewTemplateData(),
-		appinit.NewRefreshRepoTask(),
-		appinit.NewRefreshTemplateDataTask(),
-		appinit.NewRefreshPRTask(),
-		appinit.NewRefreshTask(),
-		appinit.NewGitHubMonitor(),
-		appinit.NewServer(),
-	)
-	if err != nil {
-		log.Fatal(err)
+	if err := createRepoIfNotExists(ctx, cfg.RepoDir, cfg.GitRepo); err != nil {
+		return err
 	}
 
-	if err := createRepoIfNotExists(ctx, cfg.RepoDirPath, cfg.GitRepo); err != nil {
-		log.Fatal(err)
-	}
-
-	if *flagOnce && *flagInterval == 0 {
+	if cfg.RunOnce && cfg.RunInterval == 0 {
 		runOnce(ctx, cfg.Content, cfg.RefreshTask)
 	}
 
-	if *flagInterval > 0 {
+	if cfg.RunInterval > 0 {
 		go runInterval(
 			ctx,
 			cfg.GitHubMonitor,
 			cfg.RefreshTask,
-			time.Minute*time.Duration(*flagInterval),
+			time.Minute*time.Duration(cfg.RunInterval),
 		)
 	}
 
@@ -135,6 +118,50 @@ func main() {
 
 	log.Println("starting web server")
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatal(fmt.Errorf("error while running http server: %w", err))
+		return fmt.Errorf("error while running http server: %w", err)
+	}
+
+	return nil
+}
+
+func main() {
+	flag.Parse()
+
+	cfg, err := appinit.Init(
+		// read params
+		appinit.SetDefaultParams(),
+		appinit.ParseEnvParams(),
+		appinit.ParseFlagParams(
+			flagRepoDir,
+			flagCacheDir,
+			flagLangCodes,
+			flagRunOnce,
+			flagRunInterval,
+			flagGitHubToken,
+			flagGitHubTokenFile,
+		),
+		appinit.ShowParams(true),
+		appinit.ReadGitHubTokenFile(true, true),
+
+		// create components
+		appinit.NewContent(),
+		appinit.NewRepo(),
+		appinit.NewRepoCache(),
+		appinit.NewGitHub(),
+		appinit.NewFilePRFinder(),
+		appinit.NewTemplateData(),
+		appinit.NewRefreshRepoTask(),
+		appinit.NewRefreshTemplateDataTask(),
+		appinit.NewRefreshPRTask(),
+		appinit.NewRefreshTask(),
+		appinit.NewGitHubMonitor(),
+		appinit.NewServer(),
+	)
+	if err != nil {
+		log.Fatal(fmt.Errorf("error while application configuration initialization: %w", err))
+	}
+
+	if err := Run(context.Background(), cfg); err != nil {
+		log.Fatal(err)
 	}
 }

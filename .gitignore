@@ -1,5 +1,7 @@
 .idea
 *.iml
+# replace cache with .appdata
 cache
+.appdata
 go-kweb-lang
 .github-token.txt
