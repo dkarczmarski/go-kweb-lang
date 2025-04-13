@@ -62,14 +62,15 @@ func (t *RefreshTemplateDataTask) refreshLangModel(ctx context.Context, langCode
 		return fmt.Errorf("error while checking the content directory for the language code %s: %w", langCode, err)
 	}
 
+	prIndex, err := t.filePRFinder.LangIndex(langCode)
+	if err != nil {
+		return fmt.Errorf("error while getting pull request index for lang code %v: %w", langCode, err)
+	}
+
 	var fileInfos []web.FileInfo
 	for _, seekerFileInfo := range seekerFileInfos {
 		file := filepath.Join("content", langCode, seekerFileInfo.LangRelPath)
-
-		prs, err := t.filePRFinder.ListPR(file)
-		if err != nil {
-			return fmt.Errorf("error while fetching pull requests: %w", err)
-		}
+		prs := prIndex[file]
 
 		fileInfo := web.FileInfo{
 			FileInfo: seekerFileInfo,
