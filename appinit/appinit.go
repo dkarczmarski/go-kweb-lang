@@ -55,7 +55,7 @@ func Init(opts ...func(config *Config) error) (*Config, error) {
 
 func SetDefaultParams() func(*Config) error {
 	return func(config *Config) error {
-		config.RepoDir = "../kubernetes-website"
+		config.RepoDir = "./.appdata/kubernetes-website"
 		config.CacheDir = "./.appdata/cache"
 		config.GitHubTokenFile = ".github-token.txt"
 
