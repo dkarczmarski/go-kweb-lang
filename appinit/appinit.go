@@ -179,7 +179,7 @@ func ReadGitHubTokenFile(skipFileNotExist, skipEmptyFile bool) func(*Config) err
 			b, err := os.ReadFile(config.GitHubTokenFile)
 			if err != nil {
 				if skipFileNotExist && os.IsNotExist(err) {
-					log.Printf("github token file does not exists")
+					log.Printf("github token file does not exist")
 
 					return nil
 				}

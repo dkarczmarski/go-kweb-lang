@@ -38,7 +38,7 @@ func createRepoIfNotExists(ctx context.Context, repoDirPath string, gitRepo git.
 		return fmt.Errorf("error while checking if a git repository exists: %w", err)
 	}
 	if !exists {
-		log.Println("repository doest not exist yet")
+		log.Println("repository does not exist yet. creating a new one...")
 		if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
 			return fmt.Errorf("error while creating kubernetes repository: %w", err)
 		}
