@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"slices"
 	"sort"
 
 	"go-kweb-lang/pullreq/internal"
@@ -145,7 +146,9 @@ func (p *FilePRFinder) convertToFilePRs(prsFiles map[int][]string) map[string][]
 
 	for pr, files := range prsFiles {
 		for _, file := range files {
-			filePRs[file] = append(filePRs[file], pr)
+			if !slices.Contains(filePRs[file], pr) {
+				filePRs[file] = append(filePRs[file], pr)
+			}
 		}
 	}
 
