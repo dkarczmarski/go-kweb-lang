@@ -19,4 +19,4 @@ COPY --from=builder /app/go-kweb-lang .
 
 EXPOSE 8080
 
-CMD ["/app/go-kweb-lang"]
+CMD ["/app/go-kweb-lang", "--run-once"]
