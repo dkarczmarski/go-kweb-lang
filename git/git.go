@@ -61,8 +61,8 @@ type Repo interface {
 	// Pull method do git pull.
 	Pull(ctx context.Context) error
 
-	// CommitFiles list all files that are in the commit with the commitID parameter.
-	CommitFiles(ctx context.Context, commitID string) ([]string, error)
+	// FilesInCommit list all files that are in the commit with the commitID parameter.
+	FilesInCommit(ctx context.Context, commitID string) ([]string, error)
 }
 
 type NewRepoConfig struct {
@@ -316,7 +316,7 @@ func (lr *localRepo) Pull(ctx context.Context) error {
 	return nil
 }
 
-func (lr *localRepo) CommitFiles(ctx context.Context, commitID string) ([]string, error) {
+func (lr *localRepo) FilesInCommit(ctx context.Context, commitID string) ([]string, error) {
 	out, err := lr.runner.Exec(ctx, lr.path,
 		"git",
 		"diff-tree",

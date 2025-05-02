@@ -359,8 +359,8 @@ func TestProxyCache_PullRefresh(t *testing.T) {
 						},
 					}, nil,
 				)
-				mock.EXPECT().CommitFiles(ctx, "CID1").Return([]string{"F10", "F11"}, nil)
-				mock.EXPECT().CommitFiles(ctx, "CID2").Return([]string{"F11", "F12"}, nil)
+				mock.EXPECT().FilesInCommit(ctx, "CID1").Return([]string{"F10", "F11"}, nil)
+				mock.EXPECT().FilesInCommit(ctx, "CID2").Return([]string{"F11", "F12"}, nil)
 
 				mustProxycachePut(t, cacheDir, gitpc.CategoryLastCommit, "F10")
 				mustProxycachePut(t, cacheDir, gitpc.CategoryLastCommit, "F11")

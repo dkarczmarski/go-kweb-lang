@@ -131,9 +131,9 @@ func (pc *ProxyCache) Pull(ctx context.Context) error {
 	return pc.gitRepo.Pull(ctx)
 }
 
-// CommitFiles function is a cache proxy wrapper to git.Repo.
-func (pc *ProxyCache) CommitFiles(ctx context.Context, commitID string) ([]string, error) {
-	return pc.gitRepo.CommitFiles(ctx, commitID)
+// FilesInCommit function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) FilesInCommit(ctx context.Context, commitID string) ([]string, error) {
+	return pc.gitRepo.FilesInCommit(ctx, commitID)
 }
 
 // todo: should it be private ?
@@ -162,7 +162,7 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 	}
 
 	for _, fc := range freshCommits {
-		commitFiles, err := pc.gitRepo.CommitFiles(ctx, fc.CommitID)
+		commitFiles, err := pc.gitRepo.FilesInCommit(ctx, fc.CommitID)
 		if err != nil {
 			return fmt.Errorf("git list files of commit %s error: %w", fc.CommitID, err)
 		}
