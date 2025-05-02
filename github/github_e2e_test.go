@@ -3,6 +3,7 @@
 package github_test
 
 import (
+	"context"
 	"log"
 	"testing"
 
@@ -10,9 +11,10 @@ import (
 )
 
 func TestGitHub_GetCommitFiles_E2E(t *testing.T) {
+	ctx := context.Background()
 	gh := github.New()
 
-	files, err := gh.GetCommitFiles("f9ef60a9cf2ce7fdc4e242c292d8ed728deab912")
+	files, err := gh.GetCommitFiles(ctx, "f9ef60a9cf2ce7fdc4e242c292d8ed728deab912")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -21,9 +23,10 @@ func TestGitHub_GetCommitFiles_E2E(t *testing.T) {
 }
 
 func TestGitHub_GetPRCommits_E2E(t *testing.T) {
+	ctx := context.Background()
 	gh := github.New()
 
-	commitIds, err := gh.GetPRCommits(50193)
+	commitIds, err := gh.GetPRCommits(ctx, 50193)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,6 +35,7 @@ func TestGitHub_GetPRCommits_E2E(t *testing.T) {
 }
 
 func TestGitHub_PRSearch_E2E(t *testing.T) {
+	ctx := context.Background()
 	gh := github.New()
 
 	var prs []github.PRItem
@@ -39,6 +43,7 @@ func TestGitHub_PRSearch_E2E(t *testing.T) {
 	var maxUpdatedAt string
 	for safetyCounter := 10; safetyCounter > 0; safetyCounter-- {
 		result, err := gh.PRSearch(
+			ctx,
 			github.PRSearchFilter{
 				LangCode:    "pl",
 				UpdatedFrom: maxUpdatedAt,
