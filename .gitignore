@@ -5,3 +5,4 @@ cache
 .appdata
 go-kweb-lang
 .github-token.txt
+git/testdata/repo

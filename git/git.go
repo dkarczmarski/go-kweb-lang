@@ -175,6 +175,10 @@ func (lr *localRepo) ListFiles(path string) ([]string, error) {
 				return fmt.Errorf("failed to compute relative path: %w", err)
 			}
 
+			if strings.HasPrefix(relPath, ".git/") {
+				return nil
+			}
+
 			files = append(files, relPath)
 		}
 
@@ -200,6 +204,8 @@ func (lr *localRepo) FindFileLastCommit(ctx context.Context, path string) (Commi
 	if err != nil {
 		return CommitInfo{}, fmt.Errorf("git command failed: %w", err)
 	}
+
+	// todo: probably it should be some "not-found" error
 	if len(strings.TrimSpace(out)) == 0 {
 		return CommitInfo{}, nil
 	}
