@@ -19,35 +19,24 @@ type localRepo struct {
 }
 
 func (lr *localRepo) Create(ctx context.Context, url string) error {
-	_, err := lr.runner.Exec(ctx, lr.path,
+	return execToErr(lr.exec(ctx, lr.path,
 		"git",
 		"clone",
 		url,
 		".",
-	)
-	if err != nil {
-		return fmt.Errorf("git command failed: %w", err)
-	}
-
-	return nil
+	))
 }
 
 func (lr *localRepo) Checkout(ctx context.Context, commitID string) error {
-	_, err := lr.runner.Exec(ctx, lr.path,
+	return execToErr(lr.exec(ctx, lr.path,
 		"git",
 		"checkout",
 		commitID,
-	)
-	if err != nil {
-		return fmt.Errorf("git command ( %v ) failed: %w",
-			fmt.Sprintf("git checkout %v", commitID), err)
-	}
-
-	return nil
+	))
 }
 
 func (lr *localRepo) MainBranchCommits(ctx context.Context) ([]CommitInfo, error) {
-	out, err := lr.runner.Exec(ctx, lr.path,
+	return execToCommitInfoSlice(lr.exec(ctx, lr.path,
 		"git",
 		"--no-pager",
 		"log",
@@ -55,24 +44,7 @@ func (lr *localRepo) MainBranchCommits(ctx context.Context) ([]CommitInfo, error
 		"--pretty=format:%H %cd %s",
 		"--date=iso-strict",
 		"--first-parent",
-	)
-	if err != nil {
-		return nil, fmt.Errorf("git command ( %v ) failed: %w",
-			"git --no-pager log main --pretty=format:\"%H %cd %s\" --date=iso-strict --first-parent", err)
-	}
-
-	if len(strings.TrimSpace(out)) == 0 {
-		return nil, nil
-	}
-
-	lines := outputToLines(out)
-	commits := make([]CommitInfo, 0, len(lines))
-
-	for _, line := range lines {
-		commits = append(commits, lineToCommitInfo(line))
-	}
-
-	return commits, nil
+	))
 }
 
 func (lr *localRepo) FileExists(path string) (bool, error) {
@@ -118,7 +90,7 @@ func (lr *localRepo) ListFiles(path string) ([]string, error) {
 }
 
 func (lr *localRepo) FindFileLastCommit(ctx context.Context, path string) (CommitInfo, error) {
-	out, err := lr.runner.Exec(ctx, lr.path,
+	return execToCommitInfo(lr.exec(ctx, lr.path,
 		"git",
 		"log",
 		"-1",
@@ -126,21 +98,11 @@ func (lr *localRepo) FindFileLastCommit(ctx context.Context, path string) (Commi
 		"--date=iso-strict",
 		"--",
 		path,
-	)
-	if err != nil {
-		return CommitInfo{}, fmt.Errorf("git command failed: %w", err)
-	}
-
-	// todo: probably it should be some "not-found" error
-	if len(strings.TrimSpace(out)) == 0 {
-		return CommitInfo{}, nil
-	}
-
-	return lineToCommitInfo(out), nil
+	))
 }
 
 func (lr *localRepo) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]CommitInfo, error) {
-	out, err := lr.runner.Exec(ctx, lr.path,
+	return execToCommitInfoSlice(lr.exec(ctx, lr.path,
 		"git",
 		"log",
 		"--pretty=format:%H %cd %s",
@@ -148,29 +110,13 @@ func (lr *localRepo) FindFileCommitsAfter(ctx context.Context, path string, comm
 		commitIDFrom+"..",
 		"--",
 		path,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("git command failed: %w", err)
-	}
-
-	if len(strings.TrimSpace(out)) == 0 {
-		return nil, nil
-	}
-
-	lines := outputToLines(out)
-	commits := make([]CommitInfo, 0, len(lines))
-
-	for _, line := range lines {
-		commits = append(commits, lineToCommitInfo(line))
-	}
-
-	return commits, nil
+	))
 }
 
 func (lr *localRepo) FindMergePoints(ctx context.Context, commitID string) ([]CommitInfo, error) {
 	// todo: probably we can do it better, to list only necessary merging point to the main branch
 	// todo: return result in reverse order?
-	out, err := lr.runner.Exec(ctx, lr.path,
+	return execToCommitInfoSlice(lr.exec(ctx, lr.path,
 		"git",
 		"--no-pager",
 		"log",
@@ -179,47 +125,71 @@ func (lr *localRepo) FindMergePoints(ctx context.Context, commitID string) ([]Co
 		"--pretty=format:%H %cd %s",
 		"--date=iso-strict",
 		commitID+"..main",
-	)
-	if err != nil {
-		return nil, fmt.Errorf("git command failed: %w", err)
-	}
-	if len(strings.TrimSpace(out)) == 0 {
-		return nil, nil
-	}
-
-	lines := outputToLines(out)
-	commits := make([]CommitInfo, 0, len(lines))
-
-	for _, line := range lines {
-		commits = append(commits, lineToCommitInfo(line))
-	}
-
-	return commits, nil
+	))
 }
 
 func (lr *localRepo) Fetch(ctx context.Context) error {
-	_, err := lr.runner.Exec(ctx, lr.path,
+	return execToErr(lr.exec(ctx, lr.path,
 		"git",
 		"fetch",
-	)
-	if err != nil {
-		return fmt.Errorf("git command failed: %w", err)
-	}
-
-	return nil
+	))
 }
 
 func (lr *localRepo) FreshCommits(ctx context.Context) ([]CommitInfo, error) {
-	out, err := lr.runner.Exec(ctx, lr.path,
+	return execToCommitInfoSlice(lr.exec(ctx, lr.path,
 		"git",
 		"--no-pager",
 		"log",
 		"--pretty=format:%H %cd %s",
 		"--date=iso-strict",
 		"main..origin/main",
-	)
+	))
+}
+
+func (lr *localRepo) Pull(ctx context.Context) error {
+	return execToErr(lr.exec(ctx, lr.path,
+		"git",
+		"pull",
+	))
+}
+
+func (lr *localRepo) FilesInCommit(ctx context.Context, commitID string) ([]string, error) {
+	return execToLines(lr.exec(ctx, lr.path,
+		"git",
+		"diff-tree",
+		"--no-commit-id",
+		"--name-only",
+		"-r",
+		commitID,
+	))
+}
+
+func (lr *localRepo) exec(ctx context.Context, workingDir string, cmd string, args ...string) (string, error) {
+	out, err := lr.runner.Exec(ctx, workingDir, cmd, args...)
 	if err != nil {
-		return nil, fmt.Errorf("git command failed: %w", err)
+		cmdStr := cmd + " " + strings.Join(args, " ")
+
+		return "", fmt.Errorf("git command ( %v ) at working dir %v failed: %w", cmdStr, workingDir, err)
+	}
+
+	return out, nil
+}
+
+func execToErr(out string, err error) error {
+	return err
+}
+
+func execToCommitInfo(out string, err error) (CommitInfo, error) {
+	if err != nil {
+		return CommitInfo{}, err
+	}
+
+	return lineToCommitInfo(out), nil
+}
+
+func execToCommitInfoSlice(out string, err error) ([]CommitInfo, error) {
+	if err != nil {
+		return nil, err
 	}
 
 	if len(strings.TrimSpace(out)) == 0 {
@@ -236,29 +206,9 @@ func (lr *localRepo) FreshCommits(ctx context.Context) ([]CommitInfo, error) {
 	return commits, nil
 }
 
-func (lr *localRepo) Pull(ctx context.Context) error {
-	_, err := lr.runner.Exec(ctx, lr.path,
-		"git",
-		"pull",
-	)
+func execToLines(out string, err error) ([]string, error) {
 	if err != nil {
-		return fmt.Errorf("git command failed: %w", err)
-	}
-
-	return nil
-}
-
-func (lr *localRepo) FilesInCommit(ctx context.Context, commitID string) ([]string, error) {
-	out, err := lr.runner.Exec(ctx, lr.path,
-		"git",
-		"diff-tree",
-		"--no-commit-id",
-		"--name-only",
-		"-r",
-		commitID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("git command failed: %w", err)
+		return nil, err
 	}
 
 	if len(strings.TrimSpace(out)) == 0 {
@@ -273,6 +223,10 @@ func outputToLines(out string) []string {
 }
 
 func lineToCommitInfo(line string) CommitInfo {
+	if len(strings.TrimSpace(line)) == 0 {
+		return CommitInfo{}
+	}
+
 	segs := strings.SplitN(line, " ", 3)
 	if len(segs) != 3 {
 		log.Fatalf("line syntax error: %s", line)
