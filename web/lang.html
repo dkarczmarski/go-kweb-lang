@@ -23,7 +23,11 @@
     <tr>
         <td>
             <a href="{{ .LangRelPath.URL }}">{{ .LangRelPath.Text }}</a><br/>
-            {{ truncate .LangLastCommit.DateTime 10 }}
+            Commit: {{ truncate .LangLastCommit.DateTime 10 }}
+            {{ if .LangForkCommit }}
+            <br/>
+            Fork Commit: {{ truncate .LangForkCommit.DateTime 10 }}
+            {{ end }}
         </td>
         <td>{{ .OriginStatus }}</td>
         <td>

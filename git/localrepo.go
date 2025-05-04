@@ -114,8 +114,6 @@ func (lr *localRepo) FindFileCommitsAfter(ctx context.Context, path string, comm
 }
 
 func (lr *localRepo) ListMergePoints(ctx context.Context, commitID string) ([]CommitInfo, error) {
-	// todo: probably we can do it better, to list only necessary merging point to the main branch
-	// todo: return result in reverse order?
 	return execToCommitInfoSlice(lr.exec(ctx, lr.path,
 		"git",
 		"--no-pager",
@@ -124,6 +122,7 @@ func (lr *localRepo) ListMergePoints(ctx context.Context, commitID string) ([]Co
 		"--merges",
 		"--pretty=format:%H %cd %s",
 		"--date=iso-strict",
+		"--reverse",
 		commitID+"..main",
 	))
 }
@@ -164,6 +163,17 @@ func (lr *localRepo) ListFilesInCommit(ctx context.Context, commitID string) ([]
 	))
 }
 
+func (lr *localRepo) ListAncestorCommits(ctx context.Context, commitID string) ([]CommitInfo, error) {
+	return execToCommitInfoSlice(lr.exec(ctx, lr.path,
+		"git",
+		"log",
+		"--first-parent",
+		"--pretty=format:%H %cd %s",
+		"--date=iso-strict",
+		commitID,
+	))
+}
+
 func (lr *localRepo) exec(ctx context.Context, workingDir string, cmd string, args ...string) (string, error) {
 	out, err := lr.runner.Exec(ctx, workingDir, cmd, args...)
 	if err != nil {
@@ -175,7 +185,7 @@ func (lr *localRepo) exec(ctx context.Context, workingDir string, cmd string, ar
 	return out, nil
 }
 
-func execToErr(out string, err error) error {
+func execToErr(_ string, err error) error {
 	return err
 }
 

@@ -15,6 +15,7 @@ const (
 	CategoryLastCommit        = "git-file-last-commit"
 	CategoryUpdates           = "git-file-updates"
 	CategoryMergePoints       = "git-merge-points"
+	CategoryAncestorCommits   = "git-ancestor-commits"
 	CategoryMainBranchCommits = "git-main-branch-commits"
 )
 
@@ -185,4 +186,20 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// ListAncestorCommits function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) ListAncestorCommits(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
+	key := commitID
+
+	return proxycache.Get(
+		ctx,
+		pc.cacheDir,
+		CategoryAncestorCommits,
+		key,
+		nil,
+		func(ctx context.Context) ([]git.CommitInfo, error) {
+			return pc.gitRepo.ListAncestorCommits(ctx, commitID)
+		},
+	)
 }

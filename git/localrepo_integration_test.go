@@ -381,9 +381,9 @@ func TestLocalRepo_FindMergePoints_Integration(t *testing.T) {
 			},
 			expectedResult: []git.CommitInfo{
 				{
-					CommitID: "91decf29e674f6faf478f9641b183725569382d0",
-					DateTime: "2020-01-15T00:00:00+00:00",
-					Comment:  "Merge branch 'branch3'",
+					CommitID: "01da95266faa3d418fa2c775ada3d9423ea1a598",
+					DateTime: "2020-01-11T00:00:00+00:00",
+					Comment:  "Merge branch 'branch2' into branch1",
 				},
 				{
 					CommitID: "5de1d14f917738d148657f1c8c198bfd8f2c5a27",
@@ -391,9 +391,9 @@ func TestLocalRepo_FindMergePoints_Integration(t *testing.T) {
 					Comment:  "Merge branch 'branch1'",
 				},
 				{
-					CommitID: "01da95266faa3d418fa2c775ada3d9423ea1a598",
-					DateTime: "2020-01-11T00:00:00+00:00",
-					Comment:  "Merge branch 'branch2' into branch1",
+					CommitID: "91decf29e674f6faf478f9641b183725569382d0",
+					DateTime: "2020-01-15T00:00:00+00:00",
+					Comment:  "Merge branch 'branch3'",
 				},
 			},
 		},
@@ -583,6 +583,142 @@ func TestLocalRepo_FilesInCommit_Integration(t *testing.T) {
 			gitRepo := git.NewRepo(repoPath)
 
 			result, err := gitRepo.ListFilesInCommit(ctx, tc.commitID)
+
+			if !tc.expectedErr(err) {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if !reflect.DeepEqual(tc.expectedResult, result) {
+				t.Errorf("unexpected result: %+v", result)
+			}
+		})
+	}
+}
+
+func TestLocalRepo_ListAncestorCommits_Integration(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		commitID       string
+		expectedErr    func(err error) bool
+		expectedResult []git.CommitInfo
+	}{
+		{
+			name:     "when commitID exists on the main branch",
+			commitID: "2a2c911b4a8e0e681dafa7b236446a9e42f47533",
+			expectedErr: func(err error) bool {
+				return err == nil
+			},
+			expectedResult: []git.CommitInfo{
+				{
+					CommitID: "2a2c911b4a8e0e681dafa7b236446a9e42f47533",
+					DateTime: "2020-01-05T00:00:00+00:00",
+					Comment:  "commit (main) file1.txt 2",
+				},
+				{
+					CommitID: "40eda29f9d285779f07b474a02920b6a379d8af0",
+					DateTime: "2020-01-04T00:00:00+00:00",
+					Comment:  "commit (main) file2.txt",
+				},
+				{
+					CommitID: "a706ad7f9b265094aaad26b512ece0787f09c652",
+					DateTime: "2020-01-03T00:00:00+00:00",
+					Comment:  "commit (main) file1.txt",
+				},
+				{
+					CommitID: "754fcc8e8ba56078eb3a4ebc5cfbbfe3201e4ea4",
+					DateTime: "2020-01-02T00:00:00+00:00",
+					Comment:  "init commit",
+				},
+			},
+		},
+		{
+			name:     "when commitID is not on the main branch",
+			commitID: "8dd9d9f078564d285e1945ef75d17d87eef55c33",
+			expectedErr: func(err error) bool {
+				return err == nil
+			},
+			expectedResult: []git.CommitInfo{
+				{
+					CommitID: "8dd9d9f078564d285e1945ef75d17d87eef55c33",
+					DateTime: "2020-01-09T00:00:00+00:00",
+					Comment:  "commit (branch1) file4.txt 2",
+				},
+				{
+					CommitID: "5a941744bc6dbdd39032cf076101f3f530afb295",
+					DateTime: "2020-01-06T00:00:00+00:00",
+					Comment:  "commit (branch1) file4.txt",
+				},
+				{
+					CommitID: "2a2c911b4a8e0e681dafa7b236446a9e42f47533",
+					DateTime: "2020-01-05T00:00:00+00:00",
+					Comment:  "commit (main) file1.txt 2",
+				},
+				{
+					CommitID: "40eda29f9d285779f07b474a02920b6a379d8af0",
+					DateTime: "2020-01-04T00:00:00+00:00",
+					Comment:  "commit (main) file2.txt",
+				},
+				{
+					CommitID: "a706ad7f9b265094aaad26b512ece0787f09c652",
+					DateTime: "2020-01-03T00:00:00+00:00",
+					Comment:  "commit (main) file1.txt",
+				},
+				{
+					CommitID: "754fcc8e8ba56078eb3a4ebc5cfbbfe3201e4ea4",
+					DateTime: "2020-01-02T00:00:00+00:00",
+					Comment:  "init commit",
+				},
+			},
+		},
+		{
+			name:     "when commitID is on the nested branch",
+			commitID: "fa952b36a05bc120001024566cec6b16914efe03",
+			expectedErr: func(err error) bool {
+				return err == nil
+			},
+			expectedResult: []git.CommitInfo{
+				{
+					CommitID: "fa952b36a05bc120001024566cec6b16914efe03",
+					DateTime: "2020-01-07T00:00:00+00:00",
+					Comment:  "commit (branch2) file6.txt",
+				},
+				{
+					CommitID: "5a941744bc6dbdd39032cf076101f3f530afb295",
+					DateTime: "2020-01-06T00:00:00+00:00",
+					Comment:  "commit (branch1) file4.txt",
+				},
+				{
+					CommitID: "2a2c911b4a8e0e681dafa7b236446a9e42f47533",
+					DateTime: "2020-01-05T00:00:00+00:00",
+					Comment:  "commit (main) file1.txt 2",
+				},
+				{
+					CommitID: "40eda29f9d285779f07b474a02920b6a379d8af0",
+					DateTime: "2020-01-04T00:00:00+00:00",
+					Comment:  "commit (main) file2.txt",
+				},
+				{
+					CommitID: "a706ad7f9b265094aaad26b512ece0787f09c652",
+					DateTime: "2020-01-03T00:00:00+00:00",
+					Comment:  "commit (main) file1.txt",
+				},
+				{
+					CommitID: "754fcc8e8ba56078eb3a4ebc5cfbbfe3201e4ea4",
+					DateTime: "2020-01-02T00:00:00+00:00",
+					Comment:  "init commit",
+				},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			tmpDir := t.TempDir()
+
+			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
+
+			gitRepo := git.NewRepo(repoPath)
+
+			result, err := gitRepo.ListAncestorCommits(ctx, tc.commitID)
 
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)

@@ -272,6 +272,45 @@ func (c *MockRepoFindFileLastCommitCall) DoAndReturn(f func(context.Context, str
 	return c
 }
 
+// ListAncestorCommits mocks base method.
+func (m *MockRepo) ListAncestorCommits(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAncestorCommits", ctx, commitID)
+	ret0, _ := ret[0].([]git.CommitInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAncestorCommits indicates an expected call of ListAncestorCommits.
+func (mr *MockRepoMockRecorder) ListAncestorCommits(ctx, commitID any) *MockRepoListAncestorCommitsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAncestorCommits", reflect.TypeOf((*MockRepo)(nil).ListAncestorCommits), ctx, commitID)
+	return &MockRepoListAncestorCommitsCall{Call: call}
+}
+
+// MockRepoListAncestorCommitsCall wrap *gomock.Call
+type MockRepoListAncestorCommitsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoListAncestorCommitsCall) Return(arg0 []git.CommitInfo, arg1 error) *MockRepoListAncestorCommitsCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoListAncestorCommitsCall) Do(f func(context.Context, string) ([]git.CommitInfo, error)) *MockRepoListAncestorCommitsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoListAncestorCommitsCall) DoAndReturn(f func(context.Context, string) ([]git.CommitInfo, error)) *MockRepoListAncestorCommitsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // ListFiles mocks base method.
 func (m *MockRepo) ListFiles(path string) ([]string, error) {
 	m.ctrl.T.Helper()

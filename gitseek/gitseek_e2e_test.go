@@ -27,15 +27,20 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 		expected    []gitseek.FileInfo
 	}{
 		{
-			name:        "direct commit",
+			name:        "origin has direct commit and lang has commit in a separate branch",
 			langRelPath: "docs/reference/glossary/kubelet.md",
 			expected: []gitseek.FileInfo{
 				{
 					LangRelPath: "docs/reference/glossary/kubelet.md",
-					LangCommit: git.CommitInfo{
+					LangLastCommit: git.CommitInfo{
 						CommitID: "94d89c5f4cfbb8a8c6ea8adb712237f72eb32ec1",
 						DateTime: "2021-06-22T18:26:54+09:00",
 						Comment:  "[pl] Remove exec permission on markdown files",
+					},
+					LangForkCommit: &git.CommitInfo{
+						CommitID: "f193a5fdf61781618c7951001ca9d4c862e2173d",
+						DateTime: "2021-06-21T21:45:58-07:00",
+						Comment:  "Merge pull request #28532 from lcc3108/patch-1",
 					},
 					OriginFileStatus: "MODIFIED",
 					OriginUpdates: []gitseek.OriginUpdate{
@@ -52,16 +57,17 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 			},
 		},
 		{
-			name:        "commit in a separate branch",
+			name:        "origin has commit in a separate branch and lang has a direct commit",
 			langRelPath: "docs/sitemap.md",
 			expected: []gitseek.FileInfo{
 				{
 					LangRelPath: "docs/sitemap.md",
-					LangCommit: git.CommitInfo{
+					LangLastCommit: git.CommitInfo{
 						CommitID: "0adc7047a5b607cc7987322c3b8209119131869d",
 						DateTime: "2020-01-14T06:51:24-08:00",
 						Comment:  "Init Polish localization (#18419) (#18659)",
 					},
+					LangForkCommit:   nil,
 					OriginFileStatus: "NOT_EXIST",
 					OriginUpdates: []gitseek.OriginUpdate{
 						{

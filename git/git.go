@@ -57,6 +57,9 @@ type Repo interface {
 
 	// ListFilesInCommit lists all files that are in the commit with the commitID parameter.
 	ListFilesInCommit(ctx context.Context, commitID string) ([]string, error)
+
+	// ListAncestorCommits lists ancestor commits starting from the commitID parameter.
+	ListAncestorCommits(ctx context.Context, commitID string) ([]CommitInfo, error)
 }
 
 type NewRepoConfig struct {

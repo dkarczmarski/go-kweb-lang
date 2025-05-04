@@ -14,6 +14,7 @@ type LangModel struct {
 type FileModel struct {
 	LangRelPath    LinkModel
 	LangLastCommit git.CommitInfo
+	LangForkCommit *git.CommitInfo
 	OriginStatus   string
 	OriginUpdates  []OriginUpdate
 	PRs            []LinkModel
@@ -52,7 +53,8 @@ func BuildLangModel(fileInfos []FileInfo) *LangModel {
 		}
 
 		fileModel.LangRelPath = toLangFileLinkModel(fileInfo.LangRelPath)
-		fileModel.LangLastCommit = fileInfo.LangCommit
+		fileModel.LangLastCommit = fileInfo.LangLastCommit
+		fileModel.LangForkCommit = fileInfo.LangForkCommit
 		fileModel.OriginStatus = fileInfo.OriginFileStatus
 
 		for _, originUpdate := range fileInfo.OriginUpdates {
