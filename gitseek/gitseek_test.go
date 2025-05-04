@@ -22,7 +22,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 		{
 			name: "origin file not exists and with no updates",
 			initMock: func(mock *mocks.MockRepo, ctx context.Context) {
-				mock.EXPECT().MainBranchCommits(ctx).Return([]git.CommitInfo{}, nil)
+				mock.EXPECT().ListMainBranchCommits(ctx).Return([]git.CommitInfo{}, nil)
 				mock.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
 					git.CommitInfo{
 						CommitID: "CID1",
@@ -49,7 +49,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 		{
 			name: "origin file not exists but with updates",
 			initMock: func(mock *mocks.MockRepo, ctx context.Context) {
-				mock.EXPECT().MainBranchCommits(ctx).Return([]git.CommitInfo{
+				mock.EXPECT().ListMainBranchCommits(ctx).Return([]git.CommitInfo{
 					{
 						CommitID: "CID4",
 						DateTime: "DT4",
@@ -71,7 +71,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 							Comment:  "Comment2",
 						},
 					}, nil)
-				mock.EXPECT().FindMergePoints(ctx, "CID2").Return(
+				mock.EXPECT().ListMergePoints(ctx, "CID2").Return(
 					[]git.CommitInfo{
 						{
 							CommitID: "CID3",
@@ -114,7 +114,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 		{
 			name: "origin file found but no changes",
 			initMock: func(mock *mocks.MockRepo, ctx context.Context) {
-				mock.EXPECT().MainBranchCommits(ctx).Return([]git.CommitInfo{}, nil)
+				mock.EXPECT().ListMainBranchCommits(ctx).Return([]git.CommitInfo{}, nil)
 				mock.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
 					git.CommitInfo{
 						CommitID: "CID1",
@@ -141,7 +141,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 		{
 			name: "origin file found with updates",
 			initMock: func(mock *mocks.MockRepo, ctx context.Context) {
-				mock.EXPECT().MainBranchCommits(ctx).Return([]git.CommitInfo{
+				mock.EXPECT().ListMainBranchCommits(ctx).Return([]git.CommitInfo{
 					{
 						CommitID: "CID4",
 						DateTime: "DT4",
@@ -163,7 +163,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 							Comment:  "Comment2",
 						},
 					}, nil)
-				mock.EXPECT().FindMergePoints(ctx, "CID2").Return(
+				mock.EXPECT().ListMergePoints(ctx, "CID2").Return(
 					[]git.CommitInfo{
 						{
 							CommitID: "CID3",
@@ -206,7 +206,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 		{
 			name: "origin file found with updates but commit made direct to the main branch",
 			initMock: func(mock *mocks.MockRepo, ctx context.Context) {
-				mock.EXPECT().MainBranchCommits(ctx).Return([]git.CommitInfo{
+				mock.EXPECT().ListMainBranchCommits(ctx).Return([]git.CommitInfo{
 					{
 						CommitID: "CID2",
 						DateTime: "DT2",

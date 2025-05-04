@@ -21,43 +21,42 @@ type CommitInfo struct {
 
 // Repo is an interface with methods to update a repository and get information about changes.
 type Repo interface {
-	// Create method do git clone with given url.
+	// Create performs a git clone using the given url.
 	Create(ctx context.Context, url string) error
 
 	// Checkout checks out the revision specified by the commitID parameter.
 	Checkout(ctx context.Context, commitID string) error
 
-	// MainBranchCommits lists all commits in the main branch
-	MainBranchCommits(ctx context.Context) ([]CommitInfo, error)
+	// ListMainBranchCommits lists all commits in the main branch.
+	ListMainBranchCommits(ctx context.Context) ([]CommitInfo, error)
 
-	// FileExists checks whether file exists in a repository.
+	// FileExists checks whether the file exists in a repository.
 	FileExists(path string) (bool, error)
 
-	// ListFiles list all files for given path and all subdirectories.
+	// ListFiles lists all files under the given path (and all subdirectories).
 	ListFiles(path string) ([]string, error)
 
-	// FindFileLastCommit provides information about the last commit for given file.
+	// FindFileLastCommit provides information about the last commit for the given file.
 	FindFileLastCommit(ctx context.Context, path string) (CommitInfo, error)
 
 	// FindFileCommitsAfter lists all commits that contain the given file
-	// and that are newer than then commitIDFrom parameter.
+	// and that are newer than the commitIDFrom parameter.
 	FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]CommitInfo, error)
 
-	// todo: it may require some refinement
-	// FindMergePoints list all commits that are merge points starting from the commitID parameter.
-	FindMergePoints(ctx context.Context, commitID string) ([]CommitInfo, error)
+	// ListMergePoints lists all commits that are merge points starting from the commitID parameter.
+	ListMergePoints(ctx context.Context, commitID string) ([]CommitInfo, error)
 
-	// Fetch method do git fetch.
+	// Fetch runs git fetch.
 	Fetch(ctx context.Context) error
 
-	// FreshCommits list all commits for the main branch that are at origin/main and are not merged yet.
-	FreshCommits(ctx context.Context) ([]CommitInfo, error)
+	// ListFreshCommits lists all commits in the main branch that are at origin/main and are not merged yet.
+	ListFreshCommits(ctx context.Context) ([]CommitInfo, error)
 
-	// Pull method do git pull.
+	// Pull runs git pull.
 	Pull(ctx context.Context) error
 
-	// FilesInCommit list all files that are in the commit with the commitID parameter.
-	FilesInCommit(ctx context.Context, commitID string) ([]string, error)
+	// ListFilesInCommit lists all files that are in the commit with the commitID parameter.
+	ListFilesInCommit(ctx context.Context, commitID string) ([]string, error)
 }
 
 type NewRepoConfig struct {

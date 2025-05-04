@@ -194,45 +194,6 @@ func (c *MockRepoFileExistsCall) DoAndReturn(f func(string) (bool, error)) *Mock
 	return c
 }
 
-// FilesInCommit mocks base method.
-func (m *MockRepo) FilesInCommit(ctx context.Context, commitID string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FilesInCommit", ctx, commitID)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// FilesInCommit indicates an expected call of FilesInCommit.
-func (mr *MockRepoMockRecorder) FilesInCommit(ctx, commitID any) *MockRepoFilesInCommitCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilesInCommit", reflect.TypeOf((*MockRepo)(nil).FilesInCommit), ctx, commitID)
-	return &MockRepoFilesInCommitCall{Call: call}
-}
-
-// MockRepoFilesInCommitCall wrap *gomock.Call
-type MockRepoFilesInCommitCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockRepoFilesInCommitCall) Return(arg0 []string, arg1 error) *MockRepoFilesInCommitCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockRepoFilesInCommitCall) Do(f func(context.Context, string) ([]string, error)) *MockRepoFilesInCommitCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRepoFilesInCommitCall) DoAndReturn(f func(context.Context, string) ([]string, error)) *MockRepoFilesInCommitCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
 // FindFileCommitsAfter mocks base method.
 func (m *MockRepo) FindFileCommitsAfter(ctx context.Context, path, commitIDFrom string) ([]git.CommitInfo, error) {
 	m.ctrl.T.Helper()
@@ -311,84 +272,6 @@ func (c *MockRepoFindFileLastCommitCall) DoAndReturn(f func(context.Context, str
 	return c
 }
 
-// FindMergePoints mocks base method.
-func (m *MockRepo) FindMergePoints(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FindMergePoints", ctx, commitID)
-	ret0, _ := ret[0].([]git.CommitInfo)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// FindMergePoints indicates an expected call of FindMergePoints.
-func (mr *MockRepoMockRecorder) FindMergePoints(ctx, commitID any) *MockRepoFindMergePointsCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindMergePoints", reflect.TypeOf((*MockRepo)(nil).FindMergePoints), ctx, commitID)
-	return &MockRepoFindMergePointsCall{Call: call}
-}
-
-// MockRepoFindMergePointsCall wrap *gomock.Call
-type MockRepoFindMergePointsCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockRepoFindMergePointsCall) Return(arg0 []git.CommitInfo, arg1 error) *MockRepoFindMergePointsCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockRepoFindMergePointsCall) Do(f func(context.Context, string) ([]git.CommitInfo, error)) *MockRepoFindMergePointsCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRepoFindMergePointsCall) DoAndReturn(f func(context.Context, string) ([]git.CommitInfo, error)) *MockRepoFindMergePointsCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
-// FreshCommits mocks base method.
-func (m *MockRepo) FreshCommits(ctx context.Context) ([]git.CommitInfo, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FreshCommits", ctx)
-	ret0, _ := ret[0].([]git.CommitInfo)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// FreshCommits indicates an expected call of FreshCommits.
-func (mr *MockRepoMockRecorder) FreshCommits(ctx any) *MockRepoFreshCommitsCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FreshCommits", reflect.TypeOf((*MockRepo)(nil).FreshCommits), ctx)
-	return &MockRepoFreshCommitsCall{Call: call}
-}
-
-// MockRepoFreshCommitsCall wrap *gomock.Call
-type MockRepoFreshCommitsCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockRepoFreshCommitsCall) Return(arg0 []git.CommitInfo, arg1 error) *MockRepoFreshCommitsCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockRepoFreshCommitsCall) Do(f func(context.Context) ([]git.CommitInfo, error)) *MockRepoFreshCommitsCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRepoFreshCommitsCall) DoAndReturn(f func(context.Context) ([]git.CommitInfo, error)) *MockRepoFreshCommitsCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
 // ListFiles mocks base method.
 func (m *MockRepo) ListFiles(path string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -428,41 +311,158 @@ func (c *MockRepoListFilesCall) DoAndReturn(f func(string) ([]string, error)) *M
 	return c
 }
 
-// MainBranchCommits mocks base method.
-func (m *MockRepo) MainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
+// ListFilesInCommit mocks base method.
+func (m *MockRepo) ListFilesInCommit(ctx context.Context, commitID string) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MainBranchCommits", ctx)
-	ret0, _ := ret[0].([]git.CommitInfo)
+	ret := m.ctrl.Call(m, "ListFilesInCommit", ctx, commitID)
+	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// MainBranchCommits indicates an expected call of MainBranchCommits.
-func (mr *MockRepoMockRecorder) MainBranchCommits(ctx any) *MockRepoMainBranchCommitsCall {
+// ListFilesInCommit indicates an expected call of ListFilesInCommit.
+func (mr *MockRepoMockRecorder) ListFilesInCommit(ctx, commitID any) *MockRepoListFilesInCommitCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MainBranchCommits", reflect.TypeOf((*MockRepo)(nil).MainBranchCommits), ctx)
-	return &MockRepoMainBranchCommitsCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFilesInCommit", reflect.TypeOf((*MockRepo)(nil).ListFilesInCommit), ctx, commitID)
+	return &MockRepoListFilesInCommitCall{Call: call}
 }
 
-// MockRepoMainBranchCommitsCall wrap *gomock.Call
-type MockRepoMainBranchCommitsCall struct {
+// MockRepoListFilesInCommitCall wrap *gomock.Call
+type MockRepoListFilesInCommitCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockRepoMainBranchCommitsCall) Return(arg0 []git.CommitInfo, arg1 error) *MockRepoMainBranchCommitsCall {
+func (c *MockRepoListFilesInCommitCall) Return(arg0 []string, arg1 error) *MockRepoListFilesInCommitCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockRepoMainBranchCommitsCall) Do(f func(context.Context) ([]git.CommitInfo, error)) *MockRepoMainBranchCommitsCall {
+func (c *MockRepoListFilesInCommitCall) Do(f func(context.Context, string) ([]string, error)) *MockRepoListFilesInCommitCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRepoMainBranchCommitsCall) DoAndReturn(f func(context.Context) ([]git.CommitInfo, error)) *MockRepoMainBranchCommitsCall {
+func (c *MockRepoListFilesInCommitCall) DoAndReturn(f func(context.Context, string) ([]string, error)) *MockRepoListFilesInCommitCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// ListFreshCommits mocks base method.
+func (m *MockRepo) ListFreshCommits(ctx context.Context) ([]git.CommitInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFreshCommits", ctx)
+	ret0, _ := ret[0].([]git.CommitInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListFreshCommits indicates an expected call of ListFreshCommits.
+func (mr *MockRepoMockRecorder) ListFreshCommits(ctx any) *MockRepoListFreshCommitsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFreshCommits", reflect.TypeOf((*MockRepo)(nil).ListFreshCommits), ctx)
+	return &MockRepoListFreshCommitsCall{Call: call}
+}
+
+// MockRepoListFreshCommitsCall wrap *gomock.Call
+type MockRepoListFreshCommitsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoListFreshCommitsCall) Return(arg0 []git.CommitInfo, arg1 error) *MockRepoListFreshCommitsCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoListFreshCommitsCall) Do(f func(context.Context) ([]git.CommitInfo, error)) *MockRepoListFreshCommitsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoListFreshCommitsCall) DoAndReturn(f func(context.Context) ([]git.CommitInfo, error)) *MockRepoListFreshCommitsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// ListMainBranchCommits mocks base method.
+func (m *MockRepo) ListMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMainBranchCommits", ctx)
+	ret0, _ := ret[0].([]git.CommitInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListMainBranchCommits indicates an expected call of ListMainBranchCommits.
+func (mr *MockRepoMockRecorder) ListMainBranchCommits(ctx any) *MockRepoListMainBranchCommitsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMainBranchCommits", reflect.TypeOf((*MockRepo)(nil).ListMainBranchCommits), ctx)
+	return &MockRepoListMainBranchCommitsCall{Call: call}
+}
+
+// MockRepoListMainBranchCommitsCall wrap *gomock.Call
+type MockRepoListMainBranchCommitsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoListMainBranchCommitsCall) Return(arg0 []git.CommitInfo, arg1 error) *MockRepoListMainBranchCommitsCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoListMainBranchCommitsCall) Do(f func(context.Context) ([]git.CommitInfo, error)) *MockRepoListMainBranchCommitsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoListMainBranchCommitsCall) DoAndReturn(f func(context.Context) ([]git.CommitInfo, error)) *MockRepoListMainBranchCommitsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// ListMergePoints mocks base method.
+func (m *MockRepo) ListMergePoints(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMergePoints", ctx, commitID)
+	ret0, _ := ret[0].([]git.CommitInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListMergePoints indicates an expected call of ListMergePoints.
+func (mr *MockRepoMockRecorder) ListMergePoints(ctx, commitID any) *MockRepoListMergePointsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMergePoints", reflect.TypeOf((*MockRepo)(nil).ListMergePoints), ctx, commitID)
+	return &MockRepoListMergePointsCall{Call: call}
+}
+
+// MockRepoListMergePointsCall wrap *gomock.Call
+type MockRepoListMergePointsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoListMergePointsCall) Return(arg0 []git.CommitInfo, arg1 error) *MockRepoListMergePointsCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoListMergePointsCall) Do(f func(context.Context, string) ([]git.CommitInfo, error)) *MockRepoListMergePointsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoListMergePointsCall) DoAndReturn(f func(context.Context, string) ([]git.CommitInfo, error)) *MockRepoListMergePointsCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -501,74 +501,6 @@ func (c *MockRepoPullCall) Do(f func(context.Context) error) *MockRepoPullCall {
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockRepoPullCall) DoAndReturn(f func(context.Context) error) *MockRepoPullCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
-// MockCommandRunner is a mock of CommandRunner interface.
-type MockCommandRunner struct {
-	ctrl     *gomock.Controller
-	recorder *MockCommandRunnerMockRecorder
-	isgomock struct{}
-}
-
-// MockCommandRunnerMockRecorder is the mock recorder for MockCommandRunner.
-type MockCommandRunnerMockRecorder struct {
-	mock *MockCommandRunner
-}
-
-// NewMockCommandRunner creates a new mock instance.
-func NewMockCommandRunner(ctrl *gomock.Controller) *MockCommandRunner {
-	mock := &MockCommandRunner{ctrl: ctrl}
-	mock.recorder = &MockCommandRunnerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockCommandRunner) EXPECT() *MockCommandRunnerMockRecorder {
-	return m.recorder
-}
-
-// Exec mocks base method.
-func (m *MockCommandRunner) Exec(ctx context.Context, workingDir, cmd string, args ...string) (string, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, workingDir, cmd}
-	for _, a := range args {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Exec", varargs...)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Exec indicates an expected call of Exec.
-func (mr *MockCommandRunnerMockRecorder) Exec(ctx, workingDir, cmd any, args ...any) *MockCommandRunnerExecCall {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, workingDir, cmd}, args...)
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockCommandRunner)(nil).Exec), varargs...)
-	return &MockCommandRunnerExecCall{Call: call}
-}
-
-// MockCommandRunnerExecCall wrap *gomock.Call
-type MockCommandRunnerExecCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockCommandRunnerExecCall) Return(arg0 string, arg1 error) *MockCommandRunnerExecCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockCommandRunnerExecCall) Do(f func(context.Context, string, string, ...string) (string, error)) *MockCommandRunnerExecCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockCommandRunnerExecCall) DoAndReturn(f func(context.Context, string, string, ...string) (string, error)) *MockCommandRunnerExecCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

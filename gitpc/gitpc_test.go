@@ -173,7 +173,7 @@ func TestProxyCache_FindFileCommitsAfter(t *testing.T) {
 	}
 }
 
-func TestProxyCache_FindMergePoints(t *testing.T) {
+func TestProxyCache_ListMergePoints(t *testing.T) {
 	commitID := "ID"
 	expectedCommits := []git.CommitInfo{
 		{CommitID: "ID1", DateTime: "DT1", Comment: "TEXT1"},
@@ -190,7 +190,7 @@ func TestProxyCache_FindMergePoints(t *testing.T) {
 			name: "miss cache",
 			initMock: func(m *mocks.MockRepo) {
 				m.EXPECT().
-					FindMergePoints(context.Background(), commitID).
+					ListMergePoints(context.Background(), commitID).
 					Return(expectedCommits, nil).
 					Times(1)
 			},
@@ -238,7 +238,7 @@ func TestProxyCache_FindMergePoints(t *testing.T) {
 
 			tc.before(t, cacheDir, category, key)
 
-			commits, err := gc.FindMergePoints(context.Background(), commitID)
+			commits, err := gc.ListMergePoints(context.Background(), commitID)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
@@ -335,7 +335,7 @@ func TestProxyCache_PullRefresh(t *testing.T) {
 			initMock: func(t *testing.T, mock *mocks.MockRepo, cacheDir string, ctx context.Context) []string {
 				t.Helper()
 
-				mock.EXPECT().FreshCommits(ctx).Return(nil, nil)
+				mock.EXPECT().ListFreshCommits(ctx).Return(nil, nil)
 
 				return []string{}
 			},
@@ -345,7 +345,7 @@ func TestProxyCache_PullRefresh(t *testing.T) {
 			initMock: func(t *testing.T, mock *mocks.MockRepo, cacheDir string, ctx context.Context) []string {
 				t.Helper()
 
-				mock.EXPECT().FreshCommits(ctx).Return(
+				mock.EXPECT().ListFreshCommits(ctx).Return(
 					[]git.CommitInfo{
 						{
 							CommitID: "CID1",
@@ -359,8 +359,8 @@ func TestProxyCache_PullRefresh(t *testing.T) {
 						},
 					}, nil,
 				)
-				mock.EXPECT().FilesInCommit(ctx, "CID1").Return([]string{"F10", "F11"}, nil)
-				mock.EXPECT().FilesInCommit(ctx, "CID2").Return([]string{"F11", "F12"}, nil)
+				mock.EXPECT().ListFilesInCommit(ctx, "CID1").Return([]string{"F10", "F11"}, nil)
+				mock.EXPECT().ListFilesInCommit(ctx, "CID2").Return([]string{"F11", "F12"}, nil)
 
 				mustProxycachePut(t, cacheDir, gitpc.CategoryLastCommit, "F10")
 				mustProxycachePut(t, cacheDir, gitpc.CategoryLastCommit, "F11")

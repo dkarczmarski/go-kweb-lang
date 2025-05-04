@@ -47,7 +47,7 @@ func (s *GitSeek) CheckLang(ctx context.Context, langCode string) ([]FileInfo, e
 func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCode string) ([]FileInfo, error) {
 	fileInfoList := make([]FileInfo, 0, len(langRelPaths))
 
-	mainBranchCommits, err := s.gitRepo.MainBranchCommits(ctx)
+	mainBranchCommits, err := s.gitRepo.ListMainBranchCommits(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 		for _, originCommitAfter := range originCommitsAfter {
 			var mergePoint *git.CommitInfo
 			if !containsCommit(mainBranchCommits, originCommitAfter.CommitID) {
-				mergePoints, err := s.gitRepo.FindMergePoints(ctx, originCommitAfter.CommitID)
+				mergePoints, err := s.gitRepo.ListMergePoints(ctx, originCommitAfter.CommitID)
 				if err != nil {
 					return nil, fmt.Errorf("error while finding merge points for the commit %s: %w",
 						originCommitAfter.CommitID, err)

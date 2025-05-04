@@ -40,8 +40,8 @@ func (pc *ProxyCache) Checkout(ctx context.Context, commitID string) error {
 	return pc.gitRepo.Checkout(ctx, commitID)
 }
 
-// MainBranchCommits function is a cache proxy wrapper to git.Repo.
-func (pc *ProxyCache) MainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
+// ListMainBranchCommits function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) ListMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
 	return proxycache.Get(
 		ctx,
 		pc.cacheDir,
@@ -49,7 +49,7 @@ func (pc *ProxyCache) MainBranchCommits(ctx context.Context) ([]git.CommitInfo, 
 		"",
 		nil,
 		func(ctx context.Context) ([]git.CommitInfo, error) {
-			return pc.gitRepo.MainBranchCommits(ctx)
+			return pc.gitRepo.ListMainBranchCommits(ctx)
 		},
 	)
 }
@@ -100,8 +100,8 @@ func (pc *ProxyCache) FindFileCommitsAfter(ctx context.Context, path string, com
 	)
 }
 
-// FindMergePoints function is a cache proxy wrapper to git.Repo.
-func (pc *ProxyCache) FindMergePoints(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
+// ListMergePoints function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) ListMergePoints(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
 	key := commitID
 
 	return proxycache.Get(
@@ -111,7 +111,7 @@ func (pc *ProxyCache) FindMergePoints(ctx context.Context, commitID string) ([]g
 		key,
 		nil,
 		func(ctx context.Context) ([]git.CommitInfo, error) {
-			return pc.gitRepo.FindMergePoints(ctx, commitID)
+			return pc.gitRepo.ListMergePoints(ctx, commitID)
 		},
 	)
 }
@@ -121,9 +121,9 @@ func (pc *ProxyCache) Fetch(ctx context.Context) error {
 	return pc.gitRepo.Fetch(ctx)
 }
 
-// FreshCommits function is a cache proxy wrapper to git.Repo.
-func (pc *ProxyCache) FreshCommits(ctx context.Context) ([]git.CommitInfo, error) {
-	return pc.gitRepo.FreshCommits(ctx)
+// ListFreshCommits function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) ListFreshCommits(ctx context.Context) ([]git.CommitInfo, error) {
+	return pc.gitRepo.ListFreshCommits(ctx)
 }
 
 // Pull function is a cache proxy wrapper to git.Repo.
@@ -131,9 +131,9 @@ func (pc *ProxyCache) Pull(ctx context.Context) error {
 	return pc.gitRepo.Pull(ctx)
 }
 
-// FilesInCommit function is a cache proxy wrapper to git.Repo.
-func (pc *ProxyCache) FilesInCommit(ctx context.Context, commitID string) ([]string, error) {
-	return pc.gitRepo.FilesInCommit(ctx, commitID)
+// ListFilesInCommit function is a cache proxy wrapper to git.Repo.
+func (pc *ProxyCache) ListFilesInCommit(ctx context.Context, commitID string) ([]string, error) {
+	return pc.gitRepo.ListFilesInCommit(ctx, commitID)
 }
 
 // todo: should it be private ?
@@ -156,13 +156,13 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 		return fmt.Errorf("git fetch error: %w", err)
 	}
 
-	freshCommits, err := pc.gitRepo.FreshCommits(ctx)
+	freshCommits, err := pc.gitRepo.ListFreshCommits(ctx)
 	if err != nil {
 		return fmt.Errorf("git list fresh commits error: %w", err)
 	}
 
 	for _, fc := range freshCommits {
-		commitFiles, err := pc.gitRepo.FilesInCommit(ctx, fc.CommitID)
+		commitFiles, err := pc.gitRepo.ListFilesInCommit(ctx, fc.CommitID)
 		if err != nil {
 			return fmt.Errorf("git list files of commit %s error: %w", fc.CommitID, err)
 		}

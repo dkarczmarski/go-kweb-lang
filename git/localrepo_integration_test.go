@@ -156,7 +156,7 @@ func TestLocalRepo_MainBranchCommits_Integration(t *testing.T) {
 
 			gitRepo := git.NewRepo(repoPath)
 
-			commits, err := gitRepo.MainBranchCommits(ctx)
+			commits, err := gitRepo.ListMainBranchCommits(ctx)
 
 			if !tc.expectedErr(err) {
 				t.Errorf("unexptected error: %v", err)
@@ -414,7 +414,7 @@ func TestLocalRepo_FindMergePoints_Integration(t *testing.T) {
 
 			gitRepo := git.NewRepo(repoPath)
 
-			result, err := gitRepo.FindMergePoints(ctx, tc.commitID)
+			result, err := gitRepo.ListMergePoints(ctx, tc.commitID)
 
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)
@@ -458,7 +458,7 @@ func TestLocalRepo_Pull_Integration_Scenario(t *testing.T) {
 	})
 
 	t.Run("before performing fetch the list of fresh commits should be empty", func(t *testing.T) {
-		freshCommits, err := gitRepo.FreshCommits(ctx)
+		freshCommits, err := gitRepo.ListFreshCommits(ctx)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -474,7 +474,7 @@ func TestLocalRepo_Pull_Integration_Scenario(t *testing.T) {
 	})
 
 	t.Run("after performing fetch the list of fresh commits should not be empty", func(t *testing.T) {
-		freshCommits, err := gitRepo.FreshCommits(ctx)
+		freshCommits, err := gitRepo.ListFreshCommits(ctx)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -517,7 +517,7 @@ func TestLocalRepo_Pull_Integration_Scenario(t *testing.T) {
 	})
 
 	t.Run("after performing pull the list of fresh commits should be empty", func(t *testing.T) {
-		freshCommits, err := gitRepo.FreshCommits(ctx)
+		freshCommits, err := gitRepo.ListFreshCommits(ctx)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -582,7 +582,7 @@ func TestLocalRepo_FilesInCommit_Integration(t *testing.T) {
 
 			gitRepo := git.NewRepo(repoPath)
 
-			result, err := gitRepo.FilesInCommit(ctx, tc.commitID)
+			result, err := gitRepo.ListFilesInCommit(ctx, tc.commitID)
 
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)
