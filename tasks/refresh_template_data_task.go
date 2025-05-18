@@ -39,18 +39,18 @@ func (t *RefreshTemplateDataTask) Run(ctx context.Context) error {
 		return fmt.Errorf("error while getting available languages: %w", err)
 	}
 
+	for _, langCode := range langCodes {
+		if err := t.refreshLangModel(ctx, langCode); err != nil {
+			return err
+		}
+	}
+
 	indexModel, err := web.BuildIndexModel(t.langCodesProvider)
 	if err != nil {
 		return fmt.Errorf("error while building index web model: %w", err)
 	}
 
 	t.templateData.SetIndex(indexModel)
-
-	for _, langCode := range langCodes {
-		if err := t.refreshLangModel(ctx, langCode); err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
