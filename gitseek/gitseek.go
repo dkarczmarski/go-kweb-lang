@@ -7,6 +7,8 @@ import (
 	"log"
 	"path/filepath"
 
+	"go-kweb-lang/gitpc"
+
 	"go-kweb-lang/git"
 )
 
@@ -24,12 +26,14 @@ type OriginUpdate struct {
 }
 
 type GitSeek struct {
-	gitRepo git.Repo
+	gitRepo   git.Repo
+	gitRepoPC *gitpc.ProxyCache
 }
 
-func New(gitRepo git.Repo) *GitSeek {
+func New(gitRepo git.Repo, gitRepoPC *gitpc.ProxyCache) *GitSeek {
 	return &GitSeek{
-		gitRepo: gitRepo,
+		gitRepo:   gitRepo,
+		gitRepoPC: gitRepoPC,
 	}
 }
 
@@ -48,7 +52,7 @@ func (s *GitSeek) CheckLang(ctx context.Context, langCode string) ([]FileInfo, e
 func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCode string) ([]FileInfo, error) {
 	fileInfoList := make([]FileInfo, 0, len(langRelPaths))
 
-	mainBranchCommits, err := s.gitRepo.ListMainBranchCommits(ctx)
+	mainBranchCommits, err := s.gitRepoPC.ListMainBranchCommits(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +69,7 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 
 		fileInfo.LangRelPath = langRelPath
 
-		langLastCommit, err := s.gitRepo.FindFileLastCommit(ctx, langFilePath)
+		langLastCommit, err := s.gitRepoPC.FindFileLastCommit(ctx, langFilePath)
 		if err != nil {
 			return nil, fmt.Errorf("error while finding the last commit of the file %s: %w", langFilePath, err)
 		}
@@ -86,7 +90,7 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 			startPoint = langLastCommit
 		}
 
-		originCommitsAfter, err := s.gitRepo.FindFileCommitsAfter(ctx, originFilePath, startPoint.CommitID)
+		originCommitsAfter, err := s.gitRepoPC.FindFileCommitsAfter(ctx, originFilePath, startPoint.CommitID)
 		if err != nil {
 			return nil, fmt.Errorf("error while finding commits after commit %s: %w",
 				langLastCommit.CommitID, err)
@@ -127,7 +131,7 @@ func (s *GitSeek) findForkCommit(
 	mainBranchCommits []git.CommitInfo,
 	commitID string,
 ) (*git.CommitInfo, error) {
-	commitInfo, err := s.findCommitFunc(ctx, mainBranchCommits, commitID, s.gitRepo.ListAncestorCommits)
+	commitInfo, err := s.findCommitFunc(ctx, mainBranchCommits, commitID, s.gitRepoPC.ListAncestorCommits)
 	if err != nil {
 		return nil, fmt.Errorf("error while getting list of ancestors for commit %s: %w", commitID, err)
 	}
@@ -140,7 +144,7 @@ func (s *GitSeek) findMergeCommit(
 	mainBranchCommits []git.CommitInfo,
 	commitID string,
 ) (*git.CommitInfo, error) {
-	commitInfo, err := s.findCommitFunc(ctx, mainBranchCommits, commitID, s.gitRepo.ListMergePoints)
+	commitInfo, err := s.findCommitFunc(ctx, mainBranchCommits, commitID, s.gitRepoPC.ListMergePoints)
 	if err != nil {
 		return nil, fmt.Errorf("error while finding merge points for the commit %s: %w", commitID, err)
 	}

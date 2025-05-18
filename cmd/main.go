@@ -157,6 +157,7 @@ func main() {
 		appinit.NewLangCodesProvider(),
 		appinit.NewRepo(),
 		appinit.NewRepoCache(),
+		appinit.NewGitSeek(),
 		appinit.NewGitHub(),
 		appinit.NewFilePRFinder(),
 		appinit.NewTemplateData(),

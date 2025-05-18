@@ -4,8 +4,12 @@ package gitseek_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
+
+	"go-kweb-lang/gitpc"
 
 	"go-kweb-lang/git"
 
@@ -14,8 +18,13 @@ import (
 
 func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 	ctx := context.Background()
-	repoDir := t.TempDir()
+	testDir := t.TempDir()
+	repoDir := filepath.Join(testDir, "repo")
+	mustMkDir(t, repoDir)
+	cacheDir := filepath.Join(testDir, "cache")
+	mustMkDir(t, cacheDir)
 	gitRepo := git.NewRepo(repoDir)
+	gitRepoPC := gitpc.New(gitRepo, cacheDir)
 
 	if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
 		t.Fatal(err)
@@ -92,7 +101,7 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			gitSeek := gitseek.New(gitRepo)
+			gitSeek := gitseek.New(gitRepo, gitRepoPC)
 
 			fileInfos, err := gitSeek.CheckFiles(ctx, []string{tc.langRelPath}, "pl")
 			if err != nil {
@@ -103,5 +112,13 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 				t.Errorf("unexpected result\nexpected: %+v\nactual  : %+v", tc.expected, fileInfos)
 			}
 		})
+	}
+}
+
+func mustMkDir(t testing.TB, path string) {
+	t.Helper()
+
+	if err := os.Mkdir(path, 0o700); err != nil {
+		t.Fatal(err)
 	}
 }

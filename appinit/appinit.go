@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"go-kweb-lang/gitseek"
+
 	"go-kweb-lang/git"
 	"go-kweb-lang/github"
 	"go-kweb-lang/gitpc"
@@ -29,6 +31,7 @@ type Config struct {
 	GitRepo                 git.Repo
 	TemplateData            *web.TemplateData
 	GitRepoProxyCache       *gitpc.ProxyCache
+	GitSeek                 *gitseek.GitSeek
 	GitHub                  github.GitHub
 	FilePRFinder            *pullreq.FilePRFinder
 	RefreshRepoTask         *tasks.RefreshRepoTask
@@ -258,6 +261,24 @@ func NewRepoCache() func(*Config) error {
 	}
 }
 
+func NewGitSeek() func(*Config) error {
+	return func(config *Config) error {
+		gitRepo := config.GitRepo
+		if gitRepo == nil {
+			return fmt.Errorf("param GitRepo is not set: %w", ErrBadConfiguration)
+		}
+
+		gitRepoPC := config.GitRepoProxyCache
+		if gitRepoPC == nil {
+			return fmt.Errorf("param GitRepoProxyCache is not set: %w", ErrBadConfiguration)
+		}
+
+		config.GitSeek = gitseek.New(gitRepo, gitRepoPC)
+
+		return nil
+	}
+}
+
 func NewGitHub() func(*Config) error {
 	return func(config *Config) error {
 		config.GitHub = github.New(func(githubConfig *github.ClientConfig) {
@@ -306,9 +327,9 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 			return fmt.Errorf("param LangCodesProvider is not set: %w", ErrBadConfiguration)
 		}
 
-		gitRepoProxyCache := config.GitRepoProxyCache
-		if gitRepoProxyCache == nil {
-			return fmt.Errorf("param ProxyCache is not set: %w", ErrBadConfiguration)
+		gitSeeker := config.GitSeek
+		if gitSeeker == nil {
+			return fmt.Errorf("param GitSeek is not set: %w", ErrBadConfiguration)
 		}
 
 		filePRFinder := config.FilePRFinder
@@ -323,7 +344,7 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 
 		config.RefreshTemplateDataTask = tasks.NewRefreshTemplateDataTask(
 			langCodesProvider,
-			gitRepoProxyCache,
+			gitSeeker,
 			filePRFinder,
 			templateData,
 		)

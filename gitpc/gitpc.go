@@ -31,16 +31,6 @@ func New(gitRepo git.Repo, cacheDir string) *ProxyCache {
 	}
 }
 
-// Create function is a plain proxy wrapper to git.Repo.
-func (pc *ProxyCache) Create(ctx context.Context, url string) error {
-	return pc.gitRepo.Create(ctx, url)
-}
-
-// Checkout function is a plain proxy wrapper to git.Repo.
-func (pc *ProxyCache) Checkout(ctx context.Context, commitID string) error {
-	return pc.gitRepo.Checkout(ctx, commitID)
-}
-
 // ListMainBranchCommits function is a cache proxy wrapper to git.Repo.
 func (pc *ProxyCache) ListMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
 	return proxycache.Get(
@@ -57,16 +47,6 @@ func (pc *ProxyCache) ListMainBranchCommits(ctx context.Context) ([]git.CommitIn
 
 func (pc *ProxyCache) invalidateMainBranchCommits() error {
 	return proxycache.InvalidateKey(pc.cacheDir, CategoryMainBranchCommits, "")
-}
-
-// FileExists function is a plain proxy wrapper to git.Repo.
-func (pc *ProxyCache) FileExists(path string) (bool, error) {
-	return pc.gitRepo.FileExists(path)
-}
-
-// ListFiles function is a plain proxy wrapper to git.Repo.
-func (pc *ProxyCache) ListFiles(path string) ([]string, error) {
-	return pc.gitRepo.ListFiles(path)
 }
 
 // FindFileLastCommit function is a cache proxy wrapper to git.Repo.
@@ -115,26 +95,6 @@ func (pc *ProxyCache) ListMergePoints(ctx context.Context, commitID string) ([]g
 			return pc.gitRepo.ListMergePoints(ctx, commitID)
 		},
 	)
-}
-
-// Fetch function is a cache proxy wrapper to git.Repo.
-func (pc *ProxyCache) Fetch(ctx context.Context) error {
-	return pc.gitRepo.Fetch(ctx)
-}
-
-// ListFreshCommits function is a cache proxy wrapper to git.Repo.
-func (pc *ProxyCache) ListFreshCommits(ctx context.Context) ([]git.CommitInfo, error) {
-	return pc.gitRepo.ListFreshCommits(ctx)
-}
-
-// Pull function is a cache proxy wrapper to git.Repo.
-func (pc *ProxyCache) Pull(ctx context.Context) error {
-	return pc.gitRepo.Pull(ctx)
-}
-
-// ListFilesInCommit function is a cache proxy wrapper to git.Repo.
-func (pc *ProxyCache) ListFilesInCommit(ctx context.Context, commitID string) ([]string, error) {
-	return pc.gitRepo.ListFilesInCommit(ctx, commitID)
 }
 
 // todo: should it be private ?
@@ -188,7 +148,6 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 	return nil
 }
 
-// ListAncestorCommits function is a cache proxy wrapper to git.Repo.
 func (pc *ProxyCache) ListAncestorCommits(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
 	key := commitID
 
