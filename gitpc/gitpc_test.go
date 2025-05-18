@@ -14,6 +14,8 @@ import (
 )
 
 func TestProxyCache_FindFileLastCommit(t *testing.T) {
+	ctx := context.Background()
+
 	path := "/path1"
 	expectedCommit := git.CommitInfo{CommitID: "ID1", DateTime: "DT1", Comment: "TEXT1"}
 
@@ -27,21 +29,21 @@ func TestProxyCache_FindFileLastCommit(t *testing.T) {
 			name: "miss cache",
 			initMock: func(m *mocks.MockRepo) {
 				m.EXPECT().
-					FindFileLastCommit(gomock.Any(), path).
+					FindFileLastCommit(ctx, path).
 					Return(expectedCommit, nil).
 					Times(1)
 			},
 			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
 
-				if mustProxycacheKeyExists(t, cacheDir, category, key) {
+				if mustProxyCacheKeyExists(t, cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
 
-				if !mustProxycacheKeyExists(t, cacheDir, category, key) {
+				if !mustProxyCacheKeyExists(t, cacheDir, category, key) {
 					t.Errorf("cache key %s should exist", key)
 				}
 			},
@@ -70,12 +72,12 @@ func TestProxyCache_FindFileLastCommit(t *testing.T) {
 			cacheDir := t.TempDir()
 			gc := gitpc.New(mock, cacheDir)
 
-			category := gitpc.CategoryLastCommit
+			category := "git-file-last-commit"
 			key := path
 
 			tc.before(t, cacheDir, category, key)
 
-			commit, err := gc.FindFileLastCommit(context.Background(), path)
+			commit, err := gc.FindFileLastCommit(ctx, path)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
@@ -92,6 +94,8 @@ func TestProxyCache_FindFileLastCommit(t *testing.T) {
 }
 
 func TestProxyCache_FindFileCommitsAfter(t *testing.T) {
+	ctx := context.Background()
+
 	path := "path1"
 	commitID := "ID"
 	expectedCommits := []git.CommitInfo{
@@ -109,21 +113,21 @@ func TestProxyCache_FindFileCommitsAfter(t *testing.T) {
 			name: "miss cache",
 			initMock: func(m *mocks.MockRepo) {
 				m.EXPECT().
-					FindFileCommitsAfter(context.Background(), path, commitID).
+					FindFileCommitsAfter(ctx, path, commitID).
 					Return(expectedCommits, nil).
 					Times(1)
 			},
 			before: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
 
-				if mustProxycacheKeyExists(t, cacheDir, category, key) {
+				if mustProxyCacheKeyExists(t, cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
 
-				if !mustProxycacheKeyExists(t, cacheDir, category, key) {
+				if !mustProxyCacheKeyExists(t, cacheDir, category, key) {
 					t.Errorf("cache key %s should exist", key)
 				}
 			},
@@ -153,12 +157,12 @@ func TestProxyCache_FindFileCommitsAfter(t *testing.T) {
 
 			gc := gitpc.New(mock, cacheDir)
 
-			category := gitpc.CategoryUpdates
+			category := "git-file-updates"
 			key := path
 
 			tc.before(t, cacheDir, category, key)
 
-			commits, err := gc.FindFileCommitsAfter(context.Background(), path, commitID)
+			commits, err := gc.FindFileCommitsAfter(ctx, path, commitID)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
@@ -173,48 +177,64 @@ func TestProxyCache_FindFileCommitsAfter(t *testing.T) {
 	}
 }
 
-func TestProxyCache_ListMergePoints(t *testing.T) {
-	commitID := "ID"
-	expectedCommits := []git.CommitInfo{
-		{CommitID: "ID1", DateTime: "DT1", Comment: "TEXT1"},
-		{CommitID: "ID2", DateTime: "DT2", Comment: "TEXT2"},
+func TestProxyCache_FindForkCommit(t *testing.T) {
+	ctx := context.Background()
+
+	mainBranchCommits := []git.CommitInfo{
+		{CommitID: "ID40", DateTime: "DT40", Comment: "TEXT40"},
+		{CommitID: "ID30", DateTime: "DT30", Comment: "TEXT30"},
+		{CommitID: "ID20", DateTime: "DT20", Comment: "TEXT20"},
+		{CommitID: "ID10", DateTime: "DT10", Comment: "TEXT10"},
 	}
 
 	for _, tc := range []struct {
 		name     string
-		initMock func(repo *mocks.MockRepo)
-		before   func(t *testing.T, cacheDir, category, key string)
+		commitID string
+		expected *git.CommitInfo
+		initMock func(repo *mocks.MockRepo, commitID string)
+		before   func(t *testing.T, cacheDir, category, key string, expected *git.CommitInfo)
 		after    func(t *testing.T, cacheDir, category, key string)
 	}{
 		{
-			name: "miss cache",
-			initMock: func(m *mocks.MockRepo) {
+			name:     "miss cache",
+			commitID: "ID25",
+			expected: &git.CommitInfo{CommitID: "ID20", DateTime: "DT20", Comment: "TEXT20"},
+			initMock: func(m *mocks.MockRepo, commitID string) {
+				m.EXPECT().ListMainBranchCommits(ctx).
+					Return(mainBranchCommits, nil).
+					Times(1)
+
 				m.EXPECT().
-					ListMergePoints(context.Background(), commitID).
-					Return(expectedCommits, nil).
+					ListAncestorCommits(ctx, commitID).
+					Return([]git.CommitInfo{
+						{CommitID: "ID20", DateTime: "DT20", Comment: "TEXT20"},
+						{CommitID: "ID10", DateTime: "DT10", Comment: "TEXT10"},
+					}, nil).
 					Times(1)
 			},
-			before: func(t *testing.T, cacheDir, category, key string) {
+			before: func(t *testing.T, cacheDir, category, key string, _ *git.CommitInfo) {
 				t.Helper()
 
-				if mustProxycacheKeyExists(t, cacheDir, category, key) {
+				if mustProxyCacheKeyExists(t, cacheDir, category, key) {
 					t.Fatal("should be impossible")
 				}
 			},
 			after: func(t *testing.T, cacheDir, category, key string) {
 				t.Helper()
 
-				if !mustProxycacheKeyExists(t, cacheDir, category, key) {
+				if !mustProxyCacheKeyExists(t, cacheDir, category, key) {
 					t.Errorf("cache key %s should exist", key)
 				}
 			},
 		},
 		{
-			name: "hit cache",
-			before: func(t *testing.T, cacheDir, category, key string) {
+			name:     "hit cache",
+			commitID: "ID25",
+			expected: &git.CommitInfo{CommitID: "ID20", DateTime: "DT20", Comment: "TEXT20"},
+			before: func(t *testing.T, cacheDir, category, key string, expected *git.CommitInfo) {
 				t.Helper()
 
-				if err := proxycache.Put(cacheDir, category, key, expectedCommits); err != nil {
+				if err := proxycache.Put(cacheDir, category, key, expected); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -224,27 +244,27 @@ func TestProxyCache_ListMergePoints(t *testing.T) {
 			t.Parallel()
 
 			ctrl := gomock.NewController(t)
-			mock := mocks.NewMockRepo(ctrl)
+			gitRepoMock := mocks.NewMockRepo(ctrl)
 
 			if tc.initMock != nil {
-				tc.initMock(mock)
+				tc.initMock(gitRepoMock, tc.commitID)
 			}
 
 			cacheDir := t.TempDir()
-			gc := gitpc.New(mock, cacheDir)
+			gc := gitpc.New(gitRepoMock, cacheDir)
 
-			category := gitpc.CategoryMergePoints
-			key := commitID
+			category := "git-fork-commit"
+			key := tc.commitID
 
-			tc.before(t, cacheDir, category, key)
+			tc.before(t, cacheDir, category, key, tc.expected)
 
-			commits, err := gc.ListMergePoints(context.Background(), commitID)
+			mergeCommit, err := gc.FindForkCommit(ctx, tc.commitID)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
 
-			if !reflect.DeepEqual(commits, expectedCommits) {
-				t.Errorf("unexpected outcome\nactual   : %+v\nexpected: %+v", commits, expectedCommits)
+			if !reflect.DeepEqual(mergeCommit, tc.expected) {
+				t.Errorf("unexpected outcome\nactual   : %+v\nexpected: %+v", mergeCommit, tc.expected)
 			}
 
 			if tc.after != nil {
@@ -254,46 +274,65 @@ func TestProxyCache_ListMergePoints(t *testing.T) {
 	}
 }
 
-func TestProxyCache_InvalidatePath(t *testing.T) {
+func TestProxyCache_FindMergeCommit(t *testing.T) {
+	ctx := context.Background()
+
+	mainBranchCommits := []git.CommitInfo{
+		{CommitID: "ID40", DateTime: "DT40", Comment: "TEXT40"},
+		{CommitID: "ID30", DateTime: "DT30", Comment: "TEXT30"},
+		{CommitID: "ID20", DateTime: "DT20", Comment: "TEXT20"},
+		{CommitID: "ID10", DateTime: "DT10", Comment: "TEXT10"},
+	}
+
 	for _, tc := range []struct {
-		name   string
-		before func(t *testing.T, cacheDir, key string)
-		after  func(t *testing.T, cacheDir, key string)
+		name     string
+		commitID string
+		expected *git.CommitInfo
+		initMock func(repo *mocks.MockRepo, commitID string)
+		before   func(t *testing.T, cacheDir, category, key string, expected *git.CommitInfo)
+		after    func(t *testing.T, cacheDir, category, key string)
 	}{
 		{
-			name: "when cache file does not exist, it returns no error",
+			name:     "miss cache",
+			commitID: "ID25",
+			expected: &git.CommitInfo{CommitID: "ID30", DateTime: "DT30", Comment: "TEXT30"},
+			initMock: func(m *mocks.MockRepo, commitID string) {
+				m.EXPECT().ListMainBranchCommits(ctx).
+					Return(mainBranchCommits, nil).
+					Times(1)
+
+				m.EXPECT().
+					ListMergePoints(ctx, commitID).
+					Return([]git.CommitInfo{
+						{CommitID: "ID30", DateTime: "DT30", Comment: "TEXT30"},
+						{CommitID: "ID40", DateTime: "DT40", Comment: "TEXT40"},
+					}, nil).
+					Times(1)
+			},
+			before: func(t *testing.T, cacheDir, category, key string, _ *git.CommitInfo) {
+				t.Helper()
+
+				if mustProxyCacheKeyExists(t, cacheDir, category, key) {
+					t.Fatal("should be impossible")
+				}
+			},
+			after: func(t *testing.T, cacheDir, category, key string) {
+				t.Helper()
+
+				if !mustProxyCacheKeyExists(t, cacheDir, category, key) {
+					t.Errorf("cache key %s should exist", key)
+				}
+			},
 		},
 		{
-			name: "when 'file-last-commit' cache file exists, it removes it",
-			before: func(t *testing.T, cacheDir, key string) {
+			name:     "hit cache",
+			commitID: "ID25",
+			expected: &git.CommitInfo{CommitID: "ID30", DateTime: "DT30", Comment: "TEXT30"},
+			before: func(t *testing.T, cacheDir, category, key string, expected *git.CommitInfo) {
 				t.Helper()
 
-				if err := proxycache.Put(cacheDir, gitpc.CategoryLastCommit, key, struct{}{}); err != nil {
+				if err := proxycache.Put(cacheDir, category, key, expected); err != nil {
 					t.Fatal(err)
-				}
-			},
-			after: func(t *testing.T, cacheDir, key string) {
-				t.Helper()
-
-				if mustProxycacheKeyExists(t, cacheDir, "", key) {
-					t.Error("cache key should not exist")
-				}
-			},
-		},
-		{
-			name: "when 'file-updates' cache file exists, it removes it",
-			before: func(t *testing.T, cacheDir, key string) {
-				t.Helper()
-
-				if err := proxycache.Put(cacheDir, gitpc.CategoryUpdates, key, struct{}{}); err != nil {
-					t.Fatal(err)
-				}
-			},
-			after: func(t *testing.T, cacheDir, key string) {
-				t.Helper()
-
-				if mustProxycacheKeyExists(t, cacheDir, "", key) {
-					t.Error("cache key should not exist")
 				}
 			},
 		},
@@ -302,30 +341,43 @@ func TestProxyCache_InvalidatePath(t *testing.T) {
 			t.Parallel()
 
 			ctrl := gomock.NewController(t)
-			mock := mocks.NewMockRepo(ctrl)
+			gitRepoMock := mocks.NewMockRepo(ctrl)
 
-			cacheDir := t.TempDir()
-
-			gitCache := gitpc.New(mock, cacheDir)
-
-			samplePath := "dir1/path1"
-
-			if tc.before != nil {
-				tc.before(t, cacheDir, samplePath)
+			if tc.initMock != nil {
+				tc.initMock(gitRepoMock, tc.commitID)
 			}
 
-			if err := gitCache.InvalidatePath(samplePath); err != nil {
-				t.Fatal(err)
+			cacheDir := t.TempDir()
+			gc := gitpc.New(gitRepoMock, cacheDir)
+
+			category := "git-merge-commit"
+			key := tc.commitID
+
+			tc.before(t, cacheDir, category, key, tc.expected)
+
+			mergeCommit, err := gc.FindMergeCommit(ctx, tc.commitID)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if !reflect.DeepEqual(mergeCommit, tc.expected) {
+				t.Errorf("unexpected outcome\nactual   : %+v\nexpected: %+v", mergeCommit, tc.expected)
 			}
 
 			if tc.after != nil {
-				tc.after(t, cacheDir, samplePath)
+				tc.after(t, cacheDir, category, key)
 			}
 		})
 	}
 }
 
 func TestProxyCache_PullRefresh(t *testing.T) {
+	ctx := context.Background()
+
+	const categoryLastCommit = "git-file-last-commit"
+	const categoryMainBranchCommits = "git-main-branch-commits"
+	const categoryUpdates = "git-file-updates"
+
 	for _, tc := range []struct {
 		name     string
 		initMock func(t *testing.T, mock *mocks.MockRepo, cacheDir string, ctx context.Context) []string
@@ -362,19 +414,17 @@ func TestProxyCache_PullRefresh(t *testing.T) {
 				mock.EXPECT().ListFilesInCommit(ctx, "CID1").Return([]string{"F10", "F11"}, nil)
 				mock.EXPECT().ListFilesInCommit(ctx, "CID2").Return([]string{"F11", "F12"}, nil)
 
-				mustProxycachePut(t, cacheDir, gitpc.CategoryLastCommit, "F10")
-				mustProxycachePut(t, cacheDir, gitpc.CategoryLastCommit, "F11")
-				mustProxycachePut(t, cacheDir, gitpc.CategoryUpdates, "F11")
+				mustProxyCachePut(t, cacheDir, categoryLastCommit, "F10")
+				mustProxyCachePut(t, cacheDir, categoryLastCommit, "F11")
+				mustProxyCachePut(t, cacheDir, categoryUpdates, "F11")
 
-				mustProxycachePut(t, cacheDir, gitpc.CategoryMainBranchCommits, "")
+				mustProxyCachePut(t, cacheDir, categoryMainBranchCommits, "")
 
 				return []string{"F10", "F11", "F12"}
 			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
-
 			ctrl := gomock.NewController(t)
 			mock := mocks.NewMockRepo(ctrl)
 
@@ -391,7 +441,7 @@ func TestProxyCache_PullRefresh(t *testing.T) {
 			}
 
 			for _, file := range fetchedFiles {
-				for _, category := range []string{gitpc.CategoryLastCommit, gitpc.CategoryUpdates} {
+				for _, category := range []string{categoryLastCommit, categoryUpdates} {
 					exists, err := proxycache.KeyExists(cacheDir, category, file)
 					if err != nil {
 						t.Fatal(err)
@@ -403,14 +453,14 @@ func TestProxyCache_PullRefresh(t *testing.T) {
 				}
 			}
 
-			if mustProxycacheKeyExists(t, cacheDir, gitpc.CategoryMainBranchCommits, "") {
+			if mustProxyCacheKeyExists(t, cacheDir, categoryMainBranchCommits, "") {
 				t.Error("key should not exists")
 			}
 		})
 	}
 }
 
-func mustProxycachePut(t *testing.T, cacheDir, category, key string) {
+func mustProxyCachePut(t *testing.T, cacheDir, category, key string) {
 	t.Helper()
 
 	if err := proxycache.Put(cacheDir, category, key, struct{}{}); err != nil {
@@ -418,7 +468,7 @@ func mustProxycachePut(t *testing.T, cacheDir, category, key string) {
 	}
 }
 
-func mustProxycacheKeyExists(t *testing.T, cacheDir, category, key string) bool {
+func mustProxyCacheKeyExists(t *testing.T, cacheDir, category, key string) bool {
 	t.Helper()
 
 	exists, err := proxycache.KeyExists(cacheDir, category, key)

@@ -1,22 +1,22 @@
-// Package gitpc is a cache proxy for git repository.
+// Package gitpc is a proxy cache for git repository.
 // The name stands for git proxy cache.
 package gitpc
 
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"go-kweb-lang/git"
 	"go-kweb-lang/proxycache"
 )
 
-// todo: should it be private ?
 const (
-	CategoryLastCommit        = "git-file-last-commit"
-	CategoryUpdates           = "git-file-updates"
-	CategoryMergePoints       = "git-merge-points"
-	CategoryAncestorCommits   = "git-ancestor-commits"
-	CategoryMainBranchCommits = "git-main-branch-commits"
+	categoryLastCommit        = "git-file-last-commit"
+	categoryUpdates           = "git-file-updates"
+	categoryForkCommit        = "git-fork-commit"
+	categoryMergeCommit       = "git-merge-commit"
+	categoryMainBranchCommits = "git-main-branch-commits"
 )
 
 type ProxyCache struct {
@@ -31,12 +31,11 @@ func New(gitRepo git.Repo, cacheDir string) *ProxyCache {
 	}
 }
 
-// ListMainBranchCommits function is a cache proxy wrapper to git.Repo.
-func (pc *ProxyCache) ListMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
+func (pc *ProxyCache) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
 	return proxycache.Get(
 		ctx,
 		pc.cacheDir,
-		CategoryMainBranchCommits,
+		categoryMainBranchCommits,
 		"",
 		nil,
 		func(ctx context.Context) ([]git.CommitInfo, error) {
@@ -46,17 +45,19 @@ func (pc *ProxyCache) ListMainBranchCommits(ctx context.Context) ([]git.CommitIn
 }
 
 func (pc *ProxyCache) invalidateMainBranchCommits() error {
-	return proxycache.InvalidateKey(pc.cacheDir, CategoryMainBranchCommits, "")
+	return proxycache.InvalidateKey(pc.cacheDir, categoryMainBranchCommits, "")
 }
 
 // FindFileLastCommit function is a cache proxy wrapper to git.Repo.
+// The cached result should be invalidated when a new commit occurs for the given path.
+// The result should be invalidated when the given path exists in at least one commit in git pull.
 func (pc *ProxyCache) FindFileLastCommit(ctx context.Context, path string) (git.CommitInfo, error) {
 	key := path
 
 	return proxycache.Get(
 		ctx,
 		pc.cacheDir,
-		CategoryLastCommit,
+		categoryLastCommit,
 		key,
 		nil,
 		func(ctx context.Context) (git.CommitInfo, error) {
@@ -66,13 +67,14 @@ func (pc *ProxyCache) FindFileLastCommit(ctx context.Context, path string) (git.
 }
 
 // FindFileCommitsAfter function is a cache proxy wrapper to git.Repo.
+// The cached result should be invalidated when a new commit occurs for the given path.
 func (pc *ProxyCache) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]git.CommitInfo, error) {
 	key := path
 
 	return proxycache.Get(
 		ctx,
 		pc.cacheDir,
-		CategoryUpdates,
+		categoryUpdates,
 		key,
 		nil,
 		func(ctx context.Context) ([]git.CommitInfo, error) {
@@ -81,27 +83,10 @@ func (pc *ProxyCache) FindFileCommitsAfter(ctx context.Context, path string, com
 	)
 }
 
-// ListMergePoints function is a cache proxy wrapper to git.Repo.
-func (pc *ProxyCache) ListMergePoints(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
-	key := commitID
-
-	return proxycache.Get(
-		ctx,
-		pc.cacheDir,
-		CategoryMergePoints,
-		key,
-		nil,
-		func(ctx context.Context) ([]git.CommitInfo, error) {
-			return pc.gitRepo.ListMergePoints(ctx, commitID)
-		},
-	)
-}
-
-// todo: should it be private ?
-func (pc *ProxyCache) InvalidatePath(path string) error {
+func (pc *ProxyCache) invalidatePath(path string) error {
 	for _, category := range []string{
-		CategoryLastCommit,
-		CategoryUpdates,
+		categoryLastCommit,
+		categoryUpdates,
 	} {
 		key := path
 		if err := proxycache.InvalidateKey(pc.cacheDir, category, key); err != nil {
@@ -122,6 +107,8 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 		return fmt.Errorf("git list fresh commits error: %w", err)
 	}
 
+	// todo: handle commits in merge commits
+
 	for _, fc := range freshCommits {
 		commitFiles, err := pc.gitRepo.ListFilesInCommit(ctx, fc.CommitID)
 		if err != nil {
@@ -129,7 +116,7 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 		}
 
 		for _, f := range commitFiles {
-			if err := pc.InvalidatePath(f); err != nil {
+			if err := pc.invalidatePath(f); err != nil {
 				return fmt.Errorf("git cache invalidate path %s error: %w", f, err)
 			}
 		}
@@ -148,17 +135,101 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 	return nil
 }
 
-func (pc *ProxyCache) ListAncestorCommits(ctx context.Context, commitID string) ([]git.CommitInfo, error) {
+// FindForkCommit is a cache proxy wrapper around a function that returns the fork commit
+// (on the main branch) for the given commitID. The commitID can point to a commit on the main branch,
+// or to a commit from another branch.
+// The result is never invalidated.
+func (pc *ProxyCache) FindForkCommit(ctx context.Context, commitID string) (*git.CommitInfo, error) {
 	key := commitID
 
 	return proxycache.Get(
 		ctx,
 		pc.cacheDir,
-		CategoryAncestorCommits,
+		categoryForkCommit,
 		key,
 		nil,
-		func(ctx context.Context) ([]git.CommitInfo, error) {
-			return pc.gitRepo.ListAncestorCommits(ctx, commitID)
+		func(ctx context.Context) (*git.CommitInfo, error) {
+			mainBranchCommits, err := pc.listMainBranchCommits(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			return findCommitFunc(ctx, mainBranchCommits, commitID, pc.gitRepo.ListAncestorCommits)
 		},
 	)
+}
+
+// FindMergeCommit is a cache proxy wrapper around a function that returns the merge commit
+// with the main branch for the given commitID. The commitID can point to a commit on the main branch,
+// or to a commit from another branch.
+// When the result is not nil, the cache never needs to be invalidated.
+func (pc *ProxyCache) FindMergeCommit(ctx context.Context, commitID string) (*git.CommitInfo, error) {
+	key := commitID
+
+	return proxycache.Get(
+		ctx,
+		pc.cacheDir,
+		categoryMergeCommit,
+		key,
+		func(commitInfo *git.CommitInfo) bool {
+			return commitInfo == nil
+		},
+		func(ctx context.Context) (*git.CommitInfo, error) {
+			mainBranchCommits, err := pc.listMainBranchCommits(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			return findCommitFunc(ctx, mainBranchCommits, commitID, pc.gitRepo.ListMergePoints)
+		},
+	)
+}
+
+func findCommitFunc(
+	ctx context.Context,
+	mainBranchCommits []git.CommitInfo,
+	commitID string,
+	listFunc func(ctx context.Context, commitID string) ([]git.CommitInfo, error),
+) (*git.CommitInfo, error) {
+	var commitInfo *git.CommitInfo
+
+	if !containsCommit(mainBranchCommits, commitID) {
+		commits, err := listFunc(ctx, commitID)
+		if err != nil {
+			return nil, err
+		}
+
+		commitInfo = findFirstCommit(mainBranchCommits, commits)
+	}
+
+	return commitInfo, nil
+}
+
+func containsCommit(list []git.CommitInfo, commitID string) bool {
+	for i := range list {
+		if list[i].CommitID == commitID {
+			return true
+		}
+	}
+
+	return false
+}
+
+func findFirstCommit(mainBranchCommits []git.CommitInfo, commits []git.CommitInfo) *git.CommitInfo {
+	commitsLen := len(commits)
+	if commitsLen == 0 {
+		return nil
+	}
+
+	for i := 0; i < commitsLen; i++ {
+		commit := commits[i]
+		if containsCommit(mainBranchCommits, commit.CommitID) {
+			return &commit
+		}
+	}
+
+	// todo: move it
+	log.Fatal("unexpected state: this should never happen")
+
+	return nil
 }

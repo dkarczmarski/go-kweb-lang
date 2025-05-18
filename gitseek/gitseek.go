@@ -52,11 +52,6 @@ func (s *GitSeek) CheckLang(ctx context.Context, langCode string) ([]FileInfo, e
 func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCode string) ([]FileInfo, error) {
 	fileInfoList := make([]FileInfo, 0, len(langRelPaths))
 
-	mainBranchCommits, err := s.gitRepoPC.ListMainBranchCommits(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	langRelPathsLen := len(langRelPaths)
 
 	for i, langRelPath := range langRelPaths {
@@ -76,7 +71,7 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 
 		fileInfo.LangLastCommit = langLastCommit
 
-		forkCommit, err := s.findForkCommit(ctx, mainBranchCommits, langLastCommit.CommitID)
+		forkCommit, err := s.gitRepoPC.FindForkCommit(ctx, langLastCommit.CommitID)
 		if err != nil {
 			return nil, err
 		}
@@ -107,7 +102,7 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 		}
 
 		for _, originCommitAfter := range originCommitsAfter {
-			mergePoint, err := s.findMergeCommit(ctx, mainBranchCommits, originCommitAfter.CommitID)
+			mergePoint, err := s.gitRepoPC.FindMergeCommit(ctx, originCommitAfter.CommitID)
 			if err != nil {
 				return nil, err
 			}
@@ -124,80 +119,6 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 	}
 
 	return fileInfoList, nil
-}
-
-func (s *GitSeek) findForkCommit(
-	ctx context.Context,
-	mainBranchCommits []git.CommitInfo,
-	commitID string,
-) (*git.CommitInfo, error) {
-	commitInfo, err := s.findCommitFunc(ctx, mainBranchCommits, commitID, s.gitRepoPC.ListAncestorCommits)
-	if err != nil {
-		return nil, fmt.Errorf("error while getting list of ancestors for commit %s: %w", commitID, err)
-	}
-
-	return commitInfo, nil
-}
-
-func (s *GitSeek) findMergeCommit(
-	ctx context.Context,
-	mainBranchCommits []git.CommitInfo,
-	commitID string,
-) (*git.CommitInfo, error) {
-	commitInfo, err := s.findCommitFunc(ctx, mainBranchCommits, commitID, s.gitRepoPC.ListMergePoints)
-	if err != nil {
-		return nil, fmt.Errorf("error while finding merge points for the commit %s: %w", commitID, err)
-	}
-
-	return commitInfo, nil
-}
-
-func (s *GitSeek) findCommitFunc(
-	ctx context.Context,
-	mainBranchCommits []git.CommitInfo,
-	commitID string,
-	listFunc func(ctx context.Context, commitID string) ([]git.CommitInfo, error),
-) (*git.CommitInfo, error) {
-	var commitInfo *git.CommitInfo
-
-	if !containsCommit(mainBranchCommits, commitID) {
-		commits, err := listFunc(ctx, commitID)
-		if err != nil {
-			return nil, err
-		}
-
-		commitInfo = findFirstCommit(mainBranchCommits, commits)
-	}
-
-	return commitInfo, nil
-}
-
-func containsCommit(list []git.CommitInfo, commitID string) bool {
-	for i := range list {
-		if list[i].CommitID == commitID {
-			return true
-		}
-	}
-
-	return false
-}
-
-func findFirstCommit(mainBranchCommits []git.CommitInfo, commits []git.CommitInfo) *git.CommitInfo {
-	commitsLen := len(commits)
-	if commitsLen == 0 {
-		return nil
-	}
-
-	for i := 0; i < commitsLen; i++ {
-		commit := commits[i]
-		if containsCommit(mainBranchCommits, commit.CommitID) {
-			return &commit
-		}
-	}
-
-	log.Fatal("unexpected state: this should never happen")
-
-	return nil
 }
 
 func repoOriginFilePath(relPath string) string {
