@@ -31,23 +31,6 @@ func New(gitRepo git.Repo, cacheDir string) *ProxyCache {
 	}
 }
 
-func (pc *ProxyCache) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
-	return proxycache.Get(
-		ctx,
-		pc.cacheDir,
-		categoryMainBranchCommits,
-		"",
-		nil,
-		func(ctx context.Context) ([]git.CommitInfo, error) {
-			return pc.gitRepo.ListMainBranchCommits(ctx)
-		},
-	)
-}
-
-func (pc *ProxyCache) invalidateMainBranchCommits() error {
-	return proxycache.InvalidateKey(pc.cacheDir, categoryMainBranchCommits, "")
-}
-
 // FindFileLastCommit function is a cache proxy wrapper to git.Repo.
 // The cached result should be invalidated when a new commit occurs for the given path.
 // The result should be invalidated when the given path exists in at least one commit in git pull.
@@ -81,58 +64,6 @@ func (pc *ProxyCache) FindFileCommitsAfter(ctx context.Context, path string, com
 			return pc.gitRepo.FindFileCommitsAfter(ctx, path, commitIDFrom)
 		},
 	)
-}
-
-func (pc *ProxyCache) invalidatePath(path string) error {
-	for _, category := range []string{
-		categoryLastCommit,
-		categoryUpdates,
-	} {
-		key := path
-		if err := proxycache.InvalidateKey(pc.cacheDir, category, key); err != nil {
-			return fmt.Errorf("error while invalidataing cache key %v: %w", key, err)
-		}
-	}
-
-	return nil
-}
-
-func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
-	if err := pc.gitRepo.Fetch(ctx); err != nil {
-		return fmt.Errorf("git fetch error: %w", err)
-	}
-
-	freshCommits, err := pc.gitRepo.ListFreshCommits(ctx)
-	if err != nil {
-		return fmt.Errorf("git list fresh commits error: %w", err)
-	}
-
-	// todo: handle commits in merge commits
-
-	for _, fc := range freshCommits {
-		commitFiles, err := pc.gitRepo.ListFilesInCommit(ctx, fc.CommitID)
-		if err != nil {
-			return fmt.Errorf("git list files of commit %s error: %w", fc.CommitID, err)
-		}
-
-		for _, f := range commitFiles {
-			if err := pc.invalidatePath(f); err != nil {
-				return fmt.Errorf("git cache invalidate path %s error: %w", f, err)
-			}
-		}
-	}
-
-	if err := pc.gitRepo.Pull(ctx); err != nil {
-		return fmt.Errorf("git pull error: %w", err)
-	}
-
-	if len(freshCommits) > 0 {
-		if err := pc.invalidateMainBranchCommits(); err != nil {
-			return fmt.Errorf("error while invalidating main branch commits: %w", err)
-		}
-	}
-
-	return nil
 }
 
 // FindForkCommit is a cache proxy wrapper around a function that returns the fork commit
@@ -185,6 +116,19 @@ func (pc *ProxyCache) FindMergeCommit(ctx context.Context, commitID string) (*gi
 	)
 }
 
+func (pc *ProxyCache) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
+	return proxycache.Get(
+		ctx,
+		pc.cacheDir,
+		categoryMainBranchCommits,
+		"",
+		nil,
+		func(ctx context.Context) ([]git.CommitInfo, error) {
+			return pc.gitRepo.ListMainBranchCommits(ctx)
+		},
+	)
+}
+
 func findCommitFunc(
 	ctx context.Context,
 	mainBranchCommits []git.CommitInfo,
@@ -232,4 +176,62 @@ func findFirstCommit(mainBranchCommits []git.CommitInfo, commits []git.CommitInf
 	log.Fatal("unexpected state: this should never happen")
 
 	return nil
+}
+
+// PullRefresh performs a git fetch to retrieve fresh data, detects any changes,
+// invalidates relevant cache keys, and finally runs git pull.
+func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
+	if err := pc.gitRepo.Fetch(ctx); err != nil {
+		return fmt.Errorf("git fetch error: %w", err)
+	}
+
+	freshCommits, err := pc.gitRepo.ListFreshCommits(ctx)
+	if err != nil {
+		return fmt.Errorf("git list fresh commits error: %w", err)
+	}
+
+	// todo: handle commits in merge commits
+
+	for _, fc := range freshCommits {
+		commitFiles, err := pc.gitRepo.ListFilesInCommit(ctx, fc.CommitID)
+		if err != nil {
+			return fmt.Errorf("git list files of commit %s error: %w", fc.CommitID, err)
+		}
+
+		for _, f := range commitFiles {
+			if err := pc.invalidatePath(f); err != nil {
+				return fmt.Errorf("git cache invalidate path %s error: %w", f, err)
+			}
+		}
+	}
+
+	if err := pc.gitRepo.Pull(ctx); err != nil {
+		return fmt.Errorf("git pull error: %w", err)
+	}
+
+	if len(freshCommits) > 0 {
+		if err := pc.invalidateMainBranchCommits(); err != nil {
+			return fmt.Errorf("error while invalidating main branch commits: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (pc *ProxyCache) invalidatePath(path string) error {
+	for _, category := range []string{
+		categoryLastCommit,
+		categoryUpdates,
+	} {
+		key := path
+		if err := proxycache.InvalidateKey(pc.cacheDir, category, key); err != nil {
+			return fmt.Errorf("error while invalidataing cache key %v: %w", key, err)
+		}
+	}
+
+	return nil
+}
+
+func (pc *ProxyCache) invalidateMainBranchCommits() error {
+	return proxycache.InvalidateKey(pc.cacheDir, categoryMainBranchCommits, "")
 }
