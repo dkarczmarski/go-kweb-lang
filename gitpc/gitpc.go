@@ -190,12 +190,16 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 		return fmt.Errorf("git list fresh commits error: %w", err)
 	}
 
-	// todo: handle commits in merge commits
-
+	var mergeCommits []git.CommitInfo
 	for _, fc := range freshCommits {
 		commitFiles, err := pc.gitRepo.ListFilesInCommit(ctx, fc.CommitID)
 		if err != nil {
 			return fmt.Errorf("git list files of commit %s error: %w", fc.CommitID, err)
+		}
+
+		if len(commitFiles) == 0 {
+			// it is a merge commit
+			mergeCommits = append(mergeCommits, fc)
 		}
 
 		for _, f := range commitFiles {
@@ -203,6 +207,11 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 				return fmt.Errorf("git cache invalidate path %s error: %w", f, err)
 			}
 		}
+	}
+
+	for _, mc := range mergeCommits {
+		// todo: handle files from merge commit branch
+		_ = mc
 	}
 
 	if err := pc.gitRepo.Pull(ctx); err != nil {
