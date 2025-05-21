@@ -85,6 +85,7 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 			startPoint = langLastCommit
 		}
 
+		// todo: fix it. functionality breaks when more than one language is used.
 		originCommitsAfter, err := s.gitRepoPC.FindFileCommitsAfter(ctx, originFilePath, startPoint.CommitID)
 		if err != nil {
 			return nil, fmt.Errorf("error while finding commits after commit %s: %w",
