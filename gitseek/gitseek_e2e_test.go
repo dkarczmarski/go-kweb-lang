@@ -101,7 +101,8 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			gitSeek := gitseek.New(gitRepo, gitRepoHist)
+			cacheDir := t.TempDir()
+			gitSeek := gitseek.New(gitRepo, gitRepoHist, cacheDir)
 
 			fileInfos, err := gitSeek.CheckFiles(ctx, []string{tc.langRelPath}, "pl")
 			if err != nil {

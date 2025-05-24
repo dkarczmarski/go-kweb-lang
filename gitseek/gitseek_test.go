@@ -297,8 +297,10 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 
 			tc.initMock(mock, ctx)
 
-			gitRepoHist := githist.New(mock, t.TempDir())
-			gitSeek := gitseek.New(mock, gitRepoHist)
+			cacheDir := t.TempDir()
+
+			gitRepoHist := githist.New(mock, cacheDir)
+			gitSeek := gitseek.New(mock, gitRepoHist, cacheDir)
 
 			fileInfos, err := gitSeek.CheckFiles(ctx, []string{"path1"}, "pl")
 			if err != nil {

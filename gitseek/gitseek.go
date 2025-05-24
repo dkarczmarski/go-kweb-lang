@@ -7,6 +7,8 @@ import (
 	"log"
 	"path/filepath"
 
+	"go-kweb-lang/proxycache"
+
 	"go-kweb-lang/githist"
 
 	"go-kweb-lang/git"
@@ -28,12 +30,14 @@ type OriginUpdate struct {
 type GitSeek struct {
 	gitRepo     git.Repo
 	gitRepoHist *githist.GitHist
+	cacheDir    string
 }
 
-func New(gitRepo git.Repo, gitRepoHist *githist.GitHist) *GitSeek {
+func New(gitRepo git.Repo, gitRepoHist *githist.GitHist, cacheDir string) *GitSeek {
 	return &GitSeek{
 		gitRepo:     gitRepo,
 		gitRepoHist: gitRepoHist,
+		cacheDir:    cacheDir,
 	}
 }
 
@@ -57,69 +61,91 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 	for i, langRelPath := range langRelPaths {
 		log.Printf("[%v][%v/%v] checking for updates for %v", langCode, i, langRelPathsLen, langRelPath)
 
-		var fileInfo FileInfo
-
-		originFilePath := repoOriginFilePath(langRelPath)
-		langFilePath := repoLangFilePath(langRelPath, langCode)
-
-		fileInfo.LangRelPath = langRelPath
-
-		langLastCommit, err := s.gitRepoHist.FindFileLastCommit(ctx, langFilePath)
-		if err != nil {
-			return nil, fmt.Errorf("error while finding the last commit of the file %s: %w", langFilePath, err)
-		}
-
-		fileInfo.LangLastCommit = langLastCommit
-
-		forkCommit, err := s.gitRepoHist.FindForkCommit(ctx, langLastCommit.CommitID)
+		fileInfo, err := s.checkFileCached(ctx, langRelPath, langCode)
 		if err != nil {
 			return nil, err
-		}
-
-		fileInfo.LangForkCommit = forkCommit
-
-		var startPoint git.CommitInfo
-		if forkCommit != nil {
-			startPoint = *forkCommit
-		} else {
-			startPoint = langLastCommit
-		}
-
-		// todo: fix it. functionality breaks when more than one language is used.
-		originCommitsAfter, err := s.gitRepoHist.FindFileCommitsAfter(ctx, originFilePath, startPoint.CommitID)
-		if err != nil {
-			return nil, fmt.Errorf("error while finding commits after commit %s: %w",
-				langLastCommit.CommitID, err)
-		}
-
-		exists, err := s.gitRepo.FileExists(originFilePath)
-		if err != nil {
-			return nil, fmt.Errorf("error while checking if the file %s exists: %w", originFilePath, err)
-		}
-		if !exists {
-			fileInfo.OriginFileStatus = "NOT_EXIST"
-		} else if len(originCommitsAfter) > 0 {
-			fileInfo.OriginFileStatus = "MODIFIED"
-		}
-
-		for _, originCommitAfter := range originCommitsAfter {
-			mergePoint, err := s.gitRepoHist.FindMergeCommit(ctx, originCommitAfter.CommitID)
-			if err != nil {
-				return nil, err
-			}
-
-			originUpdate := OriginUpdate{
-				Commit:     originCommitAfter,
-				MergePoint: mergePoint,
-			}
-
-			fileInfo.OriginUpdates = append(fileInfo.OriginUpdates, originUpdate)
 		}
 
 		fileInfoList = append(fileInfoList, fileInfo)
 	}
 
 	return fileInfoList, nil
+}
+
+func (s *GitSeek) checkFileCached(ctx context.Context, langRelPath string, langCode string) (FileInfo, error) {
+	return proxycache.Get(
+		ctx,
+		s.cacheDir,
+		filepath.Join(langCode, "git-file-info"),
+		langRelPath,
+		nil,
+		func(ctx context.Context) (FileInfo, error) {
+			return s.checkFile(ctx, langRelPath, langCode)
+		},
+	)
+}
+
+func (s *GitSeek) checkFile(ctx context.Context, langRelPath string, langCode string) (FileInfo, error) {
+	var fileInfo FileInfo
+
+	originFilePath := repoOriginFilePath(langRelPath)
+	langFilePath := repoLangFilePath(langRelPath, langCode)
+
+	fileInfo.LangRelPath = langRelPath
+
+	langLastCommit, err := s.gitRepoHist.FindFileLastCommit(ctx, langFilePath)
+	if err != nil {
+		return fileInfo, fmt.Errorf("error while finding the last commit of the file %s: %w", langFilePath, err)
+	}
+
+	fileInfo.LangLastCommit = langLastCommit
+
+	forkCommit, err := s.gitRepoHist.FindForkCommit(ctx, langLastCommit.CommitID)
+	if err != nil {
+		return fileInfo, err
+	}
+
+	fileInfo.LangForkCommit = forkCommit
+
+	var startPoint git.CommitInfo
+	if forkCommit != nil {
+		startPoint = *forkCommit
+	} else {
+		startPoint = langLastCommit
+	}
+
+	// todo: fix it. functionality breaks when more than one language is used.
+	originCommitsAfter, err := s.gitRepoHist.FindFileCommitsAfter(ctx, originFilePath, startPoint.CommitID)
+	if err != nil {
+		return fileInfo, fmt.Errorf("error while finding commits after commit %s: %w",
+			langLastCommit.CommitID, err)
+	}
+
+	exists, err := s.gitRepo.FileExists(originFilePath)
+	if err != nil {
+		return fileInfo, fmt.Errorf("error while checking if the file %s exists: %w", originFilePath, err)
+	}
+	if !exists {
+		fileInfo.OriginFileStatus = "NOT_EXIST"
+	} else if len(originCommitsAfter) > 0 {
+		fileInfo.OriginFileStatus = "MODIFIED"
+	}
+
+	for _, originCommitAfter := range originCommitsAfter {
+		mergePoint, err := s.gitRepoHist.FindMergeCommit(ctx, originCommitAfter.CommitID)
+		if err != nil {
+			return fileInfo, err
+		}
+
+		originUpdate := OriginUpdate{
+			Commit:     originCommitAfter,
+			MergePoint: mergePoint,
+		}
+
+		fileInfo.OriginUpdates = append(fileInfo.OriginUpdates, originUpdate)
+	}
+
+	return fileInfo, nil
 }
 
 func repoOriginFilePath(relPath string) string {

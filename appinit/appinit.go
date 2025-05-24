@@ -273,7 +273,12 @@ func NewGitSeek() func(*Config) error {
 			return fmt.Errorf("param GitRepoHist is not set: %w", ErrBadConfiguration)
 		}
 
-		config.GitSeek = gitseek.New(gitRepo, gitRepoHist)
+		cacheDirPath := config.CacheDir
+		if len(cacheDirPath) == 0 {
+			return fmt.Errorf("param CacheDir is not set: %w", ErrBadConfiguration)
+		}
+
+		config.GitSeek = gitseek.New(gitRepo, gitRepoHist, cacheDirPath)
 
 		return nil
 	}
