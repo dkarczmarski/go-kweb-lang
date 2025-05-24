@@ -1,8 +1,11 @@
 // Package githist provides information about commits in a git repository.
 package githist
 
+//go:generate mockgen -typed -source=githist.go -destination=../mocks/mock_githist.go -package=mocks
+
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -11,16 +14,17 @@ import (
 )
 
 const (
-	categoryLastCommit        = "git-file-last-commit"
-	categoryUpdates           = "git-file-updates"
-	categoryForkCommit        = "git-fork-commit"
-	categoryMergeCommit       = "git-merge-commit"
 	categoryMainBranchCommits = "git-main-branch-commits"
 )
 
+type Invalidator interface {
+	InvalidateFiles(paths []string) error
+}
+
 type GitHist struct {
-	gitRepo  git.Repo
-	cacheDir string
+	gitRepo     git.Repo
+	cacheDir    string
+	invalidator Invalidator
 }
 
 func New(gitRepo git.Repo, cacheDir string) *GitHist {
@@ -30,89 +34,34 @@ func New(gitRepo git.Repo, cacheDir string) *GitHist {
 	}
 }
 
-// FindFileLastCommit function is a cache proxy wrapper to git.Repo.
-// The cached result should be invalidated when a new commit occurs for the given path.
-// The result should be invalidated when the given path exists in at least one commit in git pull.
-func (gh *GitHist) FindFileLastCommit(ctx context.Context, path string) (git.CommitInfo, error) {
-	key := path
-
-	return proxycache.Get(
-		ctx,
-		gh.cacheDir,
-		categoryLastCommit,
-		key,
-		nil,
-		func(ctx context.Context) (git.CommitInfo, error) {
-			return gh.gitRepo.FindFileLastCommit(ctx, path)
-		},
-	)
+func (gh *GitHist) RegisterInvalidator(invalidator Invalidator) {
+	gh.invalidator = invalidator
 }
 
-// FindFileCommitsAfter function is a cache proxy wrapper to git.Repo.
-// The cached result should be invalidated when a new commit occurs for the given path.
-func (gh *GitHist) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]git.CommitInfo, error) {
-	key := path
-
-	return proxycache.Get(
-		ctx,
-		gh.cacheDir,
-		categoryUpdates,
-		key,
-		nil,
-		func(ctx context.Context) ([]git.CommitInfo, error) {
-			return gh.gitRepo.FindFileCommitsAfter(ctx, path, commitIDFrom)
-		},
-	)
-}
-
-// FindForkCommit is a cache proxy wrapper around a function that returns the fork commit
+// FindForkCommit returns the fork commit
 // (on the main branch) for the given commitID. The commitID can point to a commit on the main branch,
 // or to a commit from another branch.
 // The result is never invalidated.
 func (gh *GitHist) FindForkCommit(ctx context.Context, commitID string) (*git.CommitInfo, error) {
-	key := commitID
+	mainBranchCommits, err := gh.listMainBranchCommits(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	return proxycache.Get(
-		ctx,
-		gh.cacheDir,
-		categoryForkCommit,
-		key,
-		nil,
-		func(ctx context.Context) (*git.CommitInfo, error) {
-			mainBranchCommits, err := gh.listMainBranchCommits(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			return findCommitFunc(ctx, mainBranchCommits, commitID, gh.gitRepo.ListAncestorCommits)
-		},
-	)
+	return findCommitFunc(ctx, mainBranchCommits, commitID, gh.gitRepo.ListAncestorCommits)
 }
 
-// FindMergeCommit is a cache proxy wrapper around a function that returns the merge commit
+// FindMergeCommit returns the merge commit
 // with the main branch for the given commitID. The commitID can point to a commit on the main branch,
 // or to a commit from another branch.
 // When the result is not nil, the cache never needs to be invalidated.
 func (gh *GitHist) FindMergeCommit(ctx context.Context, commitID string) (*git.CommitInfo, error) {
-	key := commitID
+	mainBranchCommits, err := gh.listMainBranchCommits(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	return proxycache.Get(
-		ctx,
-		gh.cacheDir,
-		categoryMergeCommit,
-		key,
-		func(commitInfo *git.CommitInfo) bool {
-			return commitInfo == nil
-		},
-		func(ctx context.Context) (*git.CommitInfo, error) {
-			mainBranchCommits, err := gh.listMainBranchCommits(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			return findCommitFunc(ctx, mainBranchCommits, commitID, gh.gitRepo.ListMergePoints)
-		},
-	)
+	return findCommitFunc(ctx, mainBranchCommits, commitID, gh.gitRepo.ListMergePoints)
 }
 
 func (gh *GitHist) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
@@ -211,7 +160,7 @@ func (gh *GitHist) PullRefresh(ctx context.Context) error {
 	}
 
 	for _, mc := range mergeCommits {
-		files, err := MergeCommitFiles(ctx, gh, gh.gitRepo, mc.CommitID)
+		files, err := gh.MergeCommitFiles(ctx, mc.CommitID)
 		if err != nil {
 			return fmt.Errorf("failed to list files of the merge commit %v: %w", mc.CommitID, err)
 		}
@@ -219,16 +168,16 @@ func (gh *GitHist) PullRefresh(ctx context.Context) error {
 		filesToInvalidate = append(filesToInvalidate, files...)
 	}
 
-	filesToInvalidate = removeDuplicates(filesToInvalidate)
-	for _, f := range filesToInvalidate {
-		if err := gh.invalidatePath(f); err != nil {
-			return fmt.Errorf("git cache invalidate path %s error: %w", f, err)
-		}
-	}
-
 	if len(freshCommits) > 0 {
 		if err := gh.invalidateMainBranchCommits(); err != nil {
 			return fmt.Errorf("error while invalidating main branch commits: %w", err)
+		}
+	}
+
+	filesToInvalidate = removeDuplicates(filesToInvalidate)
+	if gh.invalidator != nil {
+		if err := gh.invalidator.InvalidateFiles(filesToInvalidate); err != nil {
+			return fmt.Errorf("invalidate paths error: %w", err)
 		}
 	}
 
@@ -249,20 +198,6 @@ func removeDuplicates(list []string) []string {
 	return result
 }
 
-func (gh *GitHist) invalidatePath(path string) error {
-	for _, category := range []string{
-		categoryLastCommit,
-		categoryUpdates,
-	} {
-		key := path
-		if err := proxycache.InvalidateKey(gh.cacheDir, category, key); err != nil {
-			return fmt.Errorf("error while invalidataing cache key %v: %w", key, err)
-		}
-	}
-
-	return nil
-}
-
 func (gh *GitHist) invalidateMainBranchCommits() error {
 	return proxycache.InvalidateKey(gh.cacheDir, categoryMainBranchCommits, "")
 }
@@ -275,4 +210,54 @@ func (gh *GitHist) IsMainBranchCommit(ctx context.Context, commitID string) (boo
 	}
 
 	return containsCommit(mainBranchCommits, commitID), nil
+}
+
+// MergeCommitFiles lists all files from the branch that was merged in the merge commit specified by mergeCommitID.
+func (gh *GitHist) MergeCommitFiles(ctx context.Context, mergeCommitID string) ([]string, error) {
+	parents, err := gh.gitRepo.ListCommitParents(ctx, mergeCommitID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list parents of merge commit %v: %w", mergeCommitID, err)
+	}
+
+	if len(parents) == 1 {
+		// it is not a merge commit
+		return []string{}, nil
+	} else if len(parents) != 2 {
+		// todo: check it. are there cases with a merge commit of 3 parents
+		return nil, errors.New("merge commit should have two parents")
+	}
+
+	var branchParentCommitID string
+	for i := 0; i < 2; i++ {
+		parent := parents[i]
+		isMain, err := gh.IsMainBranchCommit(ctx, parent)
+		if err != nil {
+			return nil, fmt.Errorf("error while checking if the commit %v is on the main branch: %w",
+				parent, err)
+		}
+		if !isMain {
+			if len(branchParentCommitID) > 0 {
+				return nil, errors.New("more than one parent is on the main branch. it should be impossible")
+			}
+
+			branchParentCommitID = parent
+		}
+	}
+	if len(branchParentCommitID) == 0 {
+		return nil, errors.New("no parent is on the main branch. it should be impossible")
+	}
+
+	forkCommit, err := gh.FindForkCommit(ctx, branchParentCommitID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find fork commit for %v: %w",
+			branchParentCommitID, err)
+	}
+
+	files, err := gh.gitRepo.ListFilesBetweenCommits(ctx, forkCommit.CommitID, branchParentCommitID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list files between commits %v and %v: %w",
+			forkCommit.CommitID, branchParentCommitID, err)
+	}
+
+	return files, nil
 }

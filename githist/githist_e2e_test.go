@@ -14,7 +14,7 @@ import (
 	"go-kweb-lang/git"
 )
 
-func TestMergeCommitFiles(t *testing.T) {
+func TestGitHist_MergeCommitFiles_E2E(t *testing.T) {
 	ctx := context.Background()
 	testDir := t.TempDir()
 	repoDir := filepath.Join(testDir, "repo")
@@ -63,7 +63,7 @@ func TestMergeCommitFiles(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			files, err := githist.MergeCommitFiles(ctx, gitRepoHist, gitRepo, tc.commitID)
+			files, err := gitRepoHist.MergeCommitFiles(ctx, tc.commitID)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return

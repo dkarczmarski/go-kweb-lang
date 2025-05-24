@@ -156,8 +156,9 @@ func main() {
 		// create components
 		appinit.NewLangCodesProvider(),
 		appinit.NewRepo(),
-		appinit.NewRepoCache(),
+		appinit.NewGitRepoHist(),
 		appinit.NewGitSeek(),
+		appinit.RegisterGitSeekInvalidator(),
 		appinit.NewGitHub(),
 		appinit.NewFilePRFinder(),
 		appinit.NewTemplateData(),

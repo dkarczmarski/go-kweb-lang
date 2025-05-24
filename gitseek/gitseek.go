@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 
 	"go-kweb-lang/proxycache"
@@ -76,7 +77,7 @@ func (s *GitSeek) checkFileCached(ctx context.Context, langRelPath string, langC
 	return proxycache.Get(
 		ctx,
 		s.cacheDir,
-		filepath.Join(langCode, "git-file-info"),
+		fileInfoCacheBucket(langCode),
 		langRelPath,
 		nil,
 		func(ctx context.Context) (FileInfo, error) {
@@ -93,7 +94,7 @@ func (s *GitSeek) checkFile(ctx context.Context, langRelPath string, langCode st
 
 	fileInfo.LangRelPath = langRelPath
 
-	langLastCommit, err := s.gitRepoHist.FindFileLastCommit(ctx, langFilePath)
+	langLastCommit, err := s.gitRepo.FindFileLastCommit(ctx, langFilePath)
 	if err != nil {
 		return fileInfo, fmt.Errorf("error while finding the last commit of the file %s: %w", langFilePath, err)
 	}
@@ -114,8 +115,7 @@ func (s *GitSeek) checkFile(ctx context.Context, langRelPath string, langCode st
 		startPoint = langLastCommit
 	}
 
-	// todo: fix it. functionality breaks when more than one language is used.
-	originCommitsAfter, err := s.gitRepoHist.FindFileCommitsAfter(ctx, originFilePath, startPoint.CommitID)
+	originCommitsAfter, err := s.gitRepo.FindFileCommitsAfter(ctx, originFilePath, startPoint.CommitID)
 	if err != nil {
 		return fileInfo, fmt.Errorf("error while finding commits after commit %s: %w",
 			langLastCommit.CommitID, err)
@@ -146,6 +146,53 @@ func (s *GitSeek) checkFile(ctx context.Context, langRelPath string, langCode st
 	}
 
 	return fileInfo, nil
+}
+
+func (s *GitSeek) InvalidateFiles(langRelPaths []string) error {
+	parentDir := filepath.Join(s.cacheDir, "lang")
+
+	langDirs, err := listSubdirectories(parentDir)
+	if err != nil {
+		return fmt.Errorf("failed to list cache lang directories %v: %w", parentDir, err)
+	}
+
+	for _, langRelPath := range langRelPaths {
+		log.Printf("invalidate path: %v", langRelPath)
+
+		for _, langCode := range langDirs {
+			bucket := fileInfoCacheBucket(langCode)
+
+			if err := proxycache.InvalidateKey(s.cacheDir, bucket, langRelPath); err != nil {
+				return fmt.Errorf("failed to invalidate path %v: %w", langRelPath, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func listSubdirectories(path string) ([]string, error) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
+
+		return nil, fmt.Errorf("failed to read directory %q: %w", path, err)
+	}
+
+	var dirs []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			dirs = append(dirs, entry.Name())
+		}
+	}
+
+	return dirs, nil
+}
+
+func fileInfoCacheBucket(langCode string) string {
+	return filepath.Join("lang", langCode, "git-file-info")
 }
 
 func repoOriginFilePath(relPath string) string {

@@ -243,7 +243,7 @@ func NewTemplateData() func(*Config) error {
 	}
 }
 
-func NewRepoCache() func(*Config) error {
+func NewGitRepoHist() func(*Config) error {
 	return func(config *Config) error {
 		gitRepo := config.GitRepo
 		if gitRepo == nil {
@@ -279,6 +279,24 @@ func NewGitSeek() func(*Config) error {
 		}
 
 		config.GitSeek = gitseek.New(gitRepo, gitRepoHist, cacheDirPath)
+
+		return nil
+	}
+}
+
+func RegisterGitSeekInvalidator() func(*Config) error {
+	return func(config *Config) error {
+		gitRepoHist := config.GitRepoHist
+		if gitRepoHist == nil {
+			return fmt.Errorf("param GitRepoHist is not set: %w", ErrBadConfiguration)
+		}
+
+		gitSeeker := config.GitSeek
+		if gitSeeker == nil {
+			return fmt.Errorf("param GitSeek is not set: %w", ErrBadConfiguration)
+		}
+
+		gitRepoHist.RegisterInvalidator(gitSeeker)
 
 		return nil
 	}
