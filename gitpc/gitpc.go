@@ -190,6 +190,8 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 		return fmt.Errorf("git list fresh commits error: %w", err)
 	}
 
+	var filesToInvalidate []string
+
 	var mergeCommits []git.CommitInfo
 	for _, fc := range freshCommits {
 		commitFiles, err := pc.gitRepo.ListFilesInCommit(ctx, fc.CommitID)
@@ -202,16 +204,23 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 			mergeCommits = append(mergeCommits, fc)
 		}
 
-		for _, f := range commitFiles {
-			if err := pc.invalidatePath(f); err != nil {
-				return fmt.Errorf("git cache invalidate path %s error: %w", f, err)
-			}
-		}
+		filesToInvalidate = append(filesToInvalidate, commitFiles...)
 	}
 
 	for _, mc := range mergeCommits {
-		// todo: handle files from merge commit branch
-		_ = mc
+		files, err := MergeCommitFiles(ctx, pc, pc.gitRepo, mc.CommitID)
+		if err != nil {
+			return fmt.Errorf("failed to list files of the merge commit %v: %w", mc.CommitID, err)
+		}
+
+		filesToInvalidate = append(filesToInvalidate, files...)
+	}
+
+	filesToInvalidate = removeDuplicates(filesToInvalidate)
+	for _, f := range filesToInvalidate {
+		if err := pc.invalidatePath(f); err != nil {
+			return fmt.Errorf("git cache invalidate path %s error: %w", f, err)
+		}
 	}
 
 	if err := pc.gitRepo.Pull(ctx); err != nil {
@@ -225,6 +234,20 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func removeDuplicates(list []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+
+	for _, item := range list {
+		if !seen[item] {
+			seen[item] = true
+			result = append(result, item)
+		}
+	}
+
+	return result
 }
 
 func (pc *ProxyCache) invalidatePath(path string) error {

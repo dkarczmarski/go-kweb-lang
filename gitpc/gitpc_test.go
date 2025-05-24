@@ -393,7 +393,7 @@ func TestProxyCache_PullRefresh(t *testing.T) {
 			},
 		},
 		{
-			name: "two fresh commits",
+			name: "two fresh commits on the main branch",
 			initMock: func(t *testing.T, mock *mocks.MockRepo, cacheDir string, ctx context.Context) []string {
 				t.Helper()
 
