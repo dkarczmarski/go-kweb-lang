@@ -4,21 +4,21 @@ import (
 	"context"
 	"fmt"
 
-	"go-kweb-lang/gitpc"
+	"go-kweb-lang/githist"
 )
 
 type RefreshRepoTask struct {
-	gitRepoProxyCache *gitpc.ProxyCache
+	gitRepoHist *githist.GitHist
 }
 
-func NewRefreshRepoTask(gitRepoProxyCache *gitpc.ProxyCache) *RefreshRepoTask {
+func NewRefreshRepoTask(gitRepoHist *githist.GitHist) *RefreshRepoTask {
 	return &RefreshRepoTask{
-		gitRepoProxyCache: gitRepoProxyCache,
+		gitRepoHist: gitRepoHist,
 	}
 }
 
 func (t *RefreshRepoTask) Run(ctx context.Context) error {
-	if err := t.gitRepoProxyCache.PullRefresh(ctx); err != nil {
+	if err := t.gitRepoHist.PullRefresh(ctx); err != nil {
 		return fmt.Errorf("git cache pull refresh error: %w", err)
 	}
 

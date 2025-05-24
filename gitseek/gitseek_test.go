@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"go-kweb-lang/gitpc"
+	"go-kweb-lang/githist"
 
 	"go-kweb-lang/git"
 
@@ -297,8 +297,8 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 
 			tc.initMock(mock, ctx)
 
-			gitPC := gitpc.New(mock, t.TempDir())
-			gitSeek := gitseek.New(mock, gitPC)
+			gitRepoHist := githist.New(mock, t.TempDir())
+			gitSeek := gitseek.New(mock, gitRepoHist)
 
 			fileInfos, err := gitSeek.CheckFiles(ctx, []string{"path1"}, "pl")
 			if err != nil {

@@ -1,4 +1,4 @@
-package gitpc_test
+package githist_test
 
 import (
 	"context"
@@ -6,14 +6,14 @@ import (
 	"testing"
 
 	"go-kweb-lang/git"
-	"go-kweb-lang/gitpc"
+	"go-kweb-lang/githist"
 	"go-kweb-lang/mocks"
 	"go-kweb-lang/proxycache"
 
 	"go.uber.org/mock/gomock"
 )
 
-func TestProxyCache_FindFileLastCommit(t *testing.T) {
+func TestGitHist_FindFileLastCommit(t *testing.T) {
 	ctx := context.Background()
 
 	path := "/path1"
@@ -70,7 +70,7 @@ func TestProxyCache_FindFileLastCommit(t *testing.T) {
 			}
 
 			cacheDir := t.TempDir()
-			gc := gitpc.New(mock, cacheDir)
+			gc := githist.New(mock, cacheDir)
 
 			category := "git-file-last-commit"
 			key := path
@@ -93,7 +93,7 @@ func TestProxyCache_FindFileLastCommit(t *testing.T) {
 	}
 }
 
-func TestProxyCache_FindFileCommitsAfter(t *testing.T) {
+func TestGitHist_FindFileCommitsAfter(t *testing.T) {
 	ctx := context.Background()
 
 	path := "path1"
@@ -155,7 +155,7 @@ func TestProxyCache_FindFileCommitsAfter(t *testing.T) {
 
 			cacheDir := t.TempDir()
 
-			gc := gitpc.New(mock, cacheDir)
+			gc := githist.New(mock, cacheDir)
 
 			category := "git-file-updates"
 			key := path
@@ -177,7 +177,7 @@ func TestProxyCache_FindFileCommitsAfter(t *testing.T) {
 	}
 }
 
-func TestProxyCache_FindForkCommit(t *testing.T) {
+func TestGitHist_FindForkCommit(t *testing.T) {
 	ctx := context.Background()
 
 	mainBranchCommits := []git.CommitInfo{
@@ -251,7 +251,7 @@ func TestProxyCache_FindForkCommit(t *testing.T) {
 			}
 
 			cacheDir := t.TempDir()
-			gc := gitpc.New(gitRepoMock, cacheDir)
+			gc := githist.New(gitRepoMock, cacheDir)
 
 			category := "git-fork-commit"
 			key := tc.commitID
@@ -274,7 +274,7 @@ func TestProxyCache_FindForkCommit(t *testing.T) {
 	}
 }
 
-func TestProxyCache_FindMergeCommit(t *testing.T) {
+func TestGitHist_FindMergeCommit(t *testing.T) {
 	ctx := context.Background()
 
 	mainBranchCommits := []git.CommitInfo{
@@ -348,7 +348,7 @@ func TestProxyCache_FindMergeCommit(t *testing.T) {
 			}
 
 			cacheDir := t.TempDir()
-			gc := gitpc.New(gitRepoMock, cacheDir)
+			gc := githist.New(gitRepoMock, cacheDir)
 
 			category := "git-merge-commit"
 			key := tc.commitID
@@ -371,7 +371,7 @@ func TestProxyCache_FindMergeCommit(t *testing.T) {
 	}
 }
 
-func TestProxyCache_PullRefresh(t *testing.T) {
+func TestGitHist_PullRefresh(t *testing.T) {
 	ctx := context.Background()
 
 	const categoryLastCommit = "git-file-last-commit"
@@ -434,7 +434,7 @@ func TestProxyCache_PullRefresh(t *testing.T) {
 			fetchedFiles := tc.initMock(t, mock, cacheDir, ctx)
 			mock.EXPECT().Pull(ctx).Return(nil)
 
-			gitCache := gitpc.New(mock, cacheDir)
+			gitCache := githist.New(mock, cacheDir)
 
 			if err := gitCache.PullRefresh(ctx); err != nil {
 				t.Error(err)

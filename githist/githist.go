@@ -1,6 +1,5 @@
-// Package gitpc is a proxy cache for git repository.
-// The name stands for git proxy cache.
-package gitpc
+// Package githist provides information about commits in a git repository.
+package githist
 
 import (
 	"context"
@@ -19,13 +18,13 @@ const (
 	categoryMainBranchCommits = "git-main-branch-commits"
 )
 
-type ProxyCache struct {
+type GitHist struct {
 	gitRepo  git.Repo
 	cacheDir string
 }
 
-func New(gitRepo git.Repo, cacheDir string) *ProxyCache {
-	return &ProxyCache{
+func New(gitRepo git.Repo, cacheDir string) *GitHist {
+	return &GitHist{
 		gitRepo:  gitRepo,
 		cacheDir: cacheDir,
 	}
@@ -34,34 +33,34 @@ func New(gitRepo git.Repo, cacheDir string) *ProxyCache {
 // FindFileLastCommit function is a cache proxy wrapper to git.Repo.
 // The cached result should be invalidated when a new commit occurs for the given path.
 // The result should be invalidated when the given path exists in at least one commit in git pull.
-func (pc *ProxyCache) FindFileLastCommit(ctx context.Context, path string) (git.CommitInfo, error) {
+func (gh *GitHist) FindFileLastCommit(ctx context.Context, path string) (git.CommitInfo, error) {
 	key := path
 
 	return proxycache.Get(
 		ctx,
-		pc.cacheDir,
+		gh.cacheDir,
 		categoryLastCommit,
 		key,
 		nil,
 		func(ctx context.Context) (git.CommitInfo, error) {
-			return pc.gitRepo.FindFileLastCommit(ctx, path)
+			return gh.gitRepo.FindFileLastCommit(ctx, path)
 		},
 	)
 }
 
 // FindFileCommitsAfter function is a cache proxy wrapper to git.Repo.
 // The cached result should be invalidated when a new commit occurs for the given path.
-func (pc *ProxyCache) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]git.CommitInfo, error) {
+func (gh *GitHist) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]git.CommitInfo, error) {
 	key := path
 
 	return proxycache.Get(
 		ctx,
-		pc.cacheDir,
+		gh.cacheDir,
 		categoryUpdates,
 		key,
 		nil,
 		func(ctx context.Context) ([]git.CommitInfo, error) {
-			return pc.gitRepo.FindFileCommitsAfter(ctx, path, commitIDFrom)
+			return gh.gitRepo.FindFileCommitsAfter(ctx, path, commitIDFrom)
 		},
 	)
 }
@@ -70,22 +69,22 @@ func (pc *ProxyCache) FindFileCommitsAfter(ctx context.Context, path string, com
 // (on the main branch) for the given commitID. The commitID can point to a commit on the main branch,
 // or to a commit from another branch.
 // The result is never invalidated.
-func (pc *ProxyCache) FindForkCommit(ctx context.Context, commitID string) (*git.CommitInfo, error) {
+func (gh *GitHist) FindForkCommit(ctx context.Context, commitID string) (*git.CommitInfo, error) {
 	key := commitID
 
 	return proxycache.Get(
 		ctx,
-		pc.cacheDir,
+		gh.cacheDir,
 		categoryForkCommit,
 		key,
 		nil,
 		func(ctx context.Context) (*git.CommitInfo, error) {
-			mainBranchCommits, err := pc.listMainBranchCommits(ctx)
+			mainBranchCommits, err := gh.listMainBranchCommits(ctx)
 			if err != nil {
 				return nil, err
 			}
 
-			return findCommitFunc(ctx, mainBranchCommits, commitID, pc.gitRepo.ListAncestorCommits)
+			return findCommitFunc(ctx, mainBranchCommits, commitID, gh.gitRepo.ListAncestorCommits)
 		},
 	)
 }
@@ -94,37 +93,37 @@ func (pc *ProxyCache) FindForkCommit(ctx context.Context, commitID string) (*git
 // with the main branch for the given commitID. The commitID can point to a commit on the main branch,
 // or to a commit from another branch.
 // When the result is not nil, the cache never needs to be invalidated.
-func (pc *ProxyCache) FindMergeCommit(ctx context.Context, commitID string) (*git.CommitInfo, error) {
+func (gh *GitHist) FindMergeCommit(ctx context.Context, commitID string) (*git.CommitInfo, error) {
 	key := commitID
 
 	return proxycache.Get(
 		ctx,
-		pc.cacheDir,
+		gh.cacheDir,
 		categoryMergeCommit,
 		key,
 		func(commitInfo *git.CommitInfo) bool {
 			return commitInfo == nil
 		},
 		func(ctx context.Context) (*git.CommitInfo, error) {
-			mainBranchCommits, err := pc.listMainBranchCommits(ctx)
+			mainBranchCommits, err := gh.listMainBranchCommits(ctx)
 			if err != nil {
 				return nil, err
 			}
 
-			return findCommitFunc(ctx, mainBranchCommits, commitID, pc.gitRepo.ListMergePoints)
+			return findCommitFunc(ctx, mainBranchCommits, commitID, gh.gitRepo.ListMergePoints)
 		},
 	)
 }
 
-func (pc *ProxyCache) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
+func (gh *GitHist) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
 	return proxycache.Get(
 		ctx,
-		pc.cacheDir,
+		gh.cacheDir,
 		categoryMainBranchCommits,
 		"",
 		nil,
 		func(ctx context.Context) ([]git.CommitInfo, error) {
-			return pc.gitRepo.ListMainBranchCommits(ctx)
+			return gh.gitRepo.ListMainBranchCommits(ctx)
 		},
 	)
 }
@@ -180,12 +179,12 @@ func findFirstCommit(mainBranchCommits []git.CommitInfo, commits []git.CommitInf
 
 // PullRefresh performs a git fetch to retrieve fresh data, detects any changes,
 // invalidates relevant cache keys, and finally runs git pull.
-func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
-	if err := pc.gitRepo.Fetch(ctx); err != nil {
+func (gh *GitHist) PullRefresh(ctx context.Context) error {
+	if err := gh.gitRepo.Fetch(ctx); err != nil {
 		return fmt.Errorf("git fetch error: %w", err)
 	}
 
-	freshCommits, err := pc.gitRepo.ListFreshCommits(ctx)
+	freshCommits, err := gh.gitRepo.ListFreshCommits(ctx)
 	if err != nil {
 		return fmt.Errorf("git list fresh commits error: %w", err)
 	}
@@ -194,7 +193,7 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 
 	var mergeCommits []git.CommitInfo
 	for _, fc := range freshCommits {
-		commitFiles, err := pc.gitRepo.ListFilesInCommit(ctx, fc.CommitID)
+		commitFiles, err := gh.gitRepo.ListFilesInCommit(ctx, fc.CommitID)
 		if err != nil {
 			return fmt.Errorf("git list files of commit %s error: %w", fc.CommitID, err)
 		}
@@ -208,7 +207,7 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 	}
 
 	for _, mc := range mergeCommits {
-		files, err := MergeCommitFiles(ctx, pc, pc.gitRepo, mc.CommitID)
+		files, err := MergeCommitFiles(ctx, gh, gh.gitRepo, mc.CommitID)
 		if err != nil {
 			return fmt.Errorf("failed to list files of the merge commit %v: %w", mc.CommitID, err)
 		}
@@ -218,17 +217,17 @@ func (pc *ProxyCache) PullRefresh(ctx context.Context) error {
 
 	filesToInvalidate = removeDuplicates(filesToInvalidate)
 	for _, f := range filesToInvalidate {
-		if err := pc.invalidatePath(f); err != nil {
+		if err := gh.invalidatePath(f); err != nil {
 			return fmt.Errorf("git cache invalidate path %s error: %w", f, err)
 		}
 	}
 
-	if err := pc.gitRepo.Pull(ctx); err != nil {
+	if err := gh.gitRepo.Pull(ctx); err != nil {
 		return fmt.Errorf("git pull error: %w", err)
 	}
 
 	if len(freshCommits) > 0 {
-		if err := pc.invalidateMainBranchCommits(); err != nil {
+		if err := gh.invalidateMainBranchCommits(); err != nil {
 			return fmt.Errorf("error while invalidating main branch commits: %w", err)
 		}
 	}
@@ -250,13 +249,13 @@ func removeDuplicates(list []string) []string {
 	return result
 }
 
-func (pc *ProxyCache) invalidatePath(path string) error {
+func (gh *GitHist) invalidatePath(path string) error {
 	for _, category := range []string{
 		categoryLastCommit,
 		categoryUpdates,
 	} {
 		key := path
-		if err := proxycache.InvalidateKey(pc.cacheDir, category, key); err != nil {
+		if err := proxycache.InvalidateKey(gh.cacheDir, category, key); err != nil {
 			return fmt.Errorf("error while invalidataing cache key %v: %w", key, err)
 		}
 	}
@@ -264,13 +263,13 @@ func (pc *ProxyCache) invalidatePath(path string) error {
 	return nil
 }
 
-func (pc *ProxyCache) invalidateMainBranchCommits() error {
-	return proxycache.InvalidateKey(pc.cacheDir, categoryMainBranchCommits, "")
+func (gh *GitHist) invalidateMainBranchCommits() error {
+	return proxycache.InvalidateKey(gh.cacheDir, categoryMainBranchCommits, "")
 }
 
 // IsMainBranchCommit checks whether the given commit ID is part of the main branch.
-func (pc *ProxyCache) IsMainBranchCommit(ctx context.Context, commitID string) (bool, error) {
-	mainBranchCommits, err := pc.listMainBranchCommits(ctx)
+func (gh *GitHist) IsMainBranchCommit(ctx context.Context, commitID string) (bool, error) {
+	mainBranchCommits, err := gh.listMainBranchCommits(ctx)
 	if err != nil {
 		return false, err
 	}

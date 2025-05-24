@@ -11,8 +11,8 @@ import (
 	"go-kweb-lang/gitseek"
 
 	"go-kweb-lang/git"
+	"go-kweb-lang/githist"
 	"go-kweb-lang/github"
-	"go-kweb-lang/gitpc"
 	"go-kweb-lang/langcnt"
 	"go-kweb-lang/pullreq"
 	"go-kweb-lang/tasks"
@@ -30,7 +30,7 @@ type Config struct {
 	LangCodesProvider       *langcnt.LangCodesProvider
 	GitRepo                 git.Repo
 	TemplateData            *web.TemplateData
-	GitRepoProxyCache       *gitpc.ProxyCache
+	GitRepoHist             *githist.GitHist
 	GitSeek                 *gitseek.GitSeek
 	GitHub                  github.GitHub
 	FilePRFinder            *pullreq.FilePRFinder
@@ -255,7 +255,7 @@ func NewRepoCache() func(*Config) error {
 			return fmt.Errorf("param CacheDir is not set: %w", ErrBadConfiguration)
 		}
 
-		config.GitRepoProxyCache = gitpc.New(gitRepo, cacheDirPath)
+		config.GitRepoHist = githist.New(gitRepo, cacheDirPath)
 
 		return nil
 	}
@@ -268,12 +268,12 @@ func NewGitSeek() func(*Config) error {
 			return fmt.Errorf("param GitRepo is not set: %w", ErrBadConfiguration)
 		}
 
-		gitRepoPC := config.GitRepoProxyCache
-		if gitRepoPC == nil {
-			return fmt.Errorf("param GitRepoProxyCache is not set: %w", ErrBadConfiguration)
+		gitRepoHist := config.GitRepoHist
+		if gitRepoHist == nil {
+			return fmt.Errorf("param GitRepoHist is not set: %w", ErrBadConfiguration)
 		}
 
-		config.GitSeek = gitseek.New(gitRepo, gitRepoPC)
+		config.GitSeek = gitseek.New(gitRepo, gitRepoHist)
 
 		return nil
 	}
@@ -309,12 +309,12 @@ func NewFilePRFinder() func(*Config) error {
 
 func NewRefreshRepoTask() func(*Config) error {
 	return func(config *Config) error {
-		gitRepoProxyCache := config.GitRepoProxyCache
-		if gitRepoProxyCache == nil {
-			return fmt.Errorf("param ProxyCache is not set: %w", ErrBadConfiguration)
+		gitRepoHist := config.GitRepoHist
+		if gitRepoHist == nil {
+			return fmt.Errorf("param GitHist is not set: %w", ErrBadConfiguration)
 		}
 
-		config.RefreshRepoTask = tasks.NewRefreshRepoTask(gitRepoProxyCache)
+		config.RefreshRepoTask = tasks.NewRefreshRepoTask(gitRepoHist)
 
 		return nil
 	}

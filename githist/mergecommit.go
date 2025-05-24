@@ -1,4 +1,4 @@
-package gitpc
+package githist
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 )
 
 // MergeCommitFiles lists all files from the branch that was merged in the merge commit specified by mergeCommitID.
-func MergeCommitFiles(ctx context.Context, gitPC *ProxyCache, gitRepo git.Repo, mergeCommitID string) ([]string, error) {
+func MergeCommitFiles(ctx context.Context, gitRepoHist *GitHist, gitRepo git.Repo, mergeCommitID string) ([]string, error) {
 	parents, err := gitRepo.ListCommitParents(ctx, mergeCommitID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list parents of merge commit %v: %w", mergeCommitID, err)
@@ -26,7 +26,7 @@ func MergeCommitFiles(ctx context.Context, gitPC *ProxyCache, gitRepo git.Repo, 
 	var branchParentCommitID string
 	for i := 0; i < 2; i++ {
 		parent := parents[i]
-		isMain, err := gitPC.IsMainBranchCommit(ctx, parent)
+		isMain, err := gitRepoHist.IsMainBranchCommit(ctx, parent)
 		if err != nil {
 			return nil, fmt.Errorf("error while checking if the commit %v is on the main branch: %w",
 				parent, err)
@@ -43,7 +43,7 @@ func MergeCommitFiles(ctx context.Context, gitPC *ProxyCache, gitRepo git.Repo, 
 		return nil, errors.New("no parent is on the main branch. it should be impossible")
 	}
 
-	forkCommit, err := gitPC.FindForkCommit(ctx, branchParentCommitID)
+	forkCommit, err := gitRepoHist.FindForkCommit(ctx, branchParentCommitID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find fork commit for %v: %w",
 			branchParentCommitID, err)

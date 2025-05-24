@@ -1,6 +1,6 @@
 //go:build e2e_test
 
-package gitpc_test
+package githist_test
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"go-kweb-lang/gitpc"
+	"go-kweb-lang/githist"
 
 	"go-kweb-lang/git"
 )
@@ -22,7 +22,7 @@ func TestMergeCommitFiles(t *testing.T) {
 	cacheDir := filepath.Join(testDir, "cache")
 	mustMkDir(t, cacheDir)
 	gitRepo := git.NewRepo(repoDir)
-	gitRepoPC := gitpc.New(gitRepo, cacheDir)
+	gitRepoHist := githist.New(gitRepo, cacheDir)
 
 	if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
 		t.Fatal(err)
@@ -63,7 +63,7 @@ func TestMergeCommitFiles(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			files, err := gitpc.MergeCommitFiles(ctx, gitRepoPC, gitRepo, tc.commitID)
+			files, err := githist.MergeCommitFiles(ctx, gitRepoHist, gitRepo, tc.commitID)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return

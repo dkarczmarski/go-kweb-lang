@@ -7,7 +7,7 @@ import (
 	"log"
 	"path/filepath"
 
-	"go-kweb-lang/gitpc"
+	"go-kweb-lang/githist"
 
 	"go-kweb-lang/git"
 )
@@ -26,14 +26,14 @@ type OriginUpdate struct {
 }
 
 type GitSeek struct {
-	gitRepo   git.Repo
-	gitRepoPC *gitpc.ProxyCache
+	gitRepo     git.Repo
+	gitRepoHist *githist.GitHist
 }
 
-func New(gitRepo git.Repo, gitRepoPC *gitpc.ProxyCache) *GitSeek {
+func New(gitRepo git.Repo, gitRepoHist *githist.GitHist) *GitSeek {
 	return &GitSeek{
-		gitRepo:   gitRepo,
-		gitRepoPC: gitRepoPC,
+		gitRepo:     gitRepo,
+		gitRepoHist: gitRepoHist,
 	}
 }
 
@@ -64,14 +64,14 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 
 		fileInfo.LangRelPath = langRelPath
 
-		langLastCommit, err := s.gitRepoPC.FindFileLastCommit(ctx, langFilePath)
+		langLastCommit, err := s.gitRepoHist.FindFileLastCommit(ctx, langFilePath)
 		if err != nil {
 			return nil, fmt.Errorf("error while finding the last commit of the file %s: %w", langFilePath, err)
 		}
 
 		fileInfo.LangLastCommit = langLastCommit
 
-		forkCommit, err := s.gitRepoPC.FindForkCommit(ctx, langLastCommit.CommitID)
+		forkCommit, err := s.gitRepoHist.FindForkCommit(ctx, langLastCommit.CommitID)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +86,7 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 		}
 
 		// todo: fix it. functionality breaks when more than one language is used.
-		originCommitsAfter, err := s.gitRepoPC.FindFileCommitsAfter(ctx, originFilePath, startPoint.CommitID)
+		originCommitsAfter, err := s.gitRepoHist.FindFileCommitsAfter(ctx, originFilePath, startPoint.CommitID)
 		if err != nil {
 			return nil, fmt.Errorf("error while finding commits after commit %s: %w",
 				langLastCommit.CommitID, err)
@@ -103,7 +103,7 @@ func (s *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCod
 		}
 
 		for _, originCommitAfter := range originCommitsAfter {
-			mergePoint, err := s.gitRepoPC.FindMergeCommit(ctx, originCommitAfter.CommitID)
+			mergePoint, err := s.gitRepoHist.FindMergeCommit(ctx, originCommitAfter.CommitID)
 			if err != nil {
 				return nil, err
 			}

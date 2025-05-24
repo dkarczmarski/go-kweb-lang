@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"go-kweb-lang/gitpc"
+	"go-kweb-lang/githist"
 
 	"go-kweb-lang/git"
 
@@ -24,7 +24,7 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 	cacheDir := filepath.Join(testDir, "cache")
 	mustMkDir(t, cacheDir)
 	gitRepo := git.NewRepo(repoDir)
-	gitRepoPC := gitpc.New(gitRepo, cacheDir)
+	gitRepoHist := githist.New(gitRepo, cacheDir)
 
 	if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
 		t.Fatal(err)
@@ -101,7 +101,7 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			gitSeek := gitseek.New(gitRepo, gitRepoPC)
+			gitSeek := gitseek.New(gitRepo, gitRepoHist)
 
 			fileInfos, err := gitSeek.CheckFiles(ctx, []string{tc.langRelPath}, "pl")
 			if err != nil {
