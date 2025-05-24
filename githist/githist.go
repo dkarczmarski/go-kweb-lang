@@ -189,6 +189,10 @@ func (gh *GitHist) PullRefresh(ctx context.Context) error {
 		return fmt.Errorf("git list fresh commits error: %w", err)
 	}
 
+	if err := gh.gitRepo.Pull(ctx); err != nil {
+		return fmt.Errorf("git pull error: %w", err)
+	}
+
 	var filesToInvalidate []string
 
 	var mergeCommits []git.CommitInfo
@@ -220,10 +224,6 @@ func (gh *GitHist) PullRefresh(ctx context.Context) error {
 		if err := gh.invalidatePath(f); err != nil {
 			return fmt.Errorf("git cache invalidate path %s error: %w", f, err)
 		}
-	}
-
-	if err := gh.gitRepo.Pull(ctx); err != nil {
-		return fmt.Errorf("git pull error: %w", err)
 	}
 
 	if len(freshCommits) > 0 {
