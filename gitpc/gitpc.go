@@ -244,3 +244,13 @@ func (pc *ProxyCache) invalidatePath(path string) error {
 func (pc *ProxyCache) invalidateMainBranchCommits() error {
 	return proxycache.InvalidateKey(pc.cacheDir, categoryMainBranchCommits, "")
 }
+
+// IsMainBranchCommit checks whether the given commit ID is part of the main branch.
+func (pc *ProxyCache) IsMainBranchCommit(ctx context.Context, commitID string) (bool, error) {
+	mainBranchCommits, err := pc.listMainBranchCommits(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return containsCommit(mainBranchCommits, commitID), nil
+}

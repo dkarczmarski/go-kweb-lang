@@ -174,6 +174,26 @@ func (lr *localRepo) ListAncestorCommits(ctx context.Context, commitID string) (
 	))
 }
 
+func (lr *localRepo) ListCommitParents(ctx context.Context, commitID string) ([]string, error) {
+	return execToSeparatedLines(lr.exec(ctx, lr.path,
+		"git",
+		"log",
+		"-1",
+		"--pretty=%P",
+		commitID,
+	))
+}
+
+func (lr *localRepo) ListFilesBetweenCommits(ctx context.Context, forkCommitID, branchLastCommitID string) ([]string, error) {
+	return execToLines(lr.exec(ctx, lr.path,
+		"git",
+		"diff",
+		"--name-only",
+		forkCommitID,
+		branchLastCommitID,
+	))
+}
+
 func (lr *localRepo) exec(ctx context.Context, workingDir string, cmd string, args ...string) (string, error) {
 	out, err := lr.runner.Exec(ctx, workingDir, cmd, args...)
 	if err != nil {
@@ -214,6 +234,22 @@ func execToCommitInfoSlice(out string, err error) ([]CommitInfo, error) {
 	}
 
 	return commits, nil
+}
+
+func execToSeparatedLines(out string, err error) ([]string, error) {
+	lines, err := execToLines(out, err)
+	if err != nil {
+		return lines, err
+	}
+
+	var separatedLines []string
+
+	for _, line := range lines {
+		segments := strings.Split(line, " ")
+		separatedLines = append(separatedLines, segments...)
+	}
+
+	return separatedLines, nil
 }
 
 func execToLines(out string, err error) ([]string, error) {

@@ -731,6 +731,111 @@ func TestLocalRepo_ListAncestorCommits_Integration(t *testing.T) {
 	}
 }
 
+func TestLocalRepo_ListCommitParents_Integration(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		commitID       string
+		expectedErr    func(err error) bool
+		expectedResult []string
+	}{
+		{
+			name:     "when commitID is a merge commit",
+			commitID: "5de1d14f917738d148657f1c8c198bfd8f2c5a27",
+			expectedErr: func(err error) bool {
+				return err == nil
+			},
+			expectedResult: []string{
+				"97056283dccdf83d7a2994e58684048d697d9ba0",
+				"fc3a8fa89964ba1bc2d19f2caa655f2037551ed7",
+			},
+		},
+		{
+			name:     "when commitID is not a merge commit",
+			commitID: "97056283dccdf83d7a2994e58684048d697d9ba0",
+			expectedErr: func(err error) bool {
+				return err == nil
+			},
+			expectedResult: []string{
+				"2a2c911b4a8e0e681dafa7b236446a9e42f47533",
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			tmpDir := t.TempDir()
+
+			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
+
+			gitRepo := git.NewRepo(repoPath)
+
+			result, err := gitRepo.ListCommitParents(ctx, tc.commitID)
+
+			if !tc.expectedErr(err) {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if !reflect.DeepEqual(tc.expectedResult, result) {
+				t.Errorf("unexpected result: %+v", result)
+			}
+		})
+	}
+}
+
+func TestLocalRepo_ListFilesBetweenCommits_Integration(t *testing.T) {
+	for _, tc := range []struct {
+		name                             string
+		forkCommitID, branchLastCommitID string
+		expectedErr                      func(err error) bool
+		expectedResult                   []string
+	}{
+		{
+			name:               "files in the branch2",
+			forkCommitID:       "5a941744bc6dbdd39032cf076101f3f530afb295",
+			branchLastCommitID: "fa952b36a05bc120001024566cec6b16914efe03",
+			expectedErr: func(err error) bool {
+				return err == nil
+			},
+			expectedResult: []string{
+				"file6.txt",
+			},
+		},
+		{
+			name:               "files in the branch1",
+			forkCommitID:       "2a2c911b4a8e0e681dafa7b236446a9e42f47533",
+			branchLastCommitID: "fc3a8fa89964ba1bc2d19f2caa655f2037551ed7",
+			expectedErr: func(err error) bool {
+				return err == nil
+			},
+			expectedResult: []string{
+				"file2.txt",
+				"file4.txt",
+				"file5.txt",
+				"file6.txt",
+				"file7.txt",
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			tmpDir := t.TempDir()
+
+			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
+
+			gitRepo := git.NewRepo(repoPath)
+
+			result, err := gitRepo.ListFilesBetweenCommits(ctx, tc.forkCommitID, tc.branchLastCommitID)
+
+			if !tc.expectedErr(err) {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if !reflect.DeepEqual(tc.expectedResult, result) {
+				t.Errorf("unexpected result: %+v", result)
+			}
+		})
+	}
+}
+
 //go:embed testdata/initrepo.sh
 var initRepoScriptContent []byte
 

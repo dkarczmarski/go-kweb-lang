@@ -311,6 +311,45 @@ func (c *MockRepoListAncestorCommitsCall) DoAndReturn(f func(context.Context, st
 	return c
 }
 
+// ListCommitParents mocks base method.
+func (m *MockRepo) ListCommitParents(ctx context.Context, commitID string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCommitParents", ctx, commitID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCommitParents indicates an expected call of ListCommitParents.
+func (mr *MockRepoMockRecorder) ListCommitParents(ctx, commitID any) *MockRepoListCommitParentsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCommitParents", reflect.TypeOf((*MockRepo)(nil).ListCommitParents), ctx, commitID)
+	return &MockRepoListCommitParentsCall{Call: call}
+}
+
+// MockRepoListCommitParentsCall wrap *gomock.Call
+type MockRepoListCommitParentsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoListCommitParentsCall) Return(arg0 []string, arg1 error) *MockRepoListCommitParentsCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoListCommitParentsCall) Do(f func(context.Context, string) ([]string, error)) *MockRepoListCommitParentsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoListCommitParentsCall) DoAndReturn(f func(context.Context, string) ([]string, error)) *MockRepoListCommitParentsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // ListFiles mocks base method.
 func (m *MockRepo) ListFiles(path string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -346,6 +385,45 @@ func (c *MockRepoListFilesCall) Do(f func(string) ([]string, error)) *MockRepoLi
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockRepoListFilesCall) DoAndReturn(f func(string) ([]string, error)) *MockRepoListFilesCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// ListFilesBetweenCommits mocks base method.
+func (m *MockRepo) ListFilesBetweenCommits(ctx context.Context, forkCommitID, branchLastCommitID string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFilesBetweenCommits", ctx, forkCommitID, branchLastCommitID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListFilesBetweenCommits indicates an expected call of ListFilesBetweenCommits.
+func (mr *MockRepoMockRecorder) ListFilesBetweenCommits(ctx, forkCommitID, branchLastCommitID any) *MockRepoListFilesBetweenCommitsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFilesBetweenCommits", reflect.TypeOf((*MockRepo)(nil).ListFilesBetweenCommits), ctx, forkCommitID, branchLastCommitID)
+	return &MockRepoListFilesBetweenCommitsCall{Call: call}
+}
+
+// MockRepoListFilesBetweenCommitsCall wrap *gomock.Call
+type MockRepoListFilesBetweenCommitsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepoListFilesBetweenCommitsCall) Return(arg0 []string, arg1 error) *MockRepoListFilesBetweenCommitsCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepoListFilesBetweenCommitsCall) Do(f func(context.Context, string, string) ([]string, error)) *MockRepoListFilesBetweenCommitsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepoListFilesBetweenCommitsCall) DoAndReturn(f func(context.Context, string, string) ([]string, error)) *MockRepoListFilesBetweenCommitsCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

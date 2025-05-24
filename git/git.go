@@ -60,6 +60,12 @@ type Repo interface {
 
 	// ListAncestorCommits lists ancestor commits starting from the commitID parameter.
 	ListAncestorCommits(ctx context.Context, commitID string) ([]CommitInfo, error)
+
+	// ListCommitParents lists the parent commits of the given merge commit ID.
+	ListCommitParents(ctx context.Context, commitID string) ([]string, error)
+
+	// ListFilesBetweenCommits lists all files present in the branch between the fork commit and the last branch commit.
+	ListFilesBetweenCommits(ctx context.Context, forkCommitID, branchLastCommitID string) ([]string, error)
 }
 
 type NewRepoConfig struct {
