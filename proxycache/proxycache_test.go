@@ -3,333 +3,190 @@ package proxycache_test
 import (
 	"context"
 	"errors"
-	"log"
+	"reflect"
 	"testing"
 
 	"go-kweb-lang/proxycache"
+	"go-kweb-lang/proxycache/internal/mocks"
+	"go-kweb-lang/testing/storetests"
+
+	"go.uber.org/mock/gomock"
 )
+
+type TestData struct {
+	Value string
+}
+
+var errTest = errors.New("test error")
 
 func TestGet(t *testing.T) {
 	for _, tc := range []struct {
-		name        string
-		before      func(t *testing.T, cacheDir, category, key string)
-		isInvalid   func(value string) bool
-		block       func(ctx context.Context) (string, error)
-		checkResult func(t *testing.T, value string, err error) bool
-		after       func(t *testing.T, cacheDir, category, key string)
+		name         string
+		initMock     func(storeMock *mocks.MockStore)
+		isInvalid    func(data TestData) bool
+		block        func(ctx context.Context) (TestData, error)
+		expectResult TestData
+		expectErr    func(err error) bool
 	}{
 		{
-			name: "first call should execute block and returns value",
-			before: func(t *testing.T, cacheDir, category, key string) {
-				t.Helper()
-
-				if proxycacheKeyExists(t, cacheDir, category, key) {
-					t.Fatal()
-				}
+			name: "value found in the cache",
+			initMock: func(storeMock *mocks.MockStore) {
+				storeMock.EXPECT().
+					Read("bucket", "key", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						TestData{"value1"},
+						nil),
+					)
 			},
 			isInvalid: nil,
-			block: func(ctx context.Context) (string, error) {
-				return "my-value", nil
+			block: func(ctx context.Context) (TestData, error) {
+				return TestData{"value1"}, nil
 			},
-			checkResult: func(t *testing.T, value string, err error) bool {
-				return value == "my-value" && err == nil
-			},
-			after: func(t *testing.T, cacheDir, category, key string) {
-				t.Helper()
-
-				if !proxycacheKeyExists(t, cacheDir, category, key) {
-					t.Error("key should exist")
-				}
+			expectResult: TestData{"value1"},
+			expectErr: func(err error) bool {
+				return err == nil
 			},
 		},
 		{
-			name: "first call should execute block and returns error",
-			before: func(t *testing.T, cacheDir, category, key string) {
-				t.Helper()
-
-				if proxycacheKeyExists(t, cacheDir, category, key) {
-					t.Fatal()
-				}
+			name: "error while reading from the store",
+			initMock: func(storeMock *mocks.MockStore) {
+				storeMock.EXPECT().
+					Read("bucket", "key", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						TestData{},
+						errTest),
+					)
 			},
 			isInvalid: nil,
-			block: func(ctx context.Context) (string, error) {
-				return "", errors.New("my-error")
+			block: func(ctx context.Context) (TestData, error) {
+				return TestData{"value1"}, nil
 			},
-			checkResult: func(t *testing.T, value string, err error) bool {
-				return value == "" && err != nil
-			},
-			after: func(t *testing.T, cacheDir, category, key string) {
-				t.Helper()
-
-				if proxycacheKeyExists(t, cacheDir, category, key) {
-					t.Error("key should not exist")
-				}
+			expectResult: TestData{},
+			expectErr: func(err error) bool {
+				return errors.Is(err, errTest)
 			},
 		},
 		{
-			name: "second call when no validation, should not execute block and hit cache",
-			before: func(t *testing.T, cacheDir, category, key string) {
-				t.Helper()
+			name: "value not found in the cache",
+			initMock: func(storeMock *mocks.MockStore) {
+				storeMock.EXPECT().
+					Read("bucket", "key", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						false,
+						TestData{},
+						nil),
+					)
 
-				if _, err := proxycache.Get(
-					context.Background(),
-					cacheDir,
-					category,
-					key,
-					nil,
-					func(ctx context.Context) (string, error) {
-						return "my-value", nil
-					},
-				); err != nil {
-					t.Fatal(err)
-				}
-
-				if !proxycacheKeyExists(t, cacheDir, category, key) {
-					t.Fatal()
-				}
+				storeMock.EXPECT().
+					Write("bucket", "key", TestData{"value1"}).Return(nil)
 			},
 			isInvalid: nil,
-			block: func(ctx context.Context) (string, error) {
-				log.Fatal("it should not be run")
-
-				return "", nil
+			block: func(ctx context.Context) (TestData, error) {
+				return TestData{"value1"}, nil
 			},
-			checkResult: func(t *testing.T, value string, err error) bool {
-				return value == "my-value" && err == nil
-			},
-			after: func(t *testing.T, cacheDir, category, key string) {
-				t.Helper()
-
-				if !proxycacheKeyExists(t, cacheDir, category, key) {
-					t.Error("key should exist")
-				}
+			expectResult: TestData{"value1"},
+			expectErr: func(err error) bool {
+				return err == nil
 			},
 		},
 		{
-			name: "second call when is valid, should not execute block and hit cache",
-			before: func(t *testing.T, cacheDir, category, key string) {
-				t.Helper()
-
-				if _, err := proxycache.Get(
-					context.Background(),
-					cacheDir,
-					category,
-					key,
-					nil,
-					func(ctx context.Context) (string, error) {
-						return "my-value", nil
-					},
-				); err != nil {
-					t.Fatal(err)
-				}
-
-				if !proxycacheKeyExists(t, cacheDir, category, key) {
-					t.Fatal()
-				}
+			name: "error while running block",
+			initMock: func(storeMock *mocks.MockStore) {
+				storeMock.EXPECT().
+					Read("bucket", "key", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						false,
+						TestData{},
+						nil),
+					)
 			},
-			isInvalid: func(value string) bool {
-				return false
+			isInvalid: nil,
+			block: func(ctx context.Context) (TestData, error) {
+				return TestData{}, errTest
 			},
-			block: func(ctx context.Context) (string, error) {
-				log.Fatal("it should not be run")
-
-				return "", nil
-			},
-			checkResult: func(t *testing.T, value string, err error) bool {
-				return value == "my-value" && err == nil
-			},
-			after: func(t *testing.T, cacheDir, category, key string) {
-				t.Helper()
-
-				if !proxycacheKeyExists(t, cacheDir, category, key) {
-					t.Error("key should exist")
-				}
+			expectResult: TestData{},
+			expectErr: func(err error) bool {
+				return errors.Is(err, errTest)
 			},
 		},
 		{
-			name: "second call when is not valid, should execute block",
-			before: func(t *testing.T, cacheDir, category, key string) {
-				t.Helper()
+			name: "error while writing to the store",
+			initMock: func(storeMock *mocks.MockStore) {
+				storeMock.EXPECT().
+					Read("bucket", "key", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						false,
+						TestData{""},
+						nil),
+					)
 
-				if _, err := proxycache.Get(
-					context.Background(),
-					cacheDir,
-					category,
-					key,
-					nil,
-					func(ctx context.Context) (string, error) {
-						return "my-value", nil
-					},
-				); err != nil {
-					t.Fatal(err)
-				}
-
-				if !proxycacheKeyExists(t, cacheDir, category, key) {
-					t.Fatal()
-				}
+				storeMock.EXPECT().
+					Write("bucket", "key", TestData{"value1"}).Return(errTest)
 			},
-			isInvalid: func(value string) bool {
+			isInvalid: nil,
+			block: func(ctx context.Context) (TestData, error) {
+				return TestData{"value1"}, nil
+			},
+			expectResult: TestData{},
+			expectErr: func(err error) bool {
+				return errors.Is(err, errTest)
+			},
+		},
+		{
+			name: "value found in the cache but is not valid",
+			initMock: func(storeMock *mocks.MockStore) {
+				storeMock.EXPECT().
+					Read("bucket", "key", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						TestData{"value1"},
+						nil),
+					)
+
+				storeMock.EXPECT().
+					Write("bucket", "key", TestData{"value2"}).Return(nil)
+			},
+			isInvalid: func(data TestData) bool {
 				return true
 			},
-			block: func(ctx context.Context) (string, error) {
-				return "my-value2", nil
+			block: func(ctx context.Context) (TestData, error) {
+				return TestData{"value2"}, nil
 			},
-			checkResult: func(t *testing.T, value string, err error) bool {
-				return value == "my-value2" && err == nil
-			},
-			after: func(t *testing.T, cacheDir, category, key string) {
-				t.Helper()
-
-				if !proxycacheKeyExists(t, cacheDir, category, key) {
-					t.Error("key should exist")
-				}
+			expectResult: TestData{"value2"},
+			expectErr: func(err error) bool {
+				return err == nil
 			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			cacheDir := t.TempDir()
-			category := "my-category"
-			key := "my-key"
+			ctx := context.Background()
 
-			tc.before(t, cacheDir, category, key)
+			ctrl := gomock.NewController(t)
+			storeMock := mocks.NewMockStore(ctrl)
 
-			value, err := proxycache.Get(
-				context.Background(),
-				cacheDir,
-				category,
-				key,
+			tc.initMock(storeMock)
+
+			result, err := proxycache.Get(
+				ctx,
+				storeMock,
+				"bucket",
+				"key",
 				tc.isInvalid,
 				tc.block,
 			)
 
-			if !tc.checkResult(t, value, err) {
-				t.Errorf("unexpected result: %v, %v", value, err)
+			if !tc.expectErr(err) {
+				t.Errorf("unexpected error: %v", err)
 			}
 
-			tc.after(t, cacheDir, category, key)
-		})
-	}
-}
-
-func TestPut(t *testing.T) {
-	for _, tc := range []struct {
-		name   string
-		before func(t *testing.T, cacheDir, category, key string)
-	}{
-		{
-			name: "put value that not exists",
-			before: func(t *testing.T, cacheDir, category, key string) {
-				t.Helper()
-
-				if proxycacheKeyExists(t, cacheDir, category, key) {
-					t.Fatal("key should not exist")
-				}
-			},
-		},
-		{
-			name: "put override value that exists",
-			before: func(t *testing.T, cacheDir, category, key string) {
-				t.Helper()
-
-				if err := proxycache.Put(cacheDir, category, key, ""); err != nil {
-					t.Fatal(err)
-				}
-
-				if !proxycacheKeyExists(t, cacheDir, category, key) {
-					t.Fatal("key should exist")
-				}
-			},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			cacheDir := t.TempDir()
-			category := "my-category"
-			key := "my-key"
-			value := "my-value"
-
-			tc.before(t, cacheDir, category, key)
-
-			err := proxycache.Put(cacheDir, category, key, value)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if !proxycacheKeyExists(t, cacheDir, category, key) {
-				t.Error("key should exist")
-			}
-
-			valueFromCache, err := proxycache.Get(
-				context.Background(),
-				cacheDir,
-				category,
-				key,
-				nil,
-				func(ctx context.Context) (string, error) {
-					log.Fatal("should not call it")
-					return "", nil
-				},
-			)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if value != valueFromCache {
-				t.Errorf("unexpected value: %v", valueFromCache)
+			if !reflect.DeepEqual(tc.expectResult, result) {
+				t.Errorf("unexpected result\nexpected: %+v\nactual:  %+v",
+					tc.expectResult, result)
 			}
 		})
 	}
-}
-
-func TestInvalidateKey(t *testing.T) {
-	for _, tc := range []struct {
-		name   string
-		before func(t *testing.T, cacheDir, category, key string)
-	}{
-		{
-			name: "invalidate non-existent key",
-		},
-		{
-			name: "invalidate existing key",
-			before: func(t *testing.T, cacheDir, category, key string) {
-				t.Helper()
-
-				if err := proxycache.Put(cacheDir, category, key, ""); err != nil {
-					t.Fatal(err)
-				}
-			},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			cacheDir := t.TempDir()
-			category := "my-category"
-			key := "my-key"
-
-			if err := proxycache.InvalidateKey(
-				cacheDir,
-				category,
-				key,
-			); err != nil {
-				t.Fatal(err)
-			}
-
-			if proxycacheKeyExists(t, cacheDir, category, key) {
-				t.Error("invalidated key should not exists")
-			}
-		})
-	}
-}
-
-func proxycacheKeyExists(t *testing.T, cacheDir, category, key string) bool {
-	t.Helper()
-
-	exists, err := proxycache.KeyExists(cacheDir, category, key)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return exists
 }

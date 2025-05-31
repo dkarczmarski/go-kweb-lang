@@ -1,6 +1,6 @@
-package github
+package githubmon
 
-//go:generate mockgen -typed -source=github_monitor.go -destination=../mocks/mock_github_monitor.go -package=mocks
+//go:generate mockgen -typed -source=github_monitor.go -destination=./internal/mocks/mocks.go -package=mocks
 
 import (
 	"context"
@@ -9,13 +9,20 @@ import (
 	"log"
 	"time"
 
+	"go-kweb-lang/github"
 	"go-kweb-lang/proxycache"
 )
 
 type Monitor struct {
-	gh           GitHub
+	gitHub       GitHub
 	langProvider LangProvider
 	storage      MonitorStorage
+}
+
+type GitHub interface {
+	PRSearch(ctx context.Context, filter github.PRSearchFilter, page github.PageRequest) (*github.PRSearchResult, error)
+
+	GetLatestCommit(ctx context.Context) (*github.CommitInfo, error)
 }
 
 type LangProvider interface {
@@ -34,25 +41,30 @@ type MonitorTask interface {
 }
 
 const (
-	categoryLastRepoUpdatedAt = "github-monitor-repo-last-updated-at"
-	categoryLastPRUpdatedAt   = "github-monitor-pr-last-updated-at"
+	bucketLastRepoUpdatedAt = "github-monitor-repo-last-updated-at"
+	bucketLastPRUpdatedAt   = "github-monitor-pr-last-updated-at"
 )
 
-type MonitorFileStorage struct {
-	cacheDir string
+type CacheStore interface {
+	Read(bucket, key string, buff any) (bool, error)
+	Write(bucket, key string, data any) error
 }
 
-func NewMonitorFileStorage(cacheDir string) *MonitorFileStorage {
+type MonitorFileStorage struct {
+	cacheStore CacheStore
+}
+
+func NewMonitorFileStorage(cacheStore CacheStore) *MonitorFileStorage {
 	return &MonitorFileStorage{
-		cacheDir: cacheDir,
+		cacheStore: cacheStore,
 	}
 }
 
 func (s *MonitorFileStorage) ReadLastRepoUpdatedAt() (string, error) {
 	return proxycache.Get(
 		context.Background(),
-		s.cacheDir,
-		categoryLastRepoUpdatedAt,
+		s.cacheStore,
+		bucketLastRepoUpdatedAt,
 		"",
 		nil,
 		func(ctx context.Context) (string, error) {
@@ -62,9 +74,8 @@ func (s *MonitorFileStorage) ReadLastRepoUpdatedAt() (string, error) {
 }
 
 func (s *MonitorFileStorage) WriteLastRepoUpdatedAt(value string) error {
-	return proxycache.Put(
-		s.cacheDir,
-		categoryLastRepoUpdatedAt,
+	return s.cacheStore.Write(
+		bucketLastRepoUpdatedAt,
 		"",
 		value,
 	)
@@ -73,8 +84,8 @@ func (s *MonitorFileStorage) WriteLastRepoUpdatedAt(value string) error {
 func (s *MonitorFileStorage) ReadLastPRUpdatedAt(langCode string) (string, error) {
 	return proxycache.Get(
 		context.Background(),
-		s.cacheDir,
-		categoryLastPRUpdatedAt,
+		s.cacheStore,
+		bucketLastPRUpdatedAt,
 		langCode,
 		nil,
 		func(ctx context.Context) (string, error) {
@@ -84,17 +95,16 @@ func (s *MonitorFileStorage) ReadLastPRUpdatedAt(langCode string) (string, error
 }
 
 func (s *MonitorFileStorage) WriteLastPRUpdatedAt(langCode, value string) error {
-	return proxycache.Put(
-		s.cacheDir,
-		categoryLastPRUpdatedAt,
+	return s.cacheStore.Write(
+		bucketLastPRUpdatedAt,
 		langCode,
 		value,
 	)
 }
 
-func NewMonitor(gh GitHub, langProvider LangProvider, storage MonitorStorage) *Monitor {
+func NewMonitor(gitHub GitHub, langProvider LangProvider, storage MonitorStorage) *Monitor {
 	return &Monitor{
-		gh:           gh,
+		gitHub:       gitHub,
 		langProvider: langProvider,
 		storage:      storage,
 	}
@@ -176,7 +186,7 @@ func (mon *Monitor) isRepoUpdated(ctx context.Context) (bool, error) {
 }
 
 func (mon *Monitor) getCurrentLastRepoUpdatedAt(ctx context.Context) (string, error) {
-	commitInfo, err := mon.gh.GetLatestCommit(ctx)
+	commitInfo, err := mon.gitHub.GetLatestCommit(ctx)
 	if err != nil {
 		return "", fmt.Errorf("GitHub get latest commit error: %w", err)
 	}
@@ -233,12 +243,12 @@ func (mon *Monitor) prUpdatedLangCodes(ctx context.Context) ([]string, error) {
 }
 
 func (mon *Monitor) getCurrentLastPRUpdatedAt(ctx context.Context, langCode string) (string, error) {
-	result, err := mon.gh.PRSearch(
+	result, err := mon.gitHub.PRSearch(
 		ctx,
-		PRSearchFilter{
+		github.PRSearchFilter{
 			LangCode: langCode,
 		},
-		PageRequest{
+		github.PageRequest{
 			Sort:    "updated",
 			Order:   "desc",
 			PerPage: 1,

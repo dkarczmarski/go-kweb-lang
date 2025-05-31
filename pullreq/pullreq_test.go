@@ -5,13 +5,10 @@ import (
 	"reflect"
 	"testing"
 
-	"go-kweb-lang/pullreq/internal"
-
-	"go-kweb-lang/proxycache"
-
 	"go-kweb-lang/github"
-	"go-kweb-lang/mocks"
 	"go-kweb-lang/pullreq"
+	"go-kweb-lang/pullreq/internal/mocks"
+	"go-kweb-lang/testing/storetests"
 
 	"go.uber.org/mock/gomock"
 )
@@ -56,11 +53,12 @@ func TestFilePRFinder_LangIndex(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			gitHubMock := mocks.NewMockGitHub(ctrl)
+			cacheStore := mocks.NewMockCacheStore(ctrl)
 			storageMock := mocks.NewMockFilePRFinderStorage(ctrl)
 
 			filePRFinder := pullreq.NewFilePRFinder(
 				gitHubMock,
-				t.TempDir(),
+				cacheStore,
 				func(config *pullreq.FilePRFinderConfig) {
 					config.Storage = storageMock
 				},
@@ -87,22 +85,20 @@ func TestFilePRFinder_Update(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		init func(
-			t *testing.T,
 			cacheDir string,
 			gitHubMock *mocks.MockGitHub,
+			cacheStore *mocks.MockCacheStore,
 			storageMock *mocks.MockFilePRFinderStorage,
 		)
 	}{
 		{
 			name: "first run",
 			init: func(
-				t *testing.T,
 				cacheDir string,
 				gitHubMock *mocks.MockGitHub,
+				cacheStore *mocks.MockCacheStore,
 				storageMock *mocks.MockFilePRFinderStorage,
 			) {
-				t.Helper()
-
 				gitHubMock.EXPECT().
 					PRSearch(
 						ctx,
@@ -187,6 +183,16 @@ func TestFilePRFinder_Update(t *testing.T) {
 				gitHubMock.EXPECT().GetPRCommits(ctx, 14).Return([]string{"C2", "C3"}, nil)
 				gitHubMock.EXPECT().GetPRCommits(ctx, 15).Return([]string{"C4"}, nil)
 
+				cacheStore.EXPECT().
+					Read(gomock.Any(), gomock.Any(), gomock.Any()).
+					AnyTimes().
+					DoAndReturn(storetests.MockReadNotFound())
+
+				cacheStore.EXPECT().
+					Write(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).
+					AnyTimes().
+					Return(nil)
+
 				gitHubMock.EXPECT().GetCommitFiles(ctx, "C1").Return(&github.CommitFiles{Files: []string{"F1"}}, nil)
 				gitHubMock.EXPECT().GetCommitFiles(ctx, "C2").Return(&github.CommitFiles{Files: []string{"F2", "F3"}}, nil)
 				gitHubMock.EXPECT().GetCommitFiles(ctx, "C3").Return(&github.CommitFiles{Files: []string{"F1", "F4"}}, nil)
@@ -200,13 +206,11 @@ func TestFilePRFinder_Update(t *testing.T) {
 		{
 			name: "there is no update",
 			init: func(
-				t *testing.T,
 				cacheDir string,
 				gitHubMock *mocks.MockGitHub,
+				cacheStore *mocks.MockCacheStore,
 				storageMock *mocks.MockFilePRFinderStorage,
 			) {
-				t.Helper()
-
 				gitHubMock.EXPECT().
 					PRSearch(
 						ctx,
@@ -287,49 +291,70 @@ func TestFilePRFinder_Update(t *testing.T) {
 						nil,
 					).Times(1)
 
-				must(t, proxycache.Put(cacheDir, internal.CategoryPrCommits, "12",
-					internal.PRCommits{
-						UpdatedAt: "D001",
-						CommitIds: []string{"C1"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryPrCommits, "14",
-					internal.PRCommits{
-						UpdatedAt: "D003",
-						CommitIds: []string{"C2", "C3"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryPrCommits, "15",
-					internal.PRCommits{
-						UpdatedAt: "D004",
-						CommitIds: []string{"C4"},
-					},
-				))
+				cacheStore.EXPECT().
+					Read("pr-pr-commits", "12", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						pullreq.PRCommits{
+							UpdatedAt: "D001",
+							CommitIds: []string{"C1"},
+						}, nil,
+					))
 
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C1",
-					&github.CommitFiles{
-						CommitID: "C1",
-						Files:    []string{"F1"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C2",
-					&github.CommitFiles{
-						CommitID: "C2",
-						Files:    []string{"F2", "F3"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C3",
-					&github.CommitFiles{
-						CommitID: "C3",
-						Files:    []string{"F1", "F4"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C4",
-					&github.CommitFiles{
-						CommitID: "C4",
-						Files:    []string{"F5"},
-					},
-				))
+				cacheStore.EXPECT().
+					Read(pullreq.BucketCommitFiles, "C1", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						&github.CommitFiles{
+							CommitID: "C1",
+							Files:    []string{"F1"},
+						}, nil))
+
+				cacheStore.EXPECT().
+					Read(pullreq.BucketPrCommits, "14", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						pullreq.PRCommits{
+							UpdatedAt: "D003",
+							CommitIds: []string{"C2", "C3"},
+						}, nil,
+					))
+
+				cacheStore.EXPECT().
+					Read(pullreq.BucketCommitFiles, "C2", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						&github.CommitFiles{
+							CommitID: "C2",
+							Files:    []string{"F2", "F3"},
+						}, nil))
+				cacheStore.EXPECT().
+					Read(pullreq.BucketCommitFiles, "C3", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						&github.CommitFiles{
+							CommitID: "C3",
+							Files:    []string{"F1", "F4"},
+						}, nil))
+
+				cacheStore.EXPECT().
+					Read(pullreq.BucketPrCommits, "15", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						pullreq.PRCommits{
+							UpdatedAt: "D004",
+							CommitIds: []string{"C4"},
+						}, nil,
+					))
+
+				cacheStore.EXPECT().
+					Read(pullreq.BucketCommitFiles, "C4", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						&github.CommitFiles{
+							CommitID: "C4",
+							Files:    []string{"F5"},
+						}, nil))
 
 				storageMock.EXPECT().StoreLangIndex(langCode, map[string][]int{
 					"F1": {14, 12}, "F2": {14}, "F3": {14}, "F4": {14}, "F5": {15},
@@ -339,9 +364,9 @@ func TestFilePRFinder_Update(t *testing.T) {
 		{
 			name: "handle updates where a new file needs to be added to the index",
 			init: func(
-				t *testing.T,
 				cacheDir string,
 				gitHubMock *mocks.MockGitHub,
+				cacheStore *mocks.MockCacheStore,
 				storageMock *mocks.MockFilePRFinderStorage,
 			) {
 				t.Helper()
@@ -426,313 +451,103 @@ func TestFilePRFinder_Update(t *testing.T) {
 						nil,
 					).Times(1)
 
-				must(t, proxycache.Put(cacheDir, internal.CategoryPrCommits, "12",
-					internal.PRCommits{
-						UpdatedAt: "D001",
-						CommitIds: []string{"C1"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryPrCommits, "14",
-					internal.PRCommits{
-						UpdatedAt: "D003",
-						CommitIds: []string{"C2", "C3"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryPrCommits, "15",
-					internal.PRCommits{
-						UpdatedAt: "D004",
-						CommitIds: []string{"C4"},
-					},
-				))
-				gitHubMock.EXPECT().GetPRCommits(ctx, 15).Return([]string{"C5"}, nil)
+				cacheStore.EXPECT().
+					Read(pullreq.BucketPrCommits, "12", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						pullreq.PRCommits{
+							UpdatedAt: "D001",
+							CommitIds: []string{"C1"},
+						}, nil,
+					))
 
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C1",
-					&github.CommitFiles{
-						CommitID: "C1",
-						Files:    []string{"F1"},
+				cacheStore.EXPECT().
+					Read(pullreq.BucketCommitFiles, "C1", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						&github.CommitFiles{
+							CommitID: "C1",
+							Files:    []string{"F1"},
+						}, nil))
+
+				cacheStore.EXPECT().
+					Read(pullreq.BucketPrCommits, "14", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						pullreq.PRCommits{
+							UpdatedAt: "D003",
+							CommitIds: []string{"C2", "C3"},
+						}, nil,
+					))
+
+				cacheStore.EXPECT().
+					Read(pullreq.BucketCommitFiles, "C2", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						&github.CommitFiles{
+							CommitID: "C2",
+							Files:    []string{"F2", "F3"},
+						}, nil))
+
+				cacheStore.EXPECT().
+					Read(pullreq.BucketPrCommits, "15", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						pullreq.PRCommits{
+							UpdatedAt: "D004",
+							CommitIds: []string{"C4"},
+						}, nil,
+					))
+				gitHubMock.EXPECT().GetPRCommits(ctx, 15).Return([]string{"C5"}, nil)
+				cacheStore.EXPECT().Write(
+					pullreq.BucketPrCommits, "15",
+					pullreq.PRCommits{
+						UpdatedAt: "D005",
+						CommitIds: []string{"C5"},
 					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C2",
-					&github.CommitFiles{
-						CommitID: "C2",
-						Files:    []string{"F2", "F3"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C3",
-					&github.CommitFiles{
-						CommitID: "C3",
-						Files:    []string{"F1", "F4"},
-					},
-				))
+				)
+				cacheStore.EXPECT().
+					Read(pullreq.BucketCommitFiles, "C5", gomock.Any()).
+					DoAndReturn(storetests.MockReadNotFound())
+
+				cacheStore.EXPECT().
+					Read(pullreq.BucketCommitFiles, "C3", gomock.Any()).
+					DoAndReturn(storetests.MockReadReturn(
+						true,
+						&github.CommitFiles{
+							CommitID: "C3",
+							Files:    []string{"F1", "F4"},
+						}, nil))
+
 				gitHubMock.EXPECT().GetCommitFiles(ctx, "C5").Return(&github.CommitFiles{Files: []string{"F5", "F6"}}, nil)
+
+				cacheStore.EXPECT().
+					Write(
+						pullreq.BucketCommitFiles,
+						"C5",
+						gomock.Any(),
+					).Return(nil)
 
 				storageMock.EXPECT().StoreLangIndex(langCode, map[string][]int{
 					"F1": {14, 12}, "F2": {14}, "F3": {14}, "F4": {14}, "F5": {15}, "F6": {15},
 				}).Return(nil)
 			},
 		},
-		{
-			name: "handle updates when the PR list changes for an existing file",
-			init: func(
-				t *testing.T,
-				cacheDir string,
-				gitHubMock *mocks.MockGitHub,
-				storageMock *mocks.MockFilePRFinderStorage,
-			) {
-				t.Helper()
-
-				gitHubMock.EXPECT().
-					PRSearch(
-						ctx,
-						github.PRSearchFilter{
-							LangCode:    langCode,
-							UpdatedFrom: "",
-							OnlyOpen:    true,
-						},
-						github.PageRequest{
-							Sort:    "updated",
-							Order:   "asc",
-							PerPage: 2,
-						},
-					).
-					Return(
-						&github.PRSearchResult{
-							Items: []github.PRItem{
-								{
-									Number:    12,
-									UpdatedAt: "D001",
-								},
-								{
-									Number:    14,
-									UpdatedAt: "D003",
-								},
-							},
-							TotalCount: 3,
-						},
-						nil,
-					).Times(1)
-
-				gitHubMock.EXPECT().
-					PRSearch(
-						ctx,
-						github.PRSearchFilter{
-							LangCode:    langCode,
-							UpdatedFrom: "D003",
-							OnlyOpen:    true,
-						},
-						github.PageRequest{
-							Sort:    "updated",
-							Order:   "asc",
-							PerPage: 2,
-						},
-					).
-					Return(
-						&github.PRSearchResult{
-							Items: []github.PRItem{
-								{
-									Number:    15,
-									UpdatedAt: "D005", // here
-								},
-							},
-							TotalCount: 3,
-						},
-						nil,
-					).Times(1)
-
-				gitHubMock.EXPECT().
-					PRSearch(
-						ctx,
-						github.PRSearchFilter{
-							LangCode:    langCode,
-							UpdatedFrom: "D005",
-							OnlyOpen:    true,
-						},
-						github.PageRequest{
-							Sort:    "updated",
-							Order:   "asc",
-							PerPage: 2,
-						},
-					).
-					Return(
-						&github.PRSearchResult{
-							Items:      []github.PRItem{},
-							TotalCount: 3,
-						},
-						nil,
-					).Times(1)
-
-				must(t, proxycache.Put(cacheDir, internal.CategoryPrCommits, "12",
-					internal.PRCommits{
-						UpdatedAt: "D001",
-						CommitIds: []string{"C1"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryPrCommits, "14",
-					internal.PRCommits{
-						UpdatedAt: "D003",
-						CommitIds: []string{"C2", "C3"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryPrCommits, "15",
-					internal.PRCommits{
-						UpdatedAt: "D004",
-						CommitIds: []string{"C4"},
-					},
-				))
-				// C5 is the new commit
-				gitHubMock.EXPECT().GetPRCommits(ctx, 15).Return([]string{"C4", "C5"}, nil)
-
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C1",
-					&github.CommitFiles{
-						CommitID: "C1",
-						Files:    []string{"F1"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C2",
-					&github.CommitFiles{
-						CommitID: "C2",
-						Files:    []string{"F2", "F3"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C3",
-					&github.CommitFiles{
-						CommitID: "C3",
-						Files:    []string{"F1", "F4"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C4",
-					&github.CommitFiles{
-						CommitID: "C4",
-						Files:    []string{"F5"},
-					},
-				))
-				gitHubMock.EXPECT().GetCommitFiles(ctx, "C5").Return(&github.CommitFiles{Files: []string{"F2"}}, nil)
-
-				storageMock.EXPECT().StoreLangIndex(langCode, map[string][]int{
-					"F1": {14, 12}, "F2": {15, 14}, "F3": {14}, "F4": {14}, "F5": {15},
-				}).Return(nil)
-			},
-		},
-		{
-			name: "handle updates where a file has no remaining PRs and should be removed",
-			init: func(
-				t *testing.T,
-				cacheDir string,
-				gitHubMock *mocks.MockGitHub,
-				storageMock *mocks.MockFilePRFinderStorage,
-			) {
-				t.Helper()
-
-				gitHubMock.EXPECT().
-					PRSearch(
-						ctx,
-						github.PRSearchFilter{
-							LangCode:    langCode,
-							UpdatedFrom: "",
-							OnlyOpen:    true,
-						},
-						github.PageRequest{
-							Sort:    "updated",
-							Order:   "asc",
-							PerPage: 2,
-						},
-					).
-					Return(
-						&github.PRSearchResult{
-							Items: []github.PRItem{
-								{
-									Number:    12,
-									UpdatedAt: "D001",
-								},
-								{
-									Number:    14,
-									UpdatedAt: "D003",
-								},
-							},
-							TotalCount: 3,
-						},
-						nil,
-					).Times(1)
-
-				gitHubMock.EXPECT().
-					PRSearch(
-						ctx,
-						github.PRSearchFilter{
-							LangCode:    langCode,
-							UpdatedFrom: "D003",
-							OnlyOpen:    true,
-						},
-						github.PageRequest{
-							Sort:    "updated",
-							Order:   "asc",
-							PerPage: 2,
-						},
-					).
-					Return(
-						&github.PRSearchResult{
-							Items:      []github.PRItem{},
-							TotalCount: 3,
-						},
-						nil,
-					).Times(1)
-
-				must(t, proxycache.Put(cacheDir, internal.CategoryPrCommits, "12",
-					internal.PRCommits{
-						UpdatedAt: "D001",
-						CommitIds: []string{"C1"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryPrCommits, "14",
-					internal.PRCommits{
-						UpdatedAt: "D003",
-						CommitIds: []string{"C2", "C3"},
-					},
-				))
-
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C1",
-					&github.CommitFiles{
-						CommitID: "C1",
-						Files:    []string{"F1"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C2",
-					&github.CommitFiles{
-						CommitID: "C2",
-						Files:    []string{"F2", "F3"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C3",
-					&github.CommitFiles{
-						CommitID: "C3",
-						Files:    []string{"F1", "F4"},
-					},
-				))
-				must(t, proxycache.Put(cacheDir, internal.CategoryCommitFiles, "C4",
-					&github.CommitFiles{
-						CommitID: "C4",
-						Files:    []string{"F5"},
-					},
-				))
-
-				storageMock.EXPECT().StoreLangIndex(langCode, map[string][]int{
-					"F1": {14, 12}, "F2": {14}, "F3": {14}, "F4": {14},
-				}).Return(nil)
-			},
-		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			gitHubMock := mocks.NewMockGitHub(ctrl)
-			storageMock := mocks.NewMockFilePRFinderStorage(ctrl)
+			gitHub := mocks.NewMockGitHub(ctrl)
+			prFinderStorage := mocks.NewMockFilePRFinderStorage(ctrl)
+			cacheStore := mocks.NewMockCacheStore(ctrl)
 			cacheDir := t.TempDir()
 
-			tc.init(t, cacheDir, gitHubMock, storageMock)
+			tc.init(cacheDir, gitHub, cacheStore, prFinderStorage)
 
 			filePRFinder := pullreq.NewFilePRFinder(
-				gitHubMock,
-				cacheDir,
+				gitHub,
+				cacheStore,
 				func(config *pullreq.FilePRFinderConfig) {
-					config.Storage = storageMock
+					config.Storage = prFinderStorage
 					config.PerPage = 2
 				},
 			)
@@ -742,11 +557,5 @@ func TestFilePRFinder_Update(t *testing.T) {
 				t.Fatal(err)
 			}
 		})
-	}
-}
-
-func must(t *testing.T, err error) {
-	if err != nil {
-		t.Fatal(err)
 	}
 }

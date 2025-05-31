@@ -12,7 +12,7 @@ import (
 
 func TestGitHub_GetCommitFiles_E2E(t *testing.T) {
 	ctx := context.Background()
-	gh := github.New()
+	gh := github.NewGitHub()
 
 	files, err := gh.GetCommitFiles(ctx, "f9ef60a9cf2ce7fdc4e242c292d8ed728deab912")
 	if err != nil {
@@ -24,7 +24,7 @@ func TestGitHub_GetCommitFiles_E2E(t *testing.T) {
 
 func TestGitHub_GetPRCommits_E2E(t *testing.T) {
 	ctx := context.Background()
-	gh := github.New()
+	gh := github.NewGitHub()
 
 	commitIds, err := gh.GetPRCommits(ctx, 50193)
 	if err != nil {
@@ -36,7 +36,7 @@ func TestGitHub_GetPRCommits_E2E(t *testing.T) {
 
 func TestGitHub_PRSearch_E2E(t *testing.T) {
 	ctx := context.Background()
-	gh := github.New()
+	gh := github.NewGitHub()
 
 	var prs []github.PRItem
 

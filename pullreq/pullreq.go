@@ -1,7 +1,7 @@
 // Package pullreq provides information about pull requests
 package pullreq
 
-//go:generate mockgen -typed -source=pullreq.go -destination=../mocks/mock_pullreq.go -package=mocks
+//go:generate mockgen -typed -source=pullreq.go -destination=./internal/mocks/mocks.go -package=mocks
 
 import (
 	"context"
@@ -9,8 +9,6 @@ import (
 	"log"
 	"slices"
 	"sort"
-
-	"go-kweb-lang/pullreq/internal"
 
 	"go-kweb-lang/github"
 	"go-kweb-lang/proxycache"
@@ -21,10 +19,24 @@ type FilePRFinderConfig struct {
 	PerPage int
 }
 
+type GitHub interface {
+	PRSearch(ctx context.Context, filter github.PRSearchFilter, page github.PageRequest) (*github.PRSearchResult, error)
+
+	GetPRCommits(ctx context.Context, prNumber int) ([]string, error)
+
+	GetCommitFiles(ctx context.Context, commitID string) (*github.CommitFiles, error)
+}
+
+type CacheStore interface {
+	Read(bucket, key string, buff any) (bool, error)
+	Write(bucket, key string, data any) error
+	Delete(bucket, key string) error
+}
+
 type FilePRFinder struct {
-	gitHub   github.GitHub
-	cacheDir string
-	storage  FilePRFinderStorage
+	gitHub     GitHub
+	cacheStore CacheStore
+	storage    FilePRFinderStorage
 
 	perPage int
 }
@@ -34,10 +46,21 @@ type FilePRFinderStorage interface {
 	StoreLangIndex(langCode string, filePRs map[string][]int) error
 }
 
-func NewFilePRFinder(gitHub github.GitHub, cacheDir string, opts ...func(config *FilePRFinderConfig)) *FilePRFinder {
+const (
+	BucketPrCommits    = "pr-pr-commits"
+	BucketCommitFiles  = "pr-commit-files"
+	BucketFilePrsIndex = "pr-fileprs-index"
+)
+
+type PRCommits struct {
+	UpdatedAt string
+	CommitIds []string
+}
+
+func NewFilePRFinder(gitHub GitHub, cacheStore CacheStore, opts ...func(config *FilePRFinderConfig)) *FilePRFinder {
 	config := FilePRFinderConfig{
 		Storage: &FilePRFinderFileStorage{
-			cacheDir: cacheDir,
+			cacheStore: cacheStore,
 		},
 		PerPage: 100,
 	}
@@ -47,10 +70,10 @@ func NewFilePRFinder(gitHub github.GitHub, cacheDir string, opts ...func(config 
 	}
 
 	return &FilePRFinder{
-		gitHub:   gitHub,
-		cacheDir: cacheDir,
-		storage:  config.Storage,
-		perPage:  config.PerPage,
+		gitHub:     gitHub,
+		cacheStore: cacheStore, // todo: check it
+		storage:    config.Storage,
+		perPage:    config.PerPage,
 	}
 }
 
@@ -95,10 +118,10 @@ func (p *FilePRFinder) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]
 	key := fmt.Sprintf("%v", pr.Number)
 	commits, err := proxycache.Get(
 		ctx,
-		p.cacheDir,
-		internal.CategoryPrCommits,
+		p.cacheStore,
+		BucketPrCommits,
 		key,
-		func(cachedPrCommits internal.PRCommits) bool {
+		func(cachedPrCommits PRCommits) bool {
 			isInvalid := cachedPrCommits.UpdatedAt != pr.UpdatedAt
 
 			if isInvalid {
@@ -107,15 +130,15 @@ func (p *FilePRFinder) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]
 
 			return isInvalid
 		},
-		func(ctx context.Context) (internal.PRCommits, error) {
+		func(ctx context.Context) (PRCommits, error) {
 			log.Printf("fetching commit list for PR #%v", pr.Number)
 
 			commitIds, err := p.gitHub.GetPRCommits(ctx, pr.Number)
 			if err != nil {
-				return internal.PRCommits{}, err
+				return PRCommits{}, err
 			}
 
-			return internal.PRCommits{
+			return PRCommits{
 				UpdatedAt: pr.UpdatedAt,
 				CommitIds: commitIds,
 			}, nil
@@ -131,8 +154,8 @@ func (p *FilePRFinder) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]
 func (p *FilePRFinder) fetchCommitFiles(ctx context.Context, commitID string) (*github.CommitFiles, error) {
 	return proxycache.Get(
 		ctx,
-		p.cacheDir,
-		internal.CategoryCommitFiles,
+		p.cacheStore,
+		BucketCommitFiles,
 		commitID,
 		nil,
 		func(ctx context.Context) (*github.CommitFiles, error) {
@@ -221,14 +244,14 @@ func (p *FilePRFinder) LangIndex(langCode string) (map[string][]int, error) {
 }
 
 type FilePRFinderFileStorage struct {
-	cacheDir string
+	cacheStore CacheStore
 }
 
 func (sto *FilePRFinderFileStorage) LangIndex(langCode string) (map[string][]int, error) {
 	return proxycache.Get(
 		context.Background(),
-		sto.cacheDir,
-		internal.CategoryFilePrsIndex,
+		sto.cacheStore,
+		BucketFilePrsIndex,
 		langCode,
 		nil,
 		func(ctx context.Context) (map[string][]int, error) {
@@ -238,9 +261,8 @@ func (sto *FilePRFinderFileStorage) LangIndex(langCode string) (map[string][]int
 }
 
 func (sto *FilePRFinderFileStorage) StoreLangIndex(langCode string, filePRs map[string][]int) error {
-	return proxycache.Put(
-		sto.cacheDir,
-		internal.CategoryFilePrsIndex,
+	return sto.cacheStore.Write(
+		BucketFilePrsIndex,
 		langCode,
 		filePRs,
 	)

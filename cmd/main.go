@@ -13,12 +13,11 @@ import (
 	"syscall"
 	"time"
 
-	"go-kweb-lang/github"
-	"go-kweb-lang/langcnt"
-	"go-kweb-lang/tasks"
-
 	"go-kweb-lang/appinit"
 	"go-kweb-lang/git"
+	"go-kweb-lang/githubmon"
+	"go-kweb-lang/langcnt"
+	"go-kweb-lang/tasks"
 )
 
 var (
@@ -32,7 +31,7 @@ var (
 	flagGitHubTokenFile = flag.String("github-token-file", "", "file path with github api access token")
 )
 
-func createRepoIfNotExists(ctx context.Context, repoDirPath string, gitRepo git.Repo) error {
+func createRepoIfNotExists(ctx context.Context, repoDirPath string, gitRepo *git.Git) error {
 	exists, err := fileExists(filepath.Join(repoDirPath, ".git"))
 	if err != nil {
 		return fmt.Errorf("error while checking if a git repository exists: %w", err)
@@ -79,7 +78,7 @@ func runOnce(ctx context.Context, langCodesProvider *langcnt.LangCodesProvider, 
 
 func runInterval(
 	ctx context.Context,
-	gitHubMonitor *github.Monitor,
+	gitHubMonitor *githubmon.Monitor,
 	refreshTask *tasks.RefreshTask,
 	delay time.Duration,
 ) {
@@ -156,6 +155,7 @@ func main() {
 		// create components
 		appinit.NewLangCodesProvider(),
 		appinit.NewRepo(),
+		appinit.NewCacheStore(),
 		appinit.NewGitRepoHist(),
 		appinit.NewGitSeek(),
 		appinit.RegisterGitSeekInvalidator(),

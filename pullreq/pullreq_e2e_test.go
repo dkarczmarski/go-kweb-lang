@@ -8,13 +8,15 @@ import (
 
 	"go-kweb-lang/github"
 	"go-kweb-lang/pullreq"
+	"go-kweb-lang/store"
 )
 
 func TestFilePRFinder_Update_E2E(t *testing.T) {
-	gitHub := github.New()
+	gitHub := github.NewGitHub()
+	cacheStore := store.NewFileStore(t.TempDir())
 	filePRFinder := pullreq.NewFilePRFinder(
 		gitHub,
-		t.TempDir(),
+		cacheStore,
 		func(config *pullreq.FilePRFinderConfig) {
 			config.PerPage = 10
 		},

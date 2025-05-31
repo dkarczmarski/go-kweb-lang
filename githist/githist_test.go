@@ -7,33 +7,35 @@ import (
 
 	"go-kweb-lang/git"
 	"go-kweb-lang/githist"
-	"go-kweb-lang/mocks"
-	"go-kweb-lang/proxycache"
+	"go-kweb-lang/githist/internal/mocks"
+	"go-kweb-lang/testing/storetests"
 
 	"go.uber.org/mock/gomock"
 )
+
+const bucketMainBranchCommits = "git-main-branch-commits"
 
 func TestGitHist_FindForkCommit(t *testing.T) {
 	ctx := context.Background()
 
 	mainBranchCommits := []git.CommitInfo{
-		{CommitID: "ID40", DateTime: "DT40", Comment: "TEXT40"},
-		{CommitID: "ID30", DateTime: "DT30", Comment: "TEXT30"},
-		{CommitID: "ID20", DateTime: "DT20", Comment: "TEXT20"},
-		{CommitID: "ID10", DateTime: "DT10", Comment: "TEXT10"},
+		{CommitID: "C-ID-40", DateTime: "DT-40", Comment: "TEXT-40"},
+		{CommitID: "C-ID-30", DateTime: "DT-30", Comment: "TEXT-30"},
+		{CommitID: "C-ID-20", DateTime: "DT-20", Comment: "TEXT-20"},
+		{CommitID: "C-ID-10", DateTime: "DT-10", Comment: "TEXT-10"},
 	}
 
 	for _, tc := range []struct {
 		name     string
 		commitID string
 		expected *git.CommitInfo
-		initMock func(repo *mocks.MockRepo, commitID string)
+		initMock func(gitRepo *mocks.MockGitRepo, commitID string)
 	}{
 		{
 			name:     "fork is found",
-			commitID: "ID25",
-			expected: &git.CommitInfo{CommitID: "ID20", DateTime: "DT20", Comment: "TEXT20"},
-			initMock: func(m *mocks.MockRepo, commitID string) {
+			commitID: "C-ID-25",
+			expected: &git.CommitInfo{CommitID: "C-ID-20", DateTime: "DT-20", Comment: "TEXT-20"},
+			initMock: func(m *mocks.MockGitRepo, commitID string) {
 				m.EXPECT().ListMainBranchCommits(ctx).
 					Return(mainBranchCommits, nil).
 					Times(1)
@@ -41,8 +43,8 @@ func TestGitHist_FindForkCommit(t *testing.T) {
 				m.EXPECT().
 					ListAncestorCommits(ctx, commitID).
 					Return([]git.CommitInfo{
-						{CommitID: "ID20", DateTime: "DT20", Comment: "TEXT20"},
-						{CommitID: "ID10", DateTime: "DT10", Comment: "TEXT10"},
+						{CommitID: "C-ID-20", DateTime: "DT-20", Comment: "TEXT-20"},
+						{CommitID: "C-ID-10", DateTime: "DT-10", Comment: "TEXT-10"},
 					}, nil).
 					Times(1)
 			},
@@ -52,14 +54,22 @@ func TestGitHist_FindForkCommit(t *testing.T) {
 			t.Parallel()
 
 			ctrl := gomock.NewController(t)
-			gitRepoMock := mocks.NewMockRepo(ctrl)
+			gitRepo := mocks.NewMockGitRepo(ctrl)
+			cacheStore := mocks.NewMockCacheStore(ctrl)
+
+			cacheStore.EXPECT().
+				Read(bucketMainBranchCommits, "", gomock.Any()).
+				DoAndReturn(storetests.MockReadNotFound())
+
+			cacheStore.EXPECT().
+				Write(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(nil)
 
 			if tc.initMock != nil {
-				tc.initMock(gitRepoMock, tc.commitID)
+				tc.initMock(gitRepo, tc.commitID)
 			}
 
-			cacheDir := t.TempDir()
-			gc := githist.New(gitRepoMock, cacheDir)
+			gc := githist.New(gitRepo, cacheStore)
 
 			mergeCommit, err := gc.FindForkCommit(ctx, tc.commitID)
 			if err != nil {
@@ -77,23 +87,23 @@ func TestGitHist_FindMergeCommit(t *testing.T) {
 	ctx := context.Background()
 
 	mainBranchCommits := []git.CommitInfo{
-		{CommitID: "ID40", DateTime: "DT40", Comment: "TEXT40"},
-		{CommitID: "ID30", DateTime: "DT30", Comment: "TEXT30"},
-		{CommitID: "ID20", DateTime: "DT20", Comment: "TEXT20"},
-		{CommitID: "ID10", DateTime: "DT10", Comment: "TEXT10"},
+		{CommitID: "C-ID-40", DateTime: "DT-40", Comment: "TEXT-40"},
+		{CommitID: "C-ID-30", DateTime: "DT-30", Comment: "TEXT-30"},
+		{CommitID: "C-ID-20", DateTime: "DT-20", Comment: "TEXT-20"},
+		{CommitID: "C-ID-10", DateTime: "DT-10", Comment: "TEXT-10"},
 	}
 
 	for _, tc := range []struct {
 		name     string
 		commitID string
 		expected *git.CommitInfo
-		initMock func(repo *mocks.MockRepo, commitID string)
+		initMock func(repo *mocks.MockGitRepo, commitID string)
 	}{
 		{
 			name:     "merge commit is found",
-			commitID: "ID25",
-			expected: &git.CommitInfo{CommitID: "ID30", DateTime: "DT30", Comment: "TEXT30"},
-			initMock: func(m *mocks.MockRepo, commitID string) {
+			commitID: "C-ID-25",
+			expected: &git.CommitInfo{CommitID: "C-ID-30", DateTime: "DT-30", Comment: "TEXT-30"},
+			initMock: func(m *mocks.MockGitRepo, commitID string) {
 				m.EXPECT().ListMainBranchCommits(ctx).
 					Return(mainBranchCommits, nil).
 					Times(1)
@@ -101,8 +111,8 @@ func TestGitHist_FindMergeCommit(t *testing.T) {
 				m.EXPECT().
 					ListMergePoints(ctx, commitID).
 					Return([]git.CommitInfo{
-						{CommitID: "ID30", DateTime: "DT30", Comment: "TEXT30"},
-						{CommitID: "ID40", DateTime: "DT40", Comment: "TEXT40"},
+						{CommitID: "C-ID-30", DateTime: "DT-30", Comment: "TEXT-30"},
+						{CommitID: "C-ID-40", DateTime: "DT-40", Comment: "TEXT-40"},
 					}, nil).
 					Times(1)
 			},
@@ -112,14 +122,23 @@ func TestGitHist_FindMergeCommit(t *testing.T) {
 			t.Parallel()
 
 			ctrl := gomock.NewController(t)
-			gitRepoMock := mocks.NewMockRepo(ctrl)
+			gitRepo := mocks.NewMockGitRepo(ctrl)
+			cacheStore := mocks.NewMockCacheStore(ctrl)
+
+			cacheStore.EXPECT().
+				Read(bucketMainBranchCommits, "", gomock.Any()).
+				DoAndReturn(storetests.MockReadReturn[[]git.CommitInfo](
+					false, nil, nil),
+				)
+
+			cacheStore.EXPECT().
+				Write(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 			if tc.initMock != nil {
-				tc.initMock(gitRepoMock, tc.commitID)
+				tc.initMock(gitRepo, tc.commitID)
 			}
 
-			cacheDir := t.TempDir()
-			gc := githist.New(gitRepoMock, cacheDir)
+			gc := githist.New(gitRepo, cacheStore)
 
 			mergeCommit, err := gc.FindMergeCommit(ctx, tc.commitID)
 			if err != nil {
@@ -136,106 +155,211 @@ func TestGitHist_FindMergeCommit(t *testing.T) {
 func TestGitHist_PullRefresh(t *testing.T) {
 	ctx := context.Background()
 
-	const categoryMainBranchCommits = "git-main-branch-commits"
-
 	for _, tc := range []struct {
 		name     string
 		initMock func(
-			t *testing.T,
-			gitRepoMock *mocks.MockRepo,
-			invalidatorMock *mocks.MockInvalidator,
-			cacheDir string,
 			ctx context.Context,
+			gitRepo *mocks.MockGitRepo,
+			cacheStore *mocks.MockCacheStore,
+			invalidator *mocks.MockInvalidator,
 		)
 	}{
 		{
 			name: "no fresh commits",
 			initMock: func(
-				t *testing.T,
-				gitRepoMock *mocks.MockRepo,
-				invalidatorMock *mocks.MockInvalidator,
-				cacheDir string,
 				ctx context.Context,
+				gitRepo *mocks.MockGitRepo,
+				cacheStore *mocks.MockCacheStore,
+				invalidator *mocks.MockInvalidator,
 			) {
-				t.Helper()
-
-				gitRepoMock.EXPECT().ListFreshCommits(ctx).Return(nil, nil)
-				invalidatorMock.EXPECT().InvalidateFiles(nil).Return(nil)
+				gitRepo.EXPECT().ListFreshCommits(ctx).Return(nil, nil)
 			},
 		},
 		{
-			name: "two fresh commits on the main branch",
+			name: "fresh commits on the main branch",
 			initMock: func(
-				t *testing.T,
-				gitRepoMock *mocks.MockRepo,
-				invalidatorMock *mocks.MockInvalidator,
-				cacheDir string,
 				ctx context.Context,
+				gitRepo *mocks.MockGitRepo,
+				cacheStore *mocks.MockCacheStore,
+				invalidator *mocks.MockInvalidator,
 			) {
-				t.Helper()
-
-				gitRepoMock.EXPECT().ListFreshCommits(ctx).Return(
+				gitRepo.EXPECT().ListFreshCommits(ctx).Return(
 					[]git.CommitInfo{
 						{
-							CommitID: "CID1",
-							DateTime: "D1",
-							Comment:  "Comment1",
+							CommitID: "C-ID-1",
+							DateTime: "DT-1",
+							Comment:  "Comment-1",
 						},
 						{
-							CommitID: "CID2",
-							DateTime: "D2",
-							Comment:  "Comment2",
+							CommitID: "C-ID-2",
+							DateTime: "Dß2",
+							Comment:  "Comment-2",
 						},
 					}, nil,
 				)
-				gitRepoMock.EXPECT().ListFilesInCommit(ctx, "CID1").Return([]string{"F10", "F11"}, nil)
-				gitRepoMock.EXPECT().ListFilesInCommit(ctx, "CID2").Return([]string{"F11", "F12"}, nil)
-				invalidatorMock.EXPECT().InvalidateFiles([]string{"F10", "F11", "F12"}).Return(nil)
 
-				mustProxyCachePut(t, cacheDir, categoryMainBranchCommits, "")
+				gitRepo.EXPECT().ListFilesInCommit(ctx, "C-ID-1").Return([]string{"content/fr/file1", "content/en/file2"}, nil)
+				gitRepo.EXPECT().ListFilesInCommit(ctx, "C-ID-2").Return([]string{"dir/file3", "content/en/dir/file4"}, nil)
+
+				cacheStore.EXPECT().Delete(bucketMainBranchCommits, "").
+					Return(nil)
+
+				invalidator.EXPECT().InvalidateFile("content/fr/file1").Return(nil)
+				invalidator.EXPECT().InvalidateFile("content/en/file2").Return(nil)
+				invalidator.EXPECT().InvalidateFile("dir/file3").Return(nil)
+				invalidator.EXPECT().InvalidateFile("content/en/dir/file4").Return(nil)
+			},
+		},
+		{
+			name: "fresh merge commits",
+			initMock: func(
+				ctx context.Context,
+				gitRepo *mocks.MockGitRepo,
+				cacheStore *mocks.MockCacheStore,
+				invalidator *mocks.MockInvalidator,
+			) {
+				// to simplify testing, no caching
+				cacheStore.EXPECT().
+					Read(gomock.Any(), gomock.Any(), gomock.Any()).
+					AnyTimes().
+					DoAndReturn(storetests.MockReadNotFound())
+
+				cacheStore.EXPECT().
+					Write(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).
+					AnyTimes()
+
+				gitRepo.EXPECT().ListFreshCommits(ctx).Return(
+					[]git.CommitInfo{
+						{
+							CommitID: "C-ID-1",
+							DateTime: "DT-1",
+							Comment:  "Comment-1",
+						},
+						{
+							CommitID: "C-ID-2",
+							DateTime: "DT-2",
+							Comment:  "Comment-2",
+						},
+					}, nil,
+				)
+
+				gitRepo.EXPECT().ListFilesInCommit(ctx, "C-ID-1").Return([]string{}, nil)
+				gitRepo.EXPECT().ListFilesInCommit(ctx, "C-ID-2").Return([]string{}, nil)
+
+				gitRepo.EXPECT().ListCommitParents(ctx, "C-ID-1").
+					Return([]string{
+						"C-ID-10", // main
+						"C-ID-11", // branch
+					}, nil)
+				gitRepo.EXPECT().ListCommitParents(ctx, "C-ID-2").
+					Return([]string{
+						"C-ID-12", // branch
+						"C-ID-13", // main
+					}, nil)
+
+				gitRepo.EXPECT().ListMainBranchCommits(ctx).
+					AnyTimes(). // to simplify testing, no caching
+					Return([]git.CommitInfo{
+						{
+							CommitID: "C-ID-2",
+							DateTime: "DT-2",
+							Comment:  "Comment-2",
+						},
+						{
+							CommitID: "C-ID-1",
+							DateTime: "DT-1",
+							Comment:  "Comment-1",
+						},
+						{
+							CommitID: "C-ID-10",
+							DateTime: "DT-10",
+							Comment:  "Comment-10",
+						},
+						{
+							CommitID: "C-ID-13",
+							DateTime: "DT-13",
+							Comment:  "Comment-13",
+						},
+						{
+							CommitID: "C-ID-103",
+							DateTime: "DT-103",
+							Comment:  "Comment-103",
+						},
+						{
+							CommitID: "C-ID-102",
+							DateTime: "DT-102",
+							Comment:  "Comment-102",
+						},
+						{
+							CommitID: "C-ID-101",
+							DateTime: "DT-101",
+							Comment:  "Comment-101",
+						},
+					}, nil)
+
+				gitRepo.EXPECT().ListAncestorCommits(ctx, "C-ID-11").
+					Return([]git.CommitInfo{
+						{
+							CommitID: "C-ID-11-2",
+							DateTime: "DT-11-2",
+							Comment:  "Comment-11-2",
+						},
+						{
+							CommitID: "C-ID-11-1",
+							DateTime: "DT-11-1",
+							Comment:  "Comment-1-11",
+						},
+						{
+							CommitID: "C-ID-102",
+							DateTime: "DT-102",
+							Comment:  "Comment-102",
+						},
+					}, nil)
+				gitRepo.EXPECT().ListAncestorCommits(ctx, "C-ID-12").
+					Return([]git.CommitInfo{
+						{
+							CommitID: "C-ID-12-1",
+							DateTime: "DT-12-1",
+							Comment:  "Comment-12-1",
+						},
+						{
+							CommitID: "C-ID-103",
+							DateTime: "DT-103",
+							Comment:  "Comment-103",
+						},
+					}, nil)
+
+				gitRepo.EXPECT().ListFilesBetweenCommits(ctx, "C-ID-102", "C-ID-11").
+					Return([]string{"dir/file1", "dir/file2"}, nil)
+				gitRepo.EXPECT().ListFilesBetweenCommits(ctx, "C-ID-103", "C-ID-12").
+					Return([]string{"dir/file3"}, nil)
+
+				cacheStore.EXPECT().Delete(bucketMainBranchCommits, "").
+					Return(nil)
+
+				invalidator.EXPECT().InvalidateFile("dir/file1").Return(nil)
+				invalidator.EXPECT().InvalidateFile("dir/file2").Return(nil)
+				invalidator.EXPECT().InvalidateFile("dir/file3").Return(nil)
 			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			gitRepoMock := mocks.NewMockRepo(ctrl)
-			invalidatorMock := mocks.NewMockInvalidator(ctrl)
+			gitRepo := mocks.NewMockGitRepo(ctrl)
+			invalidator := mocks.NewMockInvalidator(ctrl)
+			cacheStore := mocks.NewMockCacheStore(ctrl)
 
-			cacheDir := t.TempDir()
+			gitRepo.EXPECT().Fetch(ctx).Return(nil)
+			gitRepo.EXPECT().Pull(ctx).Return(nil)
 
-			gitRepoMock.EXPECT().Fetch(ctx).Return(nil)
-			tc.initMock(t, gitRepoMock, invalidatorMock, cacheDir, ctx)
-			gitRepoMock.EXPECT().Pull(ctx).Return(nil)
+			tc.initMock(ctx, gitRepo, cacheStore, invalidator)
 
-			gitRepoHist := githist.New(gitRepoMock, cacheDir)
-			gitRepoHist.RegisterInvalidator(invalidatorMock)
+			gitRepoHist := githist.New(gitRepo, cacheStore)
+			gitRepoHist.RegisterInvalidator(invalidator)
 
 			if err := gitRepoHist.PullRefresh(ctx); err != nil {
 				t.Error(err)
 			}
-
-			if mustProxyCacheKeyExists(t, cacheDir, categoryMainBranchCommits, "") {
-				t.Error("key should not exists")
-			}
 		})
 	}
-}
-
-func mustProxyCachePut(t *testing.T, cacheDir, category, key string) {
-	t.Helper()
-
-	if err := proxycache.Put(cacheDir, category, key, struct{}{}); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func mustProxyCacheKeyExists(t *testing.T, cacheDir, category, key string) bool {
-	t.Helper()
-
-	exists, err := proxycache.KeyExists(cacheDir, category, key)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return exists
 }

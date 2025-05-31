@@ -8,13 +8,14 @@ import (
 	"strconv"
 	"strings"
 
-	"go-kweb-lang/gitseek"
-
 	"go-kweb-lang/git"
 	"go-kweb-lang/githist"
 	"go-kweb-lang/github"
+	"go-kweb-lang/githubmon"
+	"go-kweb-lang/gitseek"
 	"go-kweb-lang/langcnt"
 	"go-kweb-lang/pullreq"
+	"go-kweb-lang/store"
 	"go-kweb-lang/tasks"
 	"go-kweb-lang/web"
 )
@@ -28,17 +29,18 @@ type Config struct {
 	GitHubToken             string
 	GitHubTokenFile         string
 	LangCodesProvider       *langcnt.LangCodesProvider
-	GitRepo                 git.Repo
+	GitRepo                 *git.Git
 	TemplateData            *web.TemplateData
+	CacheStore              *store.FileStore
 	GitRepoHist             *githist.GitHist
 	GitSeek                 *gitseek.GitSeek
-	GitHub                  github.GitHub
+	GitHub                  *github.GitHub
 	FilePRFinder            *pullreq.FilePRFinder
 	RefreshRepoTask         *tasks.RefreshRepoTask
 	RefreshTemplateDataTask *tasks.RefreshTemplateDataTask
 	RefreshPRTask           *tasks.RefreshPRTask
 	RefreshTask             *tasks.RefreshTask
-	GitHubMonitor           *github.Monitor
+	GitHubMonitor           *githubmon.Monitor
 	Server                  *web.Server
 }
 
@@ -243,6 +245,19 @@ func NewTemplateData() func(*Config) error {
 	}
 }
 
+func NewCacheStore() func(*Config) error {
+	return func(config *Config) error {
+		cacheDirPath := config.CacheDir
+		if len(cacheDirPath) == 0 {
+			return fmt.Errorf("param CacheDir is not set: %w", ErrBadConfiguration)
+		}
+
+		config.CacheStore = store.NewFileStore(cacheDirPath)
+
+		return nil
+	}
+}
+
 func NewGitRepoHist() func(*Config) error {
 	return func(config *Config) error {
 		gitRepo := config.GitRepo
@@ -250,12 +265,12 @@ func NewGitRepoHist() func(*Config) error {
 			return fmt.Errorf("param GitRepo is not set: %w", ErrBadConfiguration)
 		}
 
-		cacheDirPath := config.CacheDir
-		if len(cacheDirPath) == 0 {
-			return fmt.Errorf("param CacheDir is not set: %w", ErrBadConfiguration)
+		cacheStore := config.CacheStore
+		if cacheStore == nil {
+			return fmt.Errorf("param CacheStore is not set: %w", ErrBadConfiguration)
 		}
 
-		config.GitRepoHist = githist.New(gitRepo, cacheDirPath)
+		config.GitRepoHist = githist.New(gitRepo, cacheStore)
 
 		return nil
 	}
@@ -273,12 +288,12 @@ func NewGitSeek() func(*Config) error {
 			return fmt.Errorf("param GitRepoHist is not set: %w", ErrBadConfiguration)
 		}
 
-		cacheDirPath := config.CacheDir
-		if len(cacheDirPath) == 0 {
-			return fmt.Errorf("param CacheDir is not set: %w", ErrBadConfiguration)
+		cacheStore := config.CacheStore
+		if cacheStore == nil {
+			return fmt.Errorf("param CacheStore is not set: %w", ErrBadConfiguration)
 		}
 
-		config.GitSeek = gitseek.New(gitRepo, gitRepoHist, cacheDirPath)
+		config.GitSeek = gitseek.New(gitRepo, gitRepoHist, cacheStore)
 
 		return nil
 	}
@@ -304,7 +319,7 @@ func RegisterGitSeekInvalidator() func(*Config) error {
 
 func NewGitHub() func(*Config) error {
 	return func(config *Config) error {
-		config.GitHub = github.New(func(githubConfig *github.ClientConfig) {
+		config.GitHub = github.NewGitHub(func(githubConfig *github.Config) {
 			githubConfig.Token = config.GitHubToken
 		})
 
@@ -319,12 +334,12 @@ func NewFilePRFinder() func(*Config) error {
 			return fmt.Errorf("param GitHub is not set: %w", ErrBadConfiguration)
 		}
 
-		cacheDirPath := config.CacheDir
-		if len(cacheDirPath) == 0 {
-			return fmt.Errorf("param CacheDir is not set: %w", ErrBadConfiguration)
+		cacheStore := config.CacheStore
+		if cacheStore == nil {
+			return fmt.Errorf("param CacheStore is not set: %w", ErrBadConfiguration)
 		}
 
-		config.FilePRFinder = pullreq.NewFilePRFinder(gitHub, cacheDirPath)
+		config.FilePRFinder = pullreq.NewFilePRFinder(gitHub, cacheStore)
 
 		return nil
 	}
@@ -429,15 +444,15 @@ func NewGitHubMonitor() func(*Config) error {
 			return fmt.Errorf("param LangCodesProvider is not set: %w", ErrBadConfiguration)
 		}
 
-		cacheDirPath := config.CacheDir
-		if len(cacheDirPath) == 0 {
-			return fmt.Errorf("param CacheDir is not set: %w", ErrBadConfiguration)
+		cacheStore := config.CacheStore
+		if cacheStore == nil {
+			return fmt.Errorf("param CacheStore is not set: %w", ErrBadConfiguration)
 		}
 
-		config.GitHubMonitor = github.NewMonitor(
+		config.GitHubMonitor = githubmon.NewMonitor(
 			gh,
 			langCodesProvider,
-			github.NewMonitorFileStorage(cacheDirPath),
+			githubmon.NewMonitorFileStorage(cacheStore),
 		)
 
 		return nil

@@ -12,7 +12,7 @@ import (
 	"go-kweb-lang/git"
 )
 
-func TestLocalRepo_Create_Integration(t *testing.T) {
+func TestGit_Create_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
 		repoURL     func(repoDirPath string) string
@@ -59,7 +59,7 @@ func TestLocalRepo_Create_Integration(t *testing.T) {
 	}
 }
 
-func TestLocalRepo_Checkout_Integration(t *testing.T) {
+func TestGit_Checkout_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		commitID string
@@ -98,7 +98,7 @@ func TestLocalRepo_Checkout_Integration(t *testing.T) {
 	}
 }
 
-func TestLocalRepo_MainBranchCommits_Integration(t *testing.T) {
+func TestGit_MainBranchCommits_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name            string
 		expectedErr     func(err error) bool
@@ -169,7 +169,7 @@ func TestLocalRepo_MainBranchCommits_Integration(t *testing.T) {
 	}
 }
 
-func TestLocalRepo_FileExists_Integration(t *testing.T) {
+func TestGit_FileExists_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		fileName       string
@@ -213,7 +213,7 @@ func TestLocalRepo_FileExists_Integration(t *testing.T) {
 	}
 }
 
-func TestLocalRepo_ListFiles_Integration(t *testing.T) {
+func TestGit_ListFiles_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		dirPath        string
@@ -259,7 +259,7 @@ func TestLocalRepo_ListFiles_Integration(t *testing.T) {
 	}
 }
 
-func TestLocalRepo_FindFileLastCommit_Integration(t *testing.T) {
+func TestGit_FindFileLastCommit_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		filePath       string
@@ -309,7 +309,7 @@ func TestLocalRepo_FindFileLastCommit_Integration(t *testing.T) {
 	}
 }
 
-func TestLocalRepo_FindFileCommitsAfter_Integration(t *testing.T) {
+func TestGit_FindFileCommitsAfter_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		filePath       string
@@ -366,7 +366,7 @@ func TestLocalRepo_FindFileCommitsAfter_Integration(t *testing.T) {
 	}
 }
 
-func TestLocalRepo_FindMergePoints_Integration(t *testing.T) {
+func TestGit_FindMergePoints_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		commitID       string
@@ -427,7 +427,7 @@ func TestLocalRepo_FindMergePoints_Integration(t *testing.T) {
 	}
 }
 
-func TestLocalRepo_Pull_Integration_Scenario(t *testing.T) {
+func TestGit_Pull_Integration_Scenario(t *testing.T) {
 	ctx := context.Background()
 	tmpDir := t.TempDir()
 
@@ -537,7 +537,7 @@ func TestLocalRepo_Pull_Integration_Scenario(t *testing.T) {
 	})
 }
 
-func TestLocalRepo_FilesInCommit_Integration(t *testing.T) {
+func TestGit_FilesInCommit_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		commitID       string
@@ -595,7 +595,7 @@ func TestLocalRepo_FilesInCommit_Integration(t *testing.T) {
 	}
 }
 
-func TestLocalRepo_ListAncestorCommits_Integration(t *testing.T) {
+func TestGit_ListAncestorCommits_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		commitID       string
@@ -731,7 +731,7 @@ func TestLocalRepo_ListAncestorCommits_Integration(t *testing.T) {
 	}
 }
 
-func TestLocalRepo_ListCommitParents_Integration(t *testing.T) {
+func TestGit_ListCommitParents_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		commitID       string
@@ -781,7 +781,7 @@ func TestLocalRepo_ListCommitParents_Integration(t *testing.T) {
 	}
 }
 
-func TestLocalRepo_ListFilesBetweenCommits_Integration(t *testing.T) {
+func TestGit_ListFilesBetweenCommits_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name                             string
 		forkCommitID, branchLastCommitID string

@@ -15,7 +15,7 @@ import (
 //go:embed testdata/TestGitHub_GetCommitFiles.txt
 var GetCommitFiles []byte
 
-func TestGitHub_GetCommitFiles_INT(t *testing.T) {
+func TestGitHub_GetCommitFiles_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		commitID       string
@@ -42,7 +42,7 @@ func TestGitHub_GetCommitFiles_INT(t *testing.T) {
 			mockServer := newMockServer(t, tc.expectedURL, url.Values{}, tc.response)
 			defer mockServer.Close()
 
-			gh := &github.Client{
+			gh := &github.GitHub{
 				HTTPClient: mockServer.Client(),
 				BaseURL:    mockServer.URL,
 			}
@@ -62,7 +62,7 @@ func TestGitHub_GetCommitFiles_INT(t *testing.T) {
 //go:embed testdata/TestGitHub_GetPRCommits.txt
 var GetPRCommits []byte
 
-func TestGitHub_GetPRCommits_INT(t *testing.T) {
+func TestGitHub_GetPRCommits_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		prNumber       int
@@ -83,7 +83,7 @@ func TestGitHub_GetPRCommits_INT(t *testing.T) {
 			mockServer := newMockServer(t, tc.expectedURL, url.Values{}, tc.response)
 			defer mockServer.Close()
 
-			gh := &github.Client{
+			gh := &github.GitHub{
 				HTTPClient: mockServer.Client(),
 				BaseURL:    mockServer.URL,
 			}
@@ -103,7 +103,7 @@ func TestGitHub_GetPRCommits_INT(t *testing.T) {
 //go:embed testdata/TestGitHub_PRSearch.txt
 var PRSearch []byte
 
-func TestGitHub_PRSearch_INT(t *testing.T) {
+func TestGitHub_PRSearch_Integration(t *testing.T) {
 	for _, tc := range []struct {
 		name                string
 		filter              github.PRSearchFilter
@@ -150,7 +150,7 @@ func TestGitHub_PRSearch_INT(t *testing.T) {
 			mockServer := newMockServer(t, tc.expectedURL, tc.expectedQueryParams, tc.response)
 			defer mockServer.Close()
 
-			gh := &github.Client{
+			gh := &github.GitHub{
 				HTTPClient: mockServer.Client(),
 				BaseURL:    mockServer.URL,
 			}

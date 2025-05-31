@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"testing"
 
-	"go-kweb-lang/githist"
-
 	"go-kweb-lang/git"
+	"go-kweb-lang/githist"
+	"go-kweb-lang/store"
 )
 
 func TestGitHist_MergeCommitFiles_E2E(t *testing.T) {
@@ -21,8 +21,9 @@ func TestGitHist_MergeCommitFiles_E2E(t *testing.T) {
 	mustMkDir(t, repoDir)
 	cacheDir := filepath.Join(testDir, "cache")
 	mustMkDir(t, cacheDir)
+	storeCache := store.NewFileStore(cacheDir)
 	gitRepo := git.NewRepo(repoDir)
-	gitRepoHist := githist.New(gitRepo, cacheDir)
+	gitRepoHist := githist.New(gitRepo, storeCache)
 
 	if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
 		t.Fatal(err)

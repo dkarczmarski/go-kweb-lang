@@ -1,11 +1,12 @@
-package github_test
+package githubmon_test
 
 import (
 	"context"
 	"testing"
 
 	"go-kweb-lang/github"
-	"go-kweb-lang/mocks"
+	"go-kweb-lang/githubmon"
+	"go-kweb-lang/githubmon/internal/mocks"
 
 	"go.uber.org/mock/gomock"
 )
@@ -31,8 +32,8 @@ func TestMonitor_Check(t *testing.T) {
 			) {
 				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("", nil)
 				githubMock.EXPECT().GetLatestCommit(ctx).
-					Return(&github.CommitInfo{CommitID: "C1", DateTime: "DT1"}, nil)
-				storageMock.EXPECT().WriteLastRepoUpdatedAt("DT1").Return(nil)
+					Return(&github.CommitInfo{CommitID: "C-ID-1", DateTime: "DT-1"}, nil)
+				storageMock.EXPECT().WriteLastRepoUpdatedAt("DT-1").Return(nil)
 
 				langMock.EXPECT().LangCodes().Return([]string{"pl"}, nil)
 
@@ -55,9 +56,9 @@ func TestMonitor_Check(t *testing.T) {
 				storageMock *mocks.MockMonitorStorage,
 				task *mocks.MockMonitorTask,
 			) {
-				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("DT0", nil)
+				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("DT-0", nil)
 				githubMock.EXPECT().GetLatestCommit(ctx).
-					Return(&github.CommitInfo{CommitID: "C1", DateTime: "DT0"}, nil)
+					Return(&github.CommitInfo{CommitID: "C-ID-1", DateTime: "DT-0"}, nil)
 
 				langMock.EXPECT().LangCodes().Return([]string{"pl"}, nil)
 
@@ -77,10 +78,10 @@ func TestMonitor_Check(t *testing.T) {
 				storageMock *mocks.MockMonitorStorage,
 				task *mocks.MockMonitorTask,
 			) {
-				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("DT0", nil)
+				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("DT-0", nil)
 				githubMock.EXPECT().GetLatestCommit(ctx).
-					Return(&github.CommitInfo{CommitID: "C1", DateTime: "DT1"}, nil)
-				storageMock.EXPECT().WriteLastRepoUpdatedAt("DT1").Return(nil)
+					Return(&github.CommitInfo{CommitID: "C-ID-1", DateTime: "DT-1"}, nil)
+				storageMock.EXPECT().WriteLastRepoUpdatedAt("DT-1").Return(nil)
 
 				langMock.EXPECT().LangCodes().Return([]string{"pl"}, nil)
 
@@ -102,9 +103,9 @@ func TestMonitor_Check(t *testing.T) {
 				storageMock *mocks.MockMonitorStorage,
 				task *mocks.MockMonitorTask,
 			) {
-				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("DT0", nil)
+				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("DT-0", nil)
 				githubMock.EXPECT().GetLatestCommit(ctx).
-					Return(&github.CommitInfo{CommitID: "C1", DateTime: "DT0"}, nil)
+					Return(&github.CommitInfo{CommitID: "C-ID-1", DateTime: "DT-0"}, nil)
 
 				langMock.EXPECT().LangCodes().Return([]string{"pl"}, nil)
 
@@ -132,7 +133,7 @@ func TestMonitor_Check(t *testing.T) {
 
 			tc.initMocks(ctx, githubMock, langMock, storageMock, task)
 
-			mon := github.NewMonitor(githubMock, langMock, storageMock)
+			mon := githubmon.NewMonitor(githubMock, langMock, storageMock)
 
 			err := mon.Check(ctx, task)
 
