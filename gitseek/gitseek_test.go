@@ -13,6 +13,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+//nolint:dupl
 func TestGitSeek_CheckFiles(t *testing.T) {
 	ctx := context.Background()
 

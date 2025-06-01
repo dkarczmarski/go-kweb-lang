@@ -19,7 +19,7 @@ type FileModel struct {
 	LangMergeCommit *git.CommitInfo
 	LangForkCommit  *git.CommitInfo
 	ENStatus        string
-	ENUpdates       []ENUpdate
+	ENUpdates       ENUpdateGroups
 	PRs             []LinkModel
 }
 
@@ -31,6 +31,13 @@ type FileLinkModel struct {
 type CommitLinkModel struct {
 	Link       LinkModel
 	CommitInfo git.CommitInfo
+}
+
+type ENUpdateGroups struct {
+	AfterMergeCommit []ENUpdate
+	AfterLastCommit  []ENUpdate
+	AfterForkCommit  []ENUpdate
+	BeforeForkCommit []ENUpdate
 }
 
 type ENUpdate struct {
@@ -61,6 +68,7 @@ func BuildLangModel(fileInfos []FileInfo) *LangModel {
 		fileModel.LangForkCommit = convertCommitToUtcPtr(fileInfo.LangForkCommit)
 		fileModel.ENStatus = fileInfo.ENFileStatus
 
+		var enUpdates []ENUpdate
 		for _, enUpdate := range fileInfo.ENUpdates {
 			enUpdateModel := ENUpdate{
 				Commit: toCommitLinkModel(enUpdate.Commit),
@@ -71,8 +79,12 @@ func BuildLangModel(fileInfos []FileInfo) *LangModel {
 				enUpdateModel.MergeCommit = &mergeCommit
 			}
 
-			fileModel.ENUpdates = append(fileModel.ENUpdates, enUpdateModel)
+			enUpdates = append(enUpdates, enUpdateModel)
 		}
+
+		fileModel.ENUpdates = buildENUpdates(
+			enUpdates, fileModel.LangForkCommit, fileModel.LangLastCommit, fileModel.LangMergeCommit,
+		)
 
 		var prLinks []LinkModel
 		for _, pr := range fileInfo.PRs {
@@ -121,6 +133,36 @@ func convertDateStrToUtc(dateStr string) string {
 	}
 
 	return t.UTC().String()
+}
+
+func buildENUpdates(
+	enUpdates []ENUpdate,
+	langForkCommit *git.CommitInfo,
+	langLastCommit git.CommitInfo,
+	langMergeCommit *git.CommitInfo,
+) ENUpdateGroups {
+	if langForkCommit == nil || langMergeCommit == nil {
+		return ENUpdateGroups{
+			AfterLastCommit: enUpdates,
+		}
+	}
+
+	var groups ENUpdateGroups
+	for _, enUpdate := range enUpdates {
+		enUpdateDataTime := convertDateStrToUtc(enUpdate.Commit.CommitInfo.DateTime)
+
+		if enUpdateDataTime < langForkCommit.DateTime {
+			groups.BeforeForkCommit = append(groups.BeforeForkCommit, enUpdate)
+		} else if enUpdateDataTime < langLastCommit.DateTime {
+			groups.AfterForkCommit = append(groups.AfterForkCommit, enUpdate)
+		} else if enUpdateDataTime < langMergeCommit.DateTime {
+			groups.AfterLastCommit = append(groups.AfterLastCommit, enUpdate)
+		} else {
+			groups.AfterMergeCommit = append(groups.AfterMergeCommit, enUpdate)
+		}
+	}
+
+	return groups
 }
 
 func toLangFileLinkModel(langRelPath string) LinkModel {
