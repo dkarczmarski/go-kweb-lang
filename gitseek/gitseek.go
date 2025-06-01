@@ -67,7 +67,26 @@ func (gs *GitSeek) CheckLang(ctx context.Context, langCode string) ([]FileInfo, 
 		return nil, fmt.Errorf("error while listing content files for the language code %s: %w", langCode, err)
 	}
 
+	// skip selected files that do not make sense to compare
+	langRelPaths = removeStrings(langRelPaths, []string{"OWNERS"})
+
 	return gs.CheckFiles(ctx, langRelPaths, langCode)
+}
+
+func removeStrings(input []string, toRemove []string) []string {
+	removeMap := make(map[string]bool)
+	for _, val := range toRemove {
+		removeMap[val] = true
+	}
+
+	var result []string
+	for _, val := range input {
+		if !removeMap[val] {
+			result = append(result, val)
+		}
+	}
+
+	return result
 }
 
 // CheckFiles examines selected files in the content/langCode directory for the given langCode
