@@ -2,6 +2,8 @@ package web
 
 import (
 	"fmt"
+	"log"
+	"time"
 
 	"go-kweb-lang/git"
 	"go-kweb-lang/gitseek"
@@ -54,9 +56,9 @@ func BuildLangModel(fileInfos []FileInfo) *LangModel {
 		}
 
 		fileModel.LangRelPath = toLangFileLinkModel(fileInfo.LangRelPath)
-		fileModel.LangLastCommit = fileInfo.LangLastCommit
-		fileModel.LangMergeCommit = fileInfo.LangMergeCommit
-		fileModel.LangForkCommit = fileInfo.LangForkCommit
+		fileModel.LangLastCommit = convertCommitToUtc(fileInfo.LangLastCommit)
+		fileModel.LangMergeCommit = convertCommitToUtcPtr(fileInfo.LangMergeCommit)
+		fileModel.LangForkCommit = convertCommitToUtcPtr(fileInfo.LangForkCommit)
 		fileModel.ENStatus = fileInfo.ENFileStatus
 
 		for _, enUpdate := range fileInfo.ENUpdates {
@@ -85,6 +87,40 @@ func BuildLangModel(fileInfos []FileInfo) *LangModel {
 	}
 
 	return &table
+}
+
+func convertCommitToUtc(commit git.CommitInfo) git.CommitInfo {
+	modifyCommitDateTimeToUtc(&commit)
+
+	return commit
+}
+
+func convertCommitToUtcPtr(commit *git.CommitInfo) *git.CommitInfo {
+	if commit == nil {
+		return nil
+	}
+
+	modifyCommitDateTimeToUtc(commit)
+
+	return commit
+}
+
+func modifyCommitDateTimeToUtc(commit *git.CommitInfo) {
+	commit.DateTime = convertDateStrToUtc(commit.DateTime)
+}
+
+func convertDateStrToUtc(dateStr string) string {
+	if len(dateStr) == 0 {
+		return dateStr
+	}
+
+	t, err := time.Parse(time.RFC3339, dateStr)
+	if err != nil {
+		log.Printf("time string %s parse error: %v", dateStr, err)
+		return dateStr
+	}
+
+	return t.UTC().String()
 }
 
 func toLangFileLinkModel(langRelPath string) LinkModel {
