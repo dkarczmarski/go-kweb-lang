@@ -29,10 +29,10 @@
             Fork Commit: {{ truncate .LangForkCommit.DateTime 10 }}
             {{ end }}
         </td>
-        <td>{{ .OriginStatus }}</td>
+        <td>{{ .ENStatus }}</td>
         <td>
             <ul>
-                {{range .OriginUpdates}}
+                {{range .ENUpdates}}
                 <li>
                     Commit: <a href="{{ .Commit.Link.URL }}">{{ .Commit.CommitInfo.Comment }}</a> {{ truncate .Commit.CommitInfo.DateTime 10 }}
                     {{ if .MergeCommit }}

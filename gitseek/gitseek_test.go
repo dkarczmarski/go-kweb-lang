@@ -22,7 +22,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 		expected []gitseek.FileInfo
 	}{
 		{
-			name: "origin file not exists",
+			name: "EN file not exists",
 			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
 				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
 					git.CommitInfo{
@@ -43,14 +43,14 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 						DateTime: "DT1",
 						Comment:  "Comment1",
 					},
-					LangForkCommit:   nil,
-					OriginFileStatus: "NOT_EXIST",
-					OriginUpdates:    nil,
+					LangForkCommit: nil,
+					ENFileStatus:   "NOT_EXIST",
+					ENUpdates:      nil,
 				},
 			},
 		},
 		{
-			name: "origin file found with no updates",
+			name: "EN file found with no updates",
 			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
 				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
 					git.CommitInfo{
@@ -71,14 +71,14 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 						DateTime: "DT1",
 						Comment:  "Comment1",
 					},
-					LangForkCommit:   nil,
-					OriginFileStatus: "",
-					OriginUpdates:    nil,
+					LangForkCommit: nil,
+					ENFileStatus:   "",
+					ENUpdates:      nil,
 				},
 			},
 		},
 		{
-			name: "origin file found with updates",
+			name: "EN file found with updates",
 			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
 				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
 					git.CommitInfo{
@@ -110,9 +110,9 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 						DateTime: "DT1",
 						Comment:  "Comment1",
 					},
-					LangForkCommit:   nil,
-					OriginFileStatus: "MODIFIED",
-					OriginUpdates: []gitseek.OriginUpdate{
+					LangForkCommit: nil,
+					ENFileStatus:   "MODIFIED",
+					ENUpdates: []gitseek.ENUpdate{
 						{
 							Commit: git.CommitInfo{
 								CommitID: "CID2",
@@ -130,7 +130,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 			},
 		},
 		{
-			name: "origin file found with updates and origin commit made direct to the main branch",
+			name: "EN file found with updates and EN commit made direct to the main branch",
 			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
 				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
 					git.CommitInfo{
@@ -158,9 +158,9 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 						DateTime: "DT1",
 						Comment:  "Comment1",
 					},
-					LangForkCommit:   nil,
-					OriginFileStatus: "MODIFIED",
-					OriginUpdates: []gitseek.OriginUpdate{
+					LangForkCommit: nil,
+					ENFileStatus:   "MODIFIED",
+					ENUpdates: []gitseek.ENUpdate{
 						{
 							Commit: git.CommitInfo{
 								CommitID: "CID2",
@@ -212,8 +212,8 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 						DateTime: "DT0",
 						Comment:  "Comment0",
 					},
-					OriginFileStatus: "MODIFIED",
-					OriginUpdates: []gitseek.OriginUpdate{
+					ENFileStatus: "MODIFIED",
+					ENUpdates: []gitseek.ENUpdate{
 						{
 							Commit: git.CommitInfo{
 								CommitID: "CID2",

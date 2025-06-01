@@ -36,7 +36,7 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 		expected    []gitseek.FileInfo
 	}{
 		{
-			name:        "origin has direct commit and lang has commit in a separate branch",
+			name:        "EN has direct commit and lang has commit in a separate branch",
 			langRelPath: "docs/reference/glossary/kubelet.md",
 			expected: []gitseek.FileInfo{
 				{
@@ -51,8 +51,8 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 						DateTime: "2021-06-21T21:45:58-07:00",
 						Comment:  "Merge pull request #28532 from lcc3108/patch-1",
 					},
-					OriginFileStatus: "MODIFIED",
-					OriginUpdates: []gitseek.OriginUpdate{
+					ENFileStatus: "MODIFIED",
+					ENUpdates: []gitseek.ENUpdate{
 						{
 							Commit: git.CommitInfo{
 								CommitID: "2a4a506919b01acaffbd33fc09928ae217454b97",
@@ -66,7 +66,7 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 			},
 		},
 		{
-			name:        "origin has commit in a separate branch and lang has a direct commit",
+			name:        "EN has commit in a separate branch and lang has a direct commit",
 			langRelPath: "docs/sitemap.md",
 			expected: []gitseek.FileInfo{
 				{
@@ -76,9 +76,9 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 						DateTime: "2020-01-14T06:51:24-08:00",
 						Comment:  "Init Polish localization (#18419) (#18659)",
 					},
-					LangForkCommit:   nil,
-					OriginFileStatus: "NOT_EXIST",
-					OriginUpdates: []gitseek.OriginUpdate{
+					LangForkCommit: nil,
+					ENFileStatus:   "NOT_EXIST",
+					ENUpdates: []gitseek.ENUpdate{
 						{
 							Commit: git.CommitInfo{
 								CommitID: "b1fb333fad2301d4d6c30548fb001687f42e24c1",

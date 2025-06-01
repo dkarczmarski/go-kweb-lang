@@ -15,8 +15,8 @@ type FileModel struct {
 	LangRelPath    LinkModel
 	LangLastCommit git.CommitInfo
 	LangForkCommit *git.CommitInfo
-	OriginStatus   string
-	OriginUpdates  []OriginUpdate
+	ENStatus       string
+	ENUpdates      []ENUpdate
 	PRs            []LinkModel
 }
 
@@ -30,7 +30,7 @@ type CommitLinkModel struct {
 	CommitInfo git.CommitInfo
 }
 
-type OriginUpdate struct {
+type ENUpdate struct {
 	Commit      CommitLinkModel
 	MergeCommit *CommitLinkModel
 }
@@ -46,8 +46,8 @@ func BuildLangModel(fileInfos []FileInfo) *LangModel {
 	for _, fileInfo := range fileInfos {
 		var fileModel FileModel
 
-		if len(fileInfo.OriginFileStatus) == 0 &&
-			len(fileInfo.OriginUpdates) == 0 &&
+		if len(fileInfo.ENFileStatus) == 0 &&
+			len(fileInfo.ENUpdates) == 0 &&
 			len(fileInfo.PRs) == 0 {
 			continue
 		}
@@ -55,19 +55,19 @@ func BuildLangModel(fileInfos []FileInfo) *LangModel {
 		fileModel.LangRelPath = toLangFileLinkModel(fileInfo.LangRelPath)
 		fileModel.LangLastCommit = fileInfo.LangLastCommit
 		fileModel.LangForkCommit = fileInfo.LangForkCommit
-		fileModel.OriginStatus = fileInfo.OriginFileStatus
+		fileModel.ENStatus = fileInfo.ENFileStatus
 
-		for _, originUpdate := range fileInfo.OriginUpdates {
-			originUpdateModel := OriginUpdate{
-				Commit: toCommitLinkModel(originUpdate.Commit),
+		for _, enUpdate := range fileInfo.ENUpdates {
+			enUpdateModel := ENUpdate{
+				Commit: toCommitLinkModel(enUpdate.Commit),
 			}
 
-			if originUpdate.MergePoint != nil {
-				mergeCommit := toCommitLinkModel(*originUpdate.MergePoint)
-				originUpdateModel.MergeCommit = &mergeCommit
+			if enUpdate.MergePoint != nil {
+				mergeCommit := toCommitLinkModel(*enUpdate.MergePoint)
+				enUpdateModel.MergeCommit = &mergeCommit
 			}
 
-			fileModel.OriginUpdates = append(fileModel.OriginUpdates, originUpdateModel)
+			fileModel.ENUpdates = append(fileModel.ENUpdates, enUpdateModel)
 		}
 
 		var prLinks []LinkModel

@@ -15,14 +15,14 @@ import (
 )
 
 type FileInfo struct {
-	LangRelPath      string
-	LangLastCommit   git.CommitInfo
-	LangForkCommit   *git.CommitInfo
-	OriginFileStatus string
-	OriginUpdates    []OriginUpdate
+	LangRelPath    string
+	LangLastCommit git.CommitInfo
+	LangForkCommit *git.CommitInfo
+	ENFileStatus   string
+	ENUpdates      []ENUpdate
 }
 
-type OriginUpdate struct {
+type ENUpdate struct {
 	Commit     git.CommitInfo
 	MergePoint *git.CommitInfo
 }
@@ -107,7 +107,7 @@ func (gs *GitSeek) checkFileCached(ctx context.Context, langRelPath string, lang
 func (gs *GitSeek) checkFile(ctx context.Context, langRelPath string, langCode string) (FileInfo, error) {
 	var fileInfo FileInfo
 
-	originFilePath := repoOriginFilePath(langRelPath)
+	enFilePath := repoENFilePath(langRelPath)
 	langFilePath := repoLangFilePath(langRelPath, langCode)
 
 	fileInfo.LangRelPath = langRelPath
@@ -133,34 +133,34 @@ func (gs *GitSeek) checkFile(ctx context.Context, langRelPath string, langCode s
 		startPoint = langLastCommit
 	}
 
-	originCommitsAfter, err := gs.gitRepo.FindFileCommitsAfter(ctx, originFilePath, startPoint.CommitID)
+	enCommitsAfter, err := gs.gitRepo.FindFileCommitsAfter(ctx, enFilePath, startPoint.CommitID)
 	if err != nil {
 		return fileInfo, fmt.Errorf("error while finding commits after commit %s: %w",
 			langLastCommit.CommitID, err)
 	}
 
-	exists, err := gs.gitRepo.FileExists(originFilePath)
+	exists, err := gs.gitRepo.FileExists(enFilePath)
 	if err != nil {
-		return fileInfo, fmt.Errorf("error while checking if the file %s exists: %w", originFilePath, err)
+		return fileInfo, fmt.Errorf("error while checking if the file %s exists: %w", enFilePath, err)
 	}
 	if !exists {
-		fileInfo.OriginFileStatus = "NOT_EXIST"
-	} else if len(originCommitsAfter) > 0 {
-		fileInfo.OriginFileStatus = "MODIFIED"
+		fileInfo.ENFileStatus = "NOT_EXIST"
+	} else if len(enCommitsAfter) > 0 {
+		fileInfo.ENFileStatus = "MODIFIED"
 	}
 
-	for _, originCommitAfter := range originCommitsAfter {
-		mergePoint, err := gs.gitRepoHist.FindMergeCommit(ctx, originCommitAfter.CommitID)
+	for _, enCommitAfter := range enCommitsAfter {
+		mergePoint, err := gs.gitRepoHist.FindMergeCommit(ctx, enCommitAfter.CommitID)
 		if err != nil {
 			return fileInfo, err
 		}
 
-		originUpdate := OriginUpdate{
-			Commit:     originCommitAfter,
+		enUpdate := ENUpdate{
+			Commit:     enCommitAfter,
 			MergePoint: mergePoint,
 		}
 
-		fileInfo.OriginUpdates = append(fileInfo.OriginUpdates, originUpdate)
+		fileInfo.ENUpdates = append(fileInfo.ENUpdates, enUpdate)
 	}
 
 	return fileInfo, nil
@@ -229,7 +229,7 @@ func fileInfoCacheBucket(langCode string) string {
 	return filepath.Join("lang", langCode, "git-file-info")
 }
 
-func repoOriginFilePath(relPath string) string {
+func repoENFilePath(relPath string) string {
 	return repoLangFilePath(relPath, "en")
 }
 

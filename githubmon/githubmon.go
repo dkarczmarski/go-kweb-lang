@@ -1,6 +1,6 @@
 package githubmon
 
-//go:generate mockgen -typed -source=github_monitor.go -destination=./internal/mocks/mocks.go -package=mocks
+//go:generate mockgen -typed -source=githubmon.go -destination=./internal/mocks/mocks.go -package=mocks
 
 import (
 	"context"
