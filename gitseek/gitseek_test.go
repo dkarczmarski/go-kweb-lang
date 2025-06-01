@@ -98,6 +98,68 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 			},
 		},
 		{
+			name: "EN file was deleted",
+			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
+				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
+					git.CommitInfo{
+						CommitID: "CID1",
+						DateTime: "DT1",
+						Comment:  "Comment1",
+					}, nil)
+				gitRepoHist.EXPECT().FindMergeCommit(ctx, "CID1").Return(&git.CommitInfo{
+					CommitID: "CID2",
+					DateTime: "DT2",
+					Comment:  "Comment1",
+				}, nil)
+				gitRepoHist.EXPECT().FindForkCommit(ctx, "CID1").Return(&git.CommitInfo{
+					CommitID: "CID0",
+					DateTime: "DT0",
+					Comment:  "Comment1",
+				}, nil)
+				gitRepo.EXPECT().FileExists("content/en/path1").Return(false, nil)
+				gitRepo.EXPECT().FindFileCommitsAfter(ctx, "content/en/path1", "CID0").
+					Return([]git.CommitInfo{
+						{
+							CommitID: "CID2",
+							DateTime: "DT2",
+							Comment:  "Comment2",
+						},
+					}, nil)
+				gitRepoHist.EXPECT().FindMergeCommit(ctx, "CID2").Return(nil, nil)
+			},
+			expected: []gitseek.FileInfo{
+				{
+					LangRelPath: "path1",
+					LangLastCommit: git.CommitInfo{
+						CommitID: "CID1",
+						DateTime: "DT1",
+						Comment:  "Comment1",
+					},
+					LangMergeCommit: &git.CommitInfo{
+						CommitID: "CID2",
+						DateTime: "DT2",
+						Comment:  "Comment1",
+					},
+					LangForkCommit: &git.CommitInfo{
+						CommitID: "CID0",
+						DateTime: "DT0",
+						Comment:  "Comment1",
+					},
+					ENFileStatus: "DELETED",
+					ENUpdates: []gitseek.ENUpdate{
+						{
+							Commit: git.CommitInfo{
+								CommitID: "CID2",
+								DateTime: "DT2",
+								Comment:  "Comment2",
+							},
+							MergePoint: nil,
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "EN file found with no updates",
 			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
 				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(

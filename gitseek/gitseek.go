@@ -171,7 +171,11 @@ func (gs *GitSeek) checkFile(ctx context.Context, langRelPath string, langCode s
 		return fileInfo, fmt.Errorf("error while checking if the file %s exists: %w", enFilePath, err)
 	}
 	if !exists {
-		fileInfo.ENFileStatus = "NOT_EXIST"
+		if len(enCommitsAfter) > 0 {
+			fileInfo.ENFileStatus = "DELETED"
+		} else {
+			fileInfo.ENFileStatus = "NOT_EXIST"
+		}
 	} else if len(enCommitsAfter) > 0 {
 		fileInfo.ENFileStatus = "MODIFIED"
 	}
