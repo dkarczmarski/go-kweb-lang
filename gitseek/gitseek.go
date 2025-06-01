@@ -15,11 +15,12 @@ import (
 )
 
 type FileInfo struct {
-	LangRelPath    string
-	LangLastCommit git.CommitInfo
-	LangForkCommit *git.CommitInfo
-	ENFileStatus   string
-	ENUpdates      []ENUpdate
+	LangRelPath     string
+	LangLastCommit  git.CommitInfo
+	LangMergeCommit *git.CommitInfo
+	LangForkCommit  *git.CommitInfo
+	ENFileStatus    string
+	ENUpdates       []ENUpdate
 }
 
 type ENUpdate struct {
@@ -137,6 +138,13 @@ func (gs *GitSeek) checkFile(ctx context.Context, langRelPath string, langCode s
 	}
 
 	fileInfo.LangLastCommit = langLastCommit
+
+	mergeCommit, err := gs.gitRepoHist.FindMergeCommit(ctx, langLastCommit.CommitID)
+	if err != nil {
+		return fileInfo, err
+	}
+
+	fileInfo.LangMergeCommit = mergeCommit
 
 	forkCommit, err := gs.gitRepoHist.FindForkCommit(ctx, langLastCommit.CommitID)
 	if err != nil {

@@ -12,12 +12,13 @@ type LangModel struct {
 }
 
 type FileModel struct {
-	LangRelPath    LinkModel
-	LangLastCommit git.CommitInfo
-	LangForkCommit *git.CommitInfo
-	ENStatus       string
-	ENUpdates      []ENUpdate
-	PRs            []LinkModel
+	LangRelPath     LinkModel
+	LangLastCommit  git.CommitInfo
+	LangMergeCommit *git.CommitInfo
+	LangForkCommit  *git.CommitInfo
+	ENStatus        string
+	ENUpdates       []ENUpdate
+	PRs             []LinkModel
 }
 
 type FileLinkModel struct {
@@ -54,6 +55,7 @@ func BuildLangModel(fileInfos []FileInfo) *LangModel {
 
 		fileModel.LangRelPath = toLangFileLinkModel(fileInfo.LangRelPath)
 		fileModel.LangLastCommit = fileInfo.LangLastCommit
+		fileModel.LangMergeCommit = fileInfo.LangMergeCommit
 		fileModel.LangForkCommit = fileInfo.LangForkCommit
 		fileModel.ENStatus = fileInfo.ENFileStatus
 

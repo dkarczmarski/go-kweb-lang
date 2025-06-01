@@ -77,6 +77,104 @@ func TestGitHist_MergeCommitFiles_E2E(t *testing.T) {
 	}
 }
 
+func TestGitHist_FindForkCommit_E2E(t *testing.T) {
+	ctx := context.Background()
+	testDir := t.TempDir()
+	repoDir := filepath.Join(testDir, "repo")
+	mustMkDir(t, repoDir)
+	cacheDir := filepath.Join(testDir, "cache")
+	mustMkDir(t, cacheDir)
+	storeCache := store.NewFileStore(cacheDir)
+	gitRepo := git.NewRepo(repoDir)
+	gitRepoHist := githist.New(gitRepo, storeCache)
+
+	if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name     string
+		commitID string
+		expected *git.CommitInfo
+	}{
+		{
+			name:     "commitID is on the main branch",
+			commitID: "f4cc9ccc61d6faef60e2e162658d7ff02a42435b",
+			expected: nil,
+		},
+		{
+			name:     "commitID that is not on the main branch",
+			commitID: "26e9bb02e959ffb52b3609f7c794382339b47060",
+			expected: &git.CommitInfo{
+				CommitID: "5d9e5d4d764f6a9b4ee172e737b54b377724f8f0",
+				DateTime: "2025-05-12T23:21:16-07:00",
+				Comment:  "Merge pull request #50879 from jayeshmahajan/jm/hi-example-pods-security-sec-alpha",
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			files, err := gitRepoHist.FindForkCommit(ctx, tc.commitID)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if !reflect.DeepEqual(tc.expected, files) {
+				t.Errorf("unexpected result: %v", files)
+			}
+		})
+	}
+}
+
+func TestGitHist_FindMergeCommit_E2E(t *testing.T) {
+	ctx := context.Background()
+	testDir := t.TempDir()
+	repoDir := filepath.Join(testDir, "repo")
+	mustMkDir(t, repoDir)
+	cacheDir := filepath.Join(testDir, "cache")
+	mustMkDir(t, cacheDir)
+	storeCache := store.NewFileStore(cacheDir)
+	gitRepo := git.NewRepo(repoDir)
+	gitRepoHist := githist.New(gitRepo, storeCache)
+
+	if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name     string
+		commitID string
+		expected *git.CommitInfo
+	}{
+		{
+			name:     "commitID is on the main branch",
+			commitID: "f4cc9ccc61d6faef60e2e162658d7ff02a42435b",
+			expected: nil,
+		},
+		{
+			name:     "commitID that is not on the main branch",
+			commitID: "26e9bb02e959ffb52b3609f7c794382339b47060",
+			expected: &git.CommitInfo{
+				CommitID: "91c9ff2e4a9f746cc30721485122d8bfb3024b1f",
+				DateTime: "2025-05-20T10:47:15-07:00",
+				Comment:  "Merge pull request #50889 from yanai-tomohiro/make_ja_job",
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			files, err := gitRepoHist.FindMergeCommit(ctx, tc.commitID)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if !reflect.DeepEqual(tc.expected, files) {
+				t.Errorf("unexpected result: %v", files)
+			}
+		})
+	}
+}
+
 func mustMkDir(t testing.TB, path string) {
 	t.Helper()
 
