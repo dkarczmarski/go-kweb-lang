@@ -21,9 +21,9 @@ func TestGitHist_MergeCommitFiles_E2E(t *testing.T) {
 	mustMkDir(t, repoDir)
 	cacheDir := filepath.Join(testDir, "cache")
 	mustMkDir(t, cacheDir)
-	storeCache := store.NewFileStore(cacheDir)
+	cacheStore := store.NewFileStore(cacheDir)
 	gitRepo := git.NewRepo(repoDir)
-	gitRepoHist := githist.New(gitRepo, storeCache)
+	gitRepoHist := githist.New(gitRepo, cacheStore)
 
 	if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
 		t.Fatal(err)
@@ -84,9 +84,9 @@ func TestGitHist_FindForkCommit_E2E(t *testing.T) {
 	mustMkDir(t, repoDir)
 	cacheDir := filepath.Join(testDir, "cache")
 	mustMkDir(t, cacheDir)
-	storeCache := store.NewFileStore(cacheDir)
+	cacheStore := store.NewFileStore(cacheDir)
 	gitRepo := git.NewRepo(repoDir)
-	gitRepoHist := githist.New(gitRepo, storeCache)
+	gitRepoHist := githist.New(gitRepo, cacheStore)
 
 	if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
 		t.Fatal(err)
@@ -133,9 +133,9 @@ func TestGitHist_FindMergeCommit_E2E(t *testing.T) {
 	mustMkDir(t, repoDir)
 	cacheDir := filepath.Join(testDir, "cache")
 	mustMkDir(t, cacheDir)
-	storeCache := store.NewFileStore(cacheDir)
+	cacheStore := store.NewFileStore(cacheDir)
 	gitRepo := git.NewRepo(repoDir)
-	gitRepoHist := githist.New(gitRepo, storeCache)
+	gitRepoHist := githist.New(gitRepo, cacheStore)
 
 	if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
 		t.Fatal(err)
@@ -173,6 +173,29 @@ func TestGitHist_FindMergeCommit_E2E(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGitHist_GetLastMainBranchCommit_E2E(t *testing.T) {
+	ctx := context.Background()
+	testDir := t.TempDir()
+	repoDir := filepath.Join(testDir, "repo")
+	mustMkDir(t, repoDir)
+	cacheDir := filepath.Join(testDir, "cache")
+	mustMkDir(t, cacheDir)
+	cacheStore := store.NewFileStore(cacheDir)
+	gitRepo := git.NewRepo(repoDir)
+	gitRepoHist := githist.New(gitRepo, cacheStore)
+
+	if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
+		t.Fatal(err)
+	}
+
+	commit, err := gitRepoHist.GetLastMainBranchCommit(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("%+v", commit)
 }
 
 func mustMkDir(t testing.TB, path string) {

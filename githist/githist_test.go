@@ -172,6 +172,19 @@ func TestGitHist_PullRefresh(t *testing.T) {
 				cacheStore *mocks.MockCacheStore,
 				invalidator *mocks.MockInvalidator,
 			) {
+				gitRepo.EXPECT().ListMainBranchCommits(ctx).
+					Return([]git.CommitInfo{
+						{
+							CommitID: "C-ID-1",
+							DateTime: "DT-1",
+							Comment:  "Comment-1",
+						},
+					}, nil)
+				cacheStore.EXPECT().Read(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(storetests.MockReadNotFound())
+				cacheStore.EXPECT().Write(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				gitRepo.EXPECT().ListFreshCommits(ctx).Return(nil, nil)
 			},
 		},
@@ -183,6 +196,19 @@ func TestGitHist_PullRefresh(t *testing.T) {
 				cacheStore *mocks.MockCacheStore,
 				invalidator *mocks.MockInvalidator,
 			) {
+				gitRepo.EXPECT().ListMainBranchCommits(ctx).
+					Return([]git.CommitInfo{
+						{
+							CommitID: "C-ID-1",
+							DateTime: "DT-1",
+							Comment:  "Comment-1",
+						},
+					}, nil)
+				cacheStore.EXPECT().Read(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(storetests.MockReadNotFound())
+				cacheStore.EXPECT().Write(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				gitRepo.EXPECT().ListFreshCommits(ctx).Return(
 					[]git.CommitInfo{
 						{
@@ -359,6 +385,73 @@ func TestGitHist_PullRefresh(t *testing.T) {
 
 			if err := gitRepoHist.PullRefresh(ctx); err != nil {
 				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestGitHist_GetLastMainBranchCommit(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		mainBranch []git.CommitInfo
+		expected   git.CommitInfo
+	}{
+		{
+			name:       "empty list of the main branch commits",
+			mainBranch: nil,
+			expected:   git.CommitInfo{},
+		},
+		{
+			name: "not empty list of the main branch commits",
+			mainBranch: []git.CommitInfo{
+				{
+					CommitID: "C-ID-12",
+					DateTime: "DT-12",
+					Comment:  "Comment-12",
+				},
+				{
+					CommitID: "C-ID-11",
+					DateTime: "DT-11",
+					Comment:  "Comment-11",
+				},
+				{
+					CommitID: "C-ID-10",
+					DateTime: "DT-10",
+					Comment:  "Comment-10",
+				},
+			},
+			expected: git.CommitInfo{
+				CommitID: "C-ID-12",
+				DateTime: "DT-12",
+				Comment:  "Comment-12",
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+
+			ctrl := gomock.NewController(t)
+			gitRepo := mocks.NewMockGitRepo(ctrl)
+			cacheStore := mocks.NewMockCacheStore(ctrl)
+			gitRepoHist := githist.New(gitRepo, cacheStore)
+
+			cacheStore.EXPECT().Read(gomock.Any(), gomock.Any(), gomock.Any()).
+				DoAndReturn(storetests.MockReadNotFound())
+			cacheStore.EXPECT().Write(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(nil)
+
+			gitRepo.EXPECT().ListMainBranchCommits(ctx).
+				Return(tc.mainBranch, nil)
+
+			commit, err := gitRepoHist.GetLastMainBranchCommit(ctx)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if !reflect.DeepEqual(tc.expected, commit) {
+				t.Errorf("unexpected outcome: %+v", commit)
 			}
 		})
 	}

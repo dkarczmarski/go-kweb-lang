@@ -155,6 +155,13 @@ func findFirstCommit(mainBranchCommits []git.CommitInfo, commits []git.CommitInf
 // PullRefresh performs a git fetch to retrieve fresh data, detects any changes, runs git pull
 // and invalidates changed files.
 func (gh *GitHist) PullRefresh(ctx context.Context) error {
+	lastMainCommit, err := gh.GetLastMainBranchCommit(ctx)
+	if err != nil {
+		return fmt.Errorf("error while getting the last main branch commit: %w", err)
+	}
+
+	log.Printf("the last main branch commit is: %v", lastMainCommit)
+
 	if err := gh.gitRepo.Fetch(ctx); err != nil {
 		return fmt.Errorf("git fetch error: %w", err)
 	}
@@ -277,4 +284,17 @@ func (gh *GitHist) MergeCommitFiles(ctx context.Context, mergeCommitID string) (
 	}
 
 	return files, nil
+}
+
+func (gh *GitHist) GetLastMainBranchCommit(ctx context.Context) (git.CommitInfo, error) {
+	commits, err := gh.listMainBranchCommits(ctx)
+	if err != nil {
+		return git.CommitInfo{}, err
+	}
+
+	if len(commits) == 0 {
+		return git.CommitInfo{}, nil
+	}
+
+	return commits[0], nil
 }
