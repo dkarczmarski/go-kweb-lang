@@ -77,7 +77,7 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 						Comment:  "Init Polish localization (#18419) (#18659)",
 					},
 					LangForkCommit: nil,
-					ENFileStatus:   "NOT_EXIST",
+					ENFileStatus:   "NON_EXISTENT",
 					ENUpdates: []gitseek.ENUpdate{
 						{
 							Commit: git.CommitInfo{
