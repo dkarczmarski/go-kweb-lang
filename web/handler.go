@@ -7,11 +7,11 @@ import (
 	"net/http"
 )
 
-//go:embed index.html
-var indexHTML string
+//go:embed lang_codes.html
+var langCodesHTML string
 
 func createListLangCodesHandler(store ViewModelStore) func(w http.ResponseWriter, r *http.Request) {
-	indexTmpl := template.Must(template.New("index.html").Parse(indexHTML))
+	indexTmpl := template.Must(template.New("land_codes.html").Parse(langCodesHTML))
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		model, err := store.GetLangCodes()
@@ -29,14 +29,14 @@ func createListLangCodesHandler(store ViewModelStore) func(w http.ResponseWriter
 	}
 }
 
-//go:embed lang.html
-var langHTML string
+//go:embed lang_dashboard.html
+var langDashboardHTML string
 
 func createLangDashboardHandler(store ViewModelStore) func(w http.ResponseWriter, r *http.Request) {
 	funcMap := template.FuncMap{
 		"truncate": truncate,
 	}
-	langTmpl := template.Must(template.New("lang.html").Funcs(funcMap).Parse(langHTML))
+	langTmpl := template.Must(template.New("lang_dashboard.html").Funcs(funcMap).Parse(langDashboardHTML))
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		code := r.PathValue("code")

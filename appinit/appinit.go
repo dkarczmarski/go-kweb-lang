@@ -21,27 +21,27 @@ import (
 )
 
 type Config struct {
-	RepoDir                 string
-	CacheDir                string
-	LangCodes               []string
-	RunOnce                 bool
-	RunInterval             int
-	GitHubToken             string
-	GitHubTokenFile         string
-	LangCodesProvider       *langcnt.LangCodesProvider
-	GitRepo                 *git.Git
-	CacheStore              *store.FileStore
-	ViewModelCacheStore     *web.ViewModelCacheStore
-	GitRepoHist             *githist.GitHist
-	GitSeek                 *gitseek.GitSeek
-	GitHub                  *github.GitHub
-	FilePRFinder            *pullreq.FilePRFinder
-	RefreshRepoTask         *tasks.RefreshRepoTask
-	RefreshTemplateDataTask *web.RefreshTemplateDataTask
-	RefreshPRTask           *tasks.RefreshPRTask
-	RefreshTask             *tasks.RefreshTask
-	GitHubMonitor           *githubmon.Monitor
-	Server                  *web.Server
+	RepoDir              string
+	CacheDir             string
+	LangCodes            []string
+	RunOnce              bool
+	RunInterval          int
+	GitHubToken          string
+	GitHubTokenFile      string
+	LangCodesProvider    *langcnt.LangCodesProvider
+	GitRepo              *git.Git
+	CacheStore           *store.FileStore
+	ViewModelCacheStore  *web.ViewModelCacheStore
+	GitRepoHist          *githist.GitHist
+	GitSeek              *gitseek.GitSeek
+	GitHub               *github.GitHub
+	FilePRFinder         *pullreq.FilePRFinder
+	RefreshRepoTask      *tasks.RefreshRepoTask
+	RefreshViewModelTask *web.RefreshViewModelTask
+	RefreshPRTask        *tasks.RefreshPRTask
+	RefreshTask          *tasks.RefreshTask
+	GitHubMonitor        *githubmon.Monitor
+	Server               *web.Server
 }
 
 var ErrBadConfiguration = errors.New("bad configuration")
@@ -363,7 +363,7 @@ func NewRefreshRepoTask() func(*Config) error {
 	}
 }
 
-func NewRefreshTemplateDataTask() func(*Config) error {
+func NewRefreshViewModelTask() func(*Config) error {
 	return func(config *Config) error {
 		langCodesProvider := config.LangCodesProvider
 		if langCodesProvider == nil {
@@ -385,7 +385,7 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 			return fmt.Errorf("param ViewModelCacheStore is not set: %w", ErrBadConfiguration)
 		}
 
-		config.RefreshTemplateDataTask = web.NewRefreshTemplateDataTask(
+		config.RefreshViewModelTask = web.NewRefreshViewModelTask(
 			langCodesProvider,
 			gitSeeker,
 			filePRFinder,
@@ -426,12 +426,12 @@ func NewRefreshTask() func(*Config) error {
 			return fmt.Errorf("param RefreshPRTask is not set: %w", ErrBadConfiguration)
 		}
 
-		refreshTemplateDataTask := config.RefreshTemplateDataTask
-		if refreshTemplateDataTask == nil {
-			return fmt.Errorf("param RefreshTemplateDataTask is not set: %w", ErrBadConfiguration)
+		refreshViewModelTask := config.RefreshViewModelTask
+		if refreshViewModelTask == nil {
+			return fmt.Errorf("param RefreshViewModelTask is not set: %w", ErrBadConfiguration)
 		}
 
-		config.RefreshTask = tasks.NewRefreshTask(refreshRepoTask, refreshPRTask, refreshTemplateDataTask)
+		config.RefreshTask = tasks.NewRefreshTask(refreshRepoTask, refreshPRTask, refreshViewModelTask)
 
 		return nil
 	}

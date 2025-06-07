@@ -6,51 +6,53 @@ import (
 	"time"
 
 	"go-kweb-lang/git"
-	"go-kweb-lang/gitseek"
 )
 
-type LangModel struct {
-	Files []FileModel
+type LangCodesProvider interface {
+	LangCodes() ([]string, error)
 }
 
-type FileModel struct {
-	LangRelPath     LinkModel
-	LangLastCommit  git.CommitInfo
-	LangMergeCommit *git.CommitInfo
-	LangForkCommit  *git.CommitInfo
-	ENStatus        string
-	ENUpdates       ENUpdateGroups
-	PRs             []LinkModel
+func buildLangCodesViewModel(langCodesProvider LangCodesProvider) (*LangCodesViewModel, error) {
+	tableModel, err := buildLangCodesTableModel(langCodesProvider)
+	if err != nil {
+		return nil, fmt.Errorf("error while building index web model: %w", err)
+	}
+
+	langCodesViewModel := &LangCodesViewModel{
+		LangCodes: tableModel,
+	}
+
+	return langCodesViewModel, nil
 }
 
-type FileLinkModel struct {
-	Text string
-	Link LinkModel
+func buildLangCodesTableModel(langCodesProvider LangCodesProvider) ([]LinkModel, error) {
+	langCodes, err := langCodesProvider.LangCodes()
+	if err != nil {
+		return nil, fmt.Errorf("error while getting available languages: %w", err)
+	}
+
+	model := make([]LinkModel, 0, len(langCodes))
+	for _, langCode := range langCodes {
+		model = append(model, LinkModel{
+			Text: langCode,
+			URL:  "lang/" + langCode,
+		})
+	}
+
+	return model, nil
 }
 
-type CommitLinkModel struct {
-	Link       LinkModel
-	CommitInfo git.CommitInfo
+func buildLangDashboardViewModel(fileInfos []FileInfo) *LangDashboardViewModel {
+	tableModel := buildLangTableModel(fileInfos)
+
+	langDashboardViewModel := &LangDashboardViewModel{
+		TableModel: tableModel,
+	}
+
+	return langDashboardViewModel
 }
 
-type ENUpdateGroups struct {
-	AfterMergeCommit []ENUpdate
-	AfterLastCommit  []ENUpdate
-	AfterForkCommit  []ENUpdate
-	BeforeForkCommit []ENUpdate
-}
-
-type ENUpdate struct {
-	Commit      CommitLinkModel
-	MergeCommit *CommitLinkModel
-}
-
-type FileInfo struct {
-	gitseek.FileInfo
-	PRs []int
-}
-
-func BuildLangModel(fileInfos []FileInfo) *LangModel {
+func buildLangTableModel(fileInfos []FileInfo) LangModel {
 	var table LangModel
 
 	for _, fileInfo := range fileInfos {
@@ -98,7 +100,7 @@ func BuildLangModel(fileInfos []FileInfo) *LangModel {
 		table.Files = append(table.Files, fileModel)
 	}
 
-	return &table
+	return table
 }
 
 func convertCommitToUtc(commit git.CommitInfo) git.CommitInfo {
@@ -176,5 +178,12 @@ func toCommitLinkModel(commit git.CommitInfo) CommitLinkModel {
 	return CommitLinkModel{
 		Link:       toLinkModel(commit.CommitID),
 		CommitInfo: commit,
+	}
+}
+
+func toLinkModel(commitID string) LinkModel {
+	return LinkModel{
+		Text: commitID,
+		URL:  "https://github.com/kubernetes/website/commit/" + commitID,
 	}
 }

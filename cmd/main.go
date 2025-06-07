@@ -103,7 +103,7 @@ func Run(ctx context.Context, cfg *appinit.Config) error {
 	}
 
 	if cfg.RunInterval > 0 {
-		if err := cfg.RefreshTemplateDataTask.Run(ctx); err != nil {
+		if err := cfg.RefreshViewModelTask.Run(ctx); err != nil {
 			return fmt.Errorf("error while refreshing web model: %w", err)
 		}
 
@@ -163,7 +163,7 @@ func main() {
 		appinit.NewFilePRFinder(),
 		appinit.NewViewModelCacheStore(),
 		appinit.NewRefreshRepoTask(),
-		appinit.NewRefreshTemplateDataTask(),
+		appinit.NewRefreshViewModelTask(),
 		appinit.NewRefreshPRTask(),
 		appinit.NewRefreshTask(),
 		appinit.NewGitHubMonitor(),

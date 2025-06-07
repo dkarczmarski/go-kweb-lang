@@ -7,20 +7,20 @@ import (
 )
 
 type RefreshTask struct {
-	refreshRepoTask         *RefreshRepoTask
-	refreshPRTask           *RefreshPRTask
-	refreshTemplateDataTask *web.RefreshTemplateDataTask
+	refreshRepoTask      *RefreshRepoTask
+	refreshPRTask        *RefreshPRTask
+	refreshViewModelTask *web.RefreshViewModelTask
 }
 
 func NewRefreshTask(
 	refreshRepoTask *RefreshRepoTask,
 	refreshPRTask *RefreshPRTask,
-	refreshTemplateDataTask *web.RefreshTemplateDataTask,
+	refreshViewModelTask *web.RefreshViewModelTask,
 ) *RefreshTask {
 	return &RefreshTask{
-		refreshRepoTask:         refreshRepoTask,
-		refreshPRTask:           refreshPRTask,
-		refreshTemplateDataTask: refreshTemplateDataTask,
+		refreshRepoTask:      refreshRepoTask,
+		refreshPRTask:        refreshPRTask,
+		refreshViewModelTask: refreshViewModelTask,
 	}
 }
 
@@ -37,7 +37,7 @@ func (t *RefreshTask) OnUpdate(ctx context.Context, repoUpdated bool, prUpdatedL
 		}
 	}
 
-	if err := t.refreshTemplateDataTask.Run(ctx); err != nil {
+	if err := t.refreshViewModelTask.Run(ctx); err != nil {
 		return err
 	}
 

@@ -10,20 +10,20 @@ import (
 	"go-kweb-lang/pullreq"
 )
 
-type RefreshTemplateDataTask struct {
+type RefreshViewModelTask struct {
 	langCodesProvider *langcnt.LangCodesProvider
 	gitSeeker         *gitseek.GitSeek
 	filePRFinder      *pullreq.FilePRFinder
 	viewModelStore    ViewModelStore
 }
 
-func NewRefreshTemplateDataTask(
+func NewRefreshViewModelTask(
 	langCodesProvider *langcnt.LangCodesProvider,
 	gitSeeker *gitseek.GitSeek,
 	filePRFinder *pullreq.FilePRFinder,
 	viewModelStore ViewModelStore,
-) *RefreshTemplateDataTask {
-	return &RefreshTemplateDataTask{
+) *RefreshViewModelTask {
+	return &RefreshViewModelTask{
 		langCodesProvider: langCodesProvider,
 		gitSeeker:         gitSeeker,
 		filePRFinder:      filePRFinder,
@@ -31,7 +31,7 @@ func NewRefreshTemplateDataTask(
 	}
 }
 
-func (t *RefreshTemplateDataTask) Run(ctx context.Context) error {
+func (t *RefreshViewModelTask) Run(ctx context.Context) error {
 	langCodes, err := t.langCodesProvider.LangCodes()
 	if err != nil {
 		return fmt.Errorf("error while getting available languages: %w", err)
@@ -43,14 +43,11 @@ func (t *RefreshTemplateDataTask) Run(ctx context.Context) error {
 		}
 	}
 
-	indexModel, err := BuildIndexModel(t.langCodesProvider)
+	langCodesViewModel, err := buildLangCodesViewModel(t.langCodesProvider)
 	if err != nil {
-		return fmt.Errorf("error while building index web model: %w", err)
+		return fmt.Errorf("failed to build view model: %w", err)
 	}
 
-	langCodesViewModel := &LangCodesViewModel{
-		LangCodes: indexModel,
-	}
 	if err := t.viewModelStore.SetLangCodes(langCodesViewModel); err != nil {
 		return fmt.Errorf("failed to store language codes view model: %w", err)
 	}
@@ -58,7 +55,7 @@ func (t *RefreshTemplateDataTask) Run(ctx context.Context) error {
 	return nil
 }
 
-func (t *RefreshTemplateDataTask) refreshLangModel(ctx context.Context, langCode string) error {
+func (t *RefreshViewModelTask) refreshLangModel(ctx context.Context, langCode string) error {
 	seekerFileInfos, err := t.gitSeeker.CheckLang(ctx, langCode)
 	if err != nil {
 		return fmt.Errorf("error while checking the content directory for the language code %s: %w", langCode, err)
@@ -82,10 +79,7 @@ func (t *RefreshTemplateDataTask) refreshLangModel(ctx context.Context, langCode
 		fileInfos = append(fileInfos, fileInfo)
 	}
 
-	model := BuildLangModel(fileInfos)
-	langDashboardViewModel := &LangDashboardViewModel{
-		TableModel: *model, // todo:
-	}
+	langDashboardViewModel := buildLangDashboardViewModel(fileInfos)
 
 	if err := t.viewModelStore.SetLangDashboard(langCode, langDashboardViewModel); err != nil {
 		return fmt.Errorf("failed to store language dashboard view model: %w", err)
