@@ -114,12 +114,12 @@ func (p *FilePRFinder) fetchLangOpenedPRs(ctx context.Context, langCode string) 
 	return prs, nil
 }
 
-func (p *FilePRFinder) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]string, error) {
+func (p *FilePRFinder) fetchPRCommits(ctx context.Context, langCode string, pr github.PRItem) ([]string, error) {
 	key := fmt.Sprintf("%v", pr.Number)
 	commits, err := proxycache.Get(
 		ctx,
 		p.cacheStore,
-		BucketPrCommits,
+		fmt.Sprintf("lang/%s/%s", langCode, BucketPrCommits),
 		key,
 		func(cachedPrCommits PRCommits) bool {
 			isInvalid := cachedPrCommits.UpdatedAt != pr.UpdatedAt
@@ -151,11 +151,15 @@ func (p *FilePRFinder) fetchPRCommits(ctx context.Context, pr github.PRItem) ([]
 	return commits.CommitIds, nil
 }
 
-func (p *FilePRFinder) fetchCommitFiles(ctx context.Context, commitID string) (*github.CommitFiles, error) {
+func (p *FilePRFinder) fetchCommitFiles(
+	ctx context.Context,
+	langCode string,
+	commitID string,
+) (*github.CommitFiles, error) {
 	return proxycache.Get(
 		ctx,
 		p.cacheStore,
-		BucketCommitFiles,
+		fmt.Sprintf("lang/%s/%s", langCode, BucketCommitFiles),
 		commitID,
 		nil,
 		func(ctx context.Context) (*github.CommitFiles, error) {
@@ -203,7 +207,7 @@ func (p *FilePRFinder) Update(ctx context.Context, langCode string) error {
 		log.Printf("[%v][%v/%v] getting commit ids for PR #%v",
 			langCode, prIndex, prsLen, pr.Number)
 
-		commitIds, err := p.fetchPRCommits(ctx, pr)
+		commitIds, err := p.fetchPRCommits(ctx, langCode, pr)
 		if err != nil {
 			return fmt.Errorf("error while getting commits for pr %v: %w", pr.Number, err)
 		}
@@ -217,7 +221,7 @@ func (p *FilePRFinder) Update(ctx context.Context, langCode string) error {
 			log.Printf("[%v][%v/%v][%v/%v] getting file list for commit: %v",
 				langCode, prIndex, prsLen, commitIndex, commitIdsLen, commitID)
 
-			commitFiles, err := p.fetchCommitFiles(ctx, commitID)
+			commitFiles, err := p.fetchCommitFiles(ctx, langCode, commitID)
 			if err != nil {
 				return fmt.Errorf("error while getting files for commit id %v: %w", commitID, err)
 			}
@@ -251,7 +255,7 @@ func (sto *FilePRFinderFileStorage) LangIndex(langCode string) (map[string][]int
 	return proxycache.Get(
 		context.Background(),
 		sto.cacheStore,
-		BucketFilePrsIndex,
+		filePrsIndexBucketName(langCode),
 		langCode,
 		nil,
 		func(ctx context.Context) (map[string][]int, error) {
@@ -262,8 +266,12 @@ func (sto *FilePRFinderFileStorage) LangIndex(langCode string) (map[string][]int
 
 func (sto *FilePRFinderFileStorage) StoreLangIndex(langCode string, filePRs map[string][]int) error {
 	return sto.cacheStore.Write(
-		BucketFilePrsIndex,
+		filePrsIndexBucketName(langCode),
 		langCode,
 		filePRs,
 	)
+}
+
+func filePrsIndexBucketName(langCode string) string {
+	return fmt.Sprintf("lang/%s/%s", langCode, BucketFilePrsIndex)
 }

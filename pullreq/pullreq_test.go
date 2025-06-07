@@ -292,7 +292,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 					).Times(1)
 
 				cacheStore.EXPECT().
-					Read("pr-pr-commits", "12", gomock.Any()).
+					Read("lang/pl/pr-pr-commits", "12", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						pullreq.PRCommits{
@@ -302,7 +302,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 					))
 
 				cacheStore.EXPECT().
-					Read(pullreq.BucketCommitFiles, "C1", gomock.Any()).
+					Read("lang/pl/pr-commit-files", "C1", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						&github.CommitFiles{
@@ -311,7 +311,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 						}, nil))
 
 				cacheStore.EXPECT().
-					Read(pullreq.BucketPrCommits, "14", gomock.Any()).
+					Read("lang/pl/pr-pr-commits", "14", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						pullreq.PRCommits{
@@ -321,7 +321,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 					))
 
 				cacheStore.EXPECT().
-					Read(pullreq.BucketCommitFiles, "C2", gomock.Any()).
+					Read("lang/pl/pr-commit-files", "C2", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						&github.CommitFiles{
@@ -329,7 +329,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 							Files:    []string{"F2", "F3"},
 						}, nil))
 				cacheStore.EXPECT().
-					Read(pullreq.BucketCommitFiles, "C3", gomock.Any()).
+					Read("lang/pl/pr-commit-files", "C3", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						&github.CommitFiles{
@@ -338,7 +338,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 						}, nil))
 
 				cacheStore.EXPECT().
-					Read(pullreq.BucketPrCommits, "15", gomock.Any()).
+					Read("lang/pl/pr-pr-commits", "15", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						pullreq.PRCommits{
@@ -348,7 +348,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 					))
 
 				cacheStore.EXPECT().
-					Read(pullreq.BucketCommitFiles, "C4", gomock.Any()).
+					Read("lang/pl/pr-commit-files", "C4", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						&github.CommitFiles{
@@ -452,7 +452,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 					).Times(1)
 
 				cacheStore.EXPECT().
-					Read(pullreq.BucketPrCommits, "12", gomock.Any()).
+					Read("lang/pl/pr-pr-commits", "12", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						pullreq.PRCommits{
@@ -462,7 +462,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 					))
 
 				cacheStore.EXPECT().
-					Read(pullreq.BucketCommitFiles, "C1", gomock.Any()).
+					Read("lang/pl/pr-commit-files", "C1", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						&github.CommitFiles{
@@ -471,7 +471,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 						}, nil))
 
 				cacheStore.EXPECT().
-					Read(pullreq.BucketPrCommits, "14", gomock.Any()).
+					Read("lang/pl/pr-pr-commits", "14", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						pullreq.PRCommits{
@@ -481,7 +481,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 					))
 
 				cacheStore.EXPECT().
-					Read(pullreq.BucketCommitFiles, "C2", gomock.Any()).
+					Read("lang/pl/pr-commit-files", "C2", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						&github.CommitFiles{
@@ -490,7 +490,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 						}, nil))
 
 				cacheStore.EXPECT().
-					Read(pullreq.BucketPrCommits, "15", gomock.Any()).
+					Read("lang/pl/pr-pr-commits", "15", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						pullreq.PRCommits{
@@ -500,18 +500,19 @@ func TestFilePRFinder_Update(t *testing.T) {
 					))
 				gitHubMock.EXPECT().GetPRCommits(ctx, 15).Return([]string{"C5"}, nil)
 				cacheStore.EXPECT().Write(
-					pullreq.BucketPrCommits, "15",
+					"lang/pl/pr-pr-commits",
+					"15",
 					pullreq.PRCommits{
 						UpdatedAt: "D005",
 						CommitIds: []string{"C5"},
 					},
 				)
 				cacheStore.EXPECT().
-					Read(pullreq.BucketCommitFiles, "C5", gomock.Any()).
+					Read("lang/pl/pr-commit-files", "C5", gomock.Any()).
 					DoAndReturn(storetests.MockReadNotFound())
 
 				cacheStore.EXPECT().
-					Read(pullreq.BucketCommitFiles, "C3", gomock.Any()).
+					Read("lang/pl/pr-commit-files", "C3", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						&github.CommitFiles{
@@ -523,7 +524,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 
 				cacheStore.EXPECT().
 					Write(
-						pullreq.BucketCommitFiles,
+						"lang/pl/pr-commit-files",
 						"C5",
 						gomock.Any(),
 					).Return(nil)

@@ -43,6 +43,7 @@ type MonitorTask interface {
 const (
 	bucketLastRepoUpdatedAt = "github-monitor-repo-last-updated-at"
 	bucketLastPRUpdatedAt   = "github-monitor-pr-last-updated-at"
+	singleKey               = ""
 )
 
 type CacheStore interface {
@@ -85,8 +86,8 @@ func (s *MonitorFileStorage) ReadLastPRUpdatedAt(langCode string) (string, error
 	return proxycache.Get(
 		context.Background(),
 		s.cacheStore,
-		bucketLastPRUpdatedAt,
-		langCode,
+		fmt.Sprintf("lang/%s/%s", langCode, bucketLastPRUpdatedAt),
+		singleKey,
 		nil,
 		func(ctx context.Context) (string, error) {
 			return "", nil
@@ -96,8 +97,8 @@ func (s *MonitorFileStorage) ReadLastPRUpdatedAt(langCode string) (string, error
 
 func (s *MonitorFileStorage) WriteLastPRUpdatedAt(langCode, value string) error {
 	return s.cacheStore.Write(
-		bucketLastPRUpdatedAt,
-		langCode,
+		fmt.Sprintf("lang/%s/%s", langCode, bucketLastPRUpdatedAt),
+		singleKey,
 		value,
 	)
 }
