@@ -18,13 +18,14 @@ type LangModel struct {
 }
 
 type FileModel struct {
-	LangRelPath     LinkModel
-	LangLastCommit  git.CommitInfo
-	LangMergeCommit *git.CommitInfo
-	LangForkCommit  *git.CommitInfo
-	ENStatus        string
-	ENUpdates       ENUpdateGroups
-	PRs             []LinkModel
+	LangRelPath      LinkModel
+	LangFilenameLink LinkModel
+	LangLastCommit   git.CommitInfo
+	LangMergeCommit  *git.CommitInfo
+	LangForkCommit   *git.CommitInfo
+	ENStatus         string
+	ENUpdates        ENUpdateGroups
+	PRs              []LinkModel
 }
 
 type FileLinkModel struct {

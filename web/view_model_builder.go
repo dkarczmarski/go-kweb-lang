@@ -42,8 +42,8 @@ func buildLangCodesTableModel(langCodesProvider LangCodesProvider) ([]LinkModel,
 	return model, nil
 }
 
-func buildLangDashboardViewModel(fileInfos []FileInfo) *LangDashboardViewModel {
-	tableModel := buildLangTableModel(fileInfos)
+func buildLangDashboardViewModel(langCode string, fileInfos []FileInfo) *LangDashboardViewModel {
+	tableModel := buildLangTableModel(langCode, fileInfos)
 
 	langDashboardViewModel := &LangDashboardViewModel{
 		TableModel: tableModel,
@@ -52,7 +52,7 @@ func buildLangDashboardViewModel(fileInfos []FileInfo) *LangDashboardViewModel {
 	return langDashboardViewModel
 }
 
-func buildLangTableModel(fileInfos []FileInfo) LangModel {
+func buildLangTableModel(langCode string, fileInfos []FileInfo) LangModel {
 	var table LangModel
 
 	for _, fileInfo := range fileInfos {
@@ -65,6 +65,10 @@ func buildLangTableModel(fileInfos []FileInfo) LangModel {
 		}
 
 		fileModel.LangRelPath = toLangFileLinkModel(fileInfo.LangRelPath)
+		fileModel.LangFilenameLink = LinkModel{
+			Text: "#",
+			URL:  fmt.Sprintf("/lang/%s?filename=%s", langCode, fileInfo.LangRelPath),
+		}
 		fileModel.LangLastCommit = convertCommitToUtc(fileInfo.LangLastCommit)
 		fileModel.LangMergeCommit = convertCommitToUtcPtr(fileInfo.LangMergeCommit)
 		fileModel.LangForkCommit = convertCommitToUtcPtr(fileInfo.LangForkCommit)
@@ -176,14 +180,10 @@ func toLangFileLinkModel(langRelPath string) LinkModel {
 
 func toCommitLinkModel(commit git.CommitInfo) CommitLinkModel {
 	return CommitLinkModel{
-		Link:       toLinkModel(commit.CommitID),
+		Link: LinkModel{
+			Text: commit.CommitID,
+			URL:  "https://github.com/kubernetes/website/commit/" + commit.CommitID,
+		},
 		CommitInfo: commit,
-	}
-}
-
-func toLinkModel(commitID string) LinkModel {
-	return LinkModel{
-		Text: commitID,
-		URL:  "https://github.com/kubernetes/website/commit/" + commitID,
 	}
 }

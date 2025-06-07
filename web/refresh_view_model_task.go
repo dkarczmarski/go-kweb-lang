@@ -79,7 +79,7 @@ func (t *RefreshViewModelTask) refreshLangModel(ctx context.Context, langCode st
 		fileInfos = append(fileInfos, fileInfo)
 	}
 
-	langDashboardViewModel := buildLangDashboardViewModel(fileInfos)
+	langDashboardViewModel := buildLangDashboardViewModel(langCode, fileInfos)
 
 	if err := t.viewModelStore.SetLangDashboard(langCode, langDashboardViewModel); err != nil {
 		return fmt.Errorf("failed to store language dashboard view model: %w", err)
