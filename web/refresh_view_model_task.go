@@ -1,4 +1,4 @@
-package tasks
+package web
 
 import (
 	"context"
@@ -8,27 +8,26 @@ import (
 	"go-kweb-lang/gitseek"
 	"go-kweb-lang/langcnt"
 	"go-kweb-lang/pullreq"
-	"go-kweb-lang/web"
 )
 
 type RefreshTemplateDataTask struct {
 	langCodesProvider *langcnt.LangCodesProvider
 	gitSeeker         *gitseek.GitSeek
 	filePRFinder      *pullreq.FilePRFinder
-	templateData      *web.TemplateData
+	viewModelStore    ViewModelStore
 }
 
 func NewRefreshTemplateDataTask(
 	langCodesProvider *langcnt.LangCodesProvider,
 	gitSeeker *gitseek.GitSeek,
 	filePRFinder *pullreq.FilePRFinder,
-	templateData *web.TemplateData,
+	viewModelStore ViewModelStore,
 ) *RefreshTemplateDataTask {
 	return &RefreshTemplateDataTask{
 		langCodesProvider: langCodesProvider,
 		gitSeeker:         gitSeeker,
 		filePRFinder:      filePRFinder,
-		templateData:      templateData,
+		viewModelStore:    viewModelStore,
 	}
 }
 
@@ -44,12 +43,17 @@ func (t *RefreshTemplateDataTask) Run(ctx context.Context) error {
 		}
 	}
 
-	indexModel, err := web.BuildIndexModel(t.langCodesProvider)
+	indexModel, err := BuildIndexModel(t.langCodesProvider)
 	if err != nil {
 		return fmt.Errorf("error while building index web model: %w", err)
 	}
 
-	t.templateData.SetIndex(indexModel)
+	langCodesViewModel := &LangCodesViewModel{
+		LangCodes: indexModel,
+	}
+	if err := t.viewModelStore.SetLangCodes(langCodesViewModel); err != nil {
+		return fmt.Errorf("failed to store language codes view model: %w", err)
+	}
 
 	return nil
 }
@@ -65,12 +69,12 @@ func (t *RefreshTemplateDataTask) refreshLangModel(ctx context.Context, langCode
 		return fmt.Errorf("error while getting pull request index for lang code %v: %w", langCode, err)
 	}
 
-	var fileInfos []web.FileInfo
+	var fileInfos []FileInfo
 	for _, seekerFileInfo := range seekerFileInfos {
 		file := filepath.Join("content", langCode, seekerFileInfo.LangRelPath)
 		prs := prIndex[file]
 
-		fileInfo := web.FileInfo{
+		fileInfo := FileInfo{
 			FileInfo: seekerFileInfo,
 			PRs:      prs,
 		}
@@ -78,8 +82,14 @@ func (t *RefreshTemplateDataTask) refreshLangModel(ctx context.Context, langCode
 		fileInfos = append(fileInfos, fileInfo)
 	}
 
-	model := web.BuildLangModel(fileInfos)
-	t.templateData.SetLang(langCode, model)
+	model := BuildLangModel(fileInfos)
+	langDashboardViewModel := &LangDashboardViewModel{
+		TableModel: model,
+	}
+
+	if err := t.viewModelStore.SetLangDashboard(langCode, langDashboardViewModel); err != nil {
+		return fmt.Errorf("failed to store language dashboard view model: %w", err)
+	}
 
 	return nil
 }

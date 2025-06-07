@@ -10,11 +10,17 @@ import (
 //go:embed index.html
 var indexHTML string
 
-func createListLangCodesHandler(templateData *TemplateData) func(w http.ResponseWriter, r *http.Request) {
+func createListLangCodesHandler(store ViewModelStore) func(w http.ResponseWriter, r *http.Request) {
 	indexTmpl := template.Must(template.New("index.html").Parse(indexHTML))
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		model := templateData.GetIndex()
+		model, err := store.GetLangCodes()
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+
 		if err := indexTmpl.Execute(w, model); err != nil {
 			log.Println(err)
 			http.Error(w, "", http.StatusInternalServerError)
@@ -26,7 +32,7 @@ func createListLangCodesHandler(templateData *TemplateData) func(w http.Response
 //go:embed lang.html
 var langHTML string
 
-func createLangDashboardHandler(templateData *TemplateData) func(w http.ResponseWriter, r *http.Request) {
+func createLangDashboardHandler(store ViewModelStore) func(w http.ResponseWriter, r *http.Request) {
 	funcMap := template.FuncMap{
 		"truncate": truncate,
 	}
@@ -35,7 +41,13 @@ func createLangDashboardHandler(templateData *TemplateData) func(w http.Response
 	return func(w http.ResponseWriter, r *http.Request) {
 		code := r.PathValue("code")
 
-		model := templateData.GetLang(code)
+		model, err := store.GetLangDashboard(code)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+
 		if model == nil {
 			http.NotFound(w, r)
 			return

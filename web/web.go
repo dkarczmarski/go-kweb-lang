@@ -11,10 +11,10 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func NewServer(templateData *TemplateData) *Server {
+func NewServer(viewModelStore ViewModelStore) *Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", createListLangCodesHandler(templateData))
-	mux.HandleFunc("/lang/{code}", createLangDashboardHandler(templateData))
+	mux.HandleFunc("/", createListLangCodesHandler(viewModelStore))
+	mux.HandleFunc("/lang/{code}", createLangDashboardHandler(viewModelStore))
 
 	httpServer := &http.Server{
 		Addr:              ":8080",

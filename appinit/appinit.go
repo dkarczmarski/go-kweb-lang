@@ -30,14 +30,14 @@ type Config struct {
 	GitHubTokenFile         string
 	LangCodesProvider       *langcnt.LangCodesProvider
 	GitRepo                 *git.Git
-	TemplateData            *web.TemplateData
 	CacheStore              *store.FileStore
+	ViewModelCacheStore     *web.ViewModelCacheStore
 	GitRepoHist             *githist.GitHist
 	GitSeek                 *gitseek.GitSeek
 	GitHub                  *github.GitHub
 	FilePRFinder            *pullreq.FilePRFinder
 	RefreshRepoTask         *tasks.RefreshRepoTask
-	RefreshTemplateDataTask *tasks.RefreshTemplateDataTask
+	RefreshTemplateDataTask *web.RefreshTemplateDataTask
 	RefreshPRTask           *tasks.RefreshPRTask
 	RefreshTask             *tasks.RefreshTask
 	GitHubMonitor           *githubmon.Monitor
@@ -237,14 +237,6 @@ func NewRepo() func(*Config) error {
 	}
 }
 
-func NewTemplateData() func(*Config) error {
-	return func(config *Config) error {
-		config.TemplateData = web.NewTemplateData()
-
-		return nil
-	}
-}
-
 func NewCacheStore() func(*Config) error {
 	return func(config *Config) error {
 		cacheDirPath := config.CacheDir
@@ -253,6 +245,19 @@ func NewCacheStore() func(*Config) error {
 		}
 
 		config.CacheStore = store.NewFileStore(cacheDirPath)
+
+		return nil
+	}
+}
+
+func NewViewModelCacheStore() func(*Config) error {
+	return func(config *Config) error {
+		cacheStore := config.CacheStore
+		if cacheStore == nil {
+			return fmt.Errorf("param CacheStore is not set: %w", ErrBadConfiguration)
+		}
+
+		config.ViewModelCacheStore = web.NewViewModelCacheStore(cacheStore)
 
 		return nil
 	}
@@ -375,16 +380,16 @@ func NewRefreshTemplateDataTask() func(*Config) error {
 			return fmt.Errorf("param FilePRFinder is not set: %w", ErrBadConfiguration)
 		}
 
-		templateData := config.TemplateData
-		if templateData == nil {
-			return fmt.Errorf("param TemplateData is not set: %w", ErrBadConfiguration)
+		viewModelCacheStore := config.ViewModelCacheStore
+		if viewModelCacheStore == nil {
+			return fmt.Errorf("param ViewModelCacheStore is not set: %w", ErrBadConfiguration)
 		}
 
-		config.RefreshTemplateDataTask = tasks.NewRefreshTemplateDataTask(
+		config.RefreshTemplateDataTask = web.NewRefreshTemplateDataTask(
 			langCodesProvider,
 			gitSeeker,
 			filePRFinder,
-			templateData,
+			viewModelCacheStore,
 		)
 
 		return nil
@@ -461,12 +466,12 @@ func NewGitHubMonitor() func(*Config) error {
 
 func NewServer() func(*Config) error {
 	return func(config *Config) error {
-		templateData := config.TemplateData
-		if templateData == nil {
-			return fmt.Errorf("param TemplateData is not set: %w", ErrBadConfiguration)
+		viewModelCacheStore := config.ViewModelCacheStore
+		if viewModelCacheStore == nil {
+			return fmt.Errorf("param ViewModelCacheStore is not set: %w", ErrBadConfiguration)
 		}
 
-		config.Server = web.NewServer(templateData)
+		config.Server = web.NewServer(viewModelCacheStore)
 
 		return nil
 	}

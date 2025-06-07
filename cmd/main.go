@@ -161,7 +161,7 @@ func main() {
 		appinit.RegisterGitSeekInvalidator(),
 		appinit.NewGitHub(),
 		appinit.NewFilePRFinder(),
-		appinit.NewTemplateData(),
+		appinit.NewViewModelCacheStore(),
 		appinit.NewRefreshRepoTask(),
 		appinit.NewRefreshTemplateDataTask(),
 		appinit.NewRefreshPRTask(),
