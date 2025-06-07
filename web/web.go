@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	_ "embed"
 	"net/http"
 	"time"
 )

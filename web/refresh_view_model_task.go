@@ -84,7 +84,7 @@ func (t *RefreshTemplateDataTask) refreshLangModel(ctx context.Context, langCode
 
 	model := BuildLangModel(fileInfos)
 	langDashboardViewModel := &LangDashboardViewModel{
-		TableModel: model,
+		TableModel: *model, // todo:
 	}
 
 	if err := t.viewModelStore.SetLangDashboard(langCode, langDashboardViewModel); err != nil {
