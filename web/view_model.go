@@ -10,6 +10,17 @@ type LangCodesViewModel struct {
 }
 
 type LangDashboardViewModel struct {
+	URL string
+
+	ParamLangCode  string
+	ParamItemsType string
+	ParamFilename  string
+	ParamFilepath  string
+	ParamSort      string
+	ParamSortOrder string
+
+	ShowPanel bool
+
 	TableModel LangModel
 }
 

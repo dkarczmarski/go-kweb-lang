@@ -30,13 +30,13 @@ func FilterAndSort(
 	filePath string,
 	sort int,
 	sortOrder int,
-) *LangDashboardViewModel {
-	var resultModel LangDashboardViewModel
+) {
+	var newFiles []FileModel
 
 	if len(fileName) > 0 {
 		for _, f := range model.TableModel.Files {
 			if f.LangRelPath.Text == fileName {
-				resultModel.TableModel.Files = append(resultModel.TableModel.Files, f)
+				newFiles = append(newFiles, f)
 				break
 			}
 		}
@@ -72,17 +72,17 @@ func FilterAndSort(
 				continue
 			}
 
-			resultModel.TableModel.Files = append(resultModel.TableModel.Files, f)
+			newFiles = append(newFiles, f)
 		}
 
-		slices.SortFunc(resultModel.TableModel.Files, func(a, b FileModel) int {
+		slices.SortFunc(newFiles, func(a, b FileModel) int {
 			var cmpValue int
 
 			switch sort {
 			case SortByFileName:
 				cmpValue = cmp.Compare(a.LangRelPath.Text, b.LangRelPath.Text)
 			case SortByLastLangFileCommit:
-				cmpValue = cmp.Compare(a.LangLastCommit.DateTime, a.LangLastCommit.DateTime)
+				cmpValue = cmp.Compare(a.LangLastCommit.DateTime, b.LangLastCommit.DateTime)
 			}
 
 			switch sortOrder {
@@ -96,5 +96,5 @@ func FilterAndSort(
 		})
 	}
 
-	return &resultModel
+	model.TableModel.Files = newFiles
 }

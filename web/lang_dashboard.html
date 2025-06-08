@@ -6,6 +6,7 @@
     <title>Changes in Lang Files Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <style>
         .invisible-link {
             opacity: 0;
@@ -19,6 +20,62 @@
     </style>
 </head>
 <body class="container">
+
+{{ if .ShowPanel }}
+<div class="row pt-3">
+
+    <div class="col-2">
+        <select name="SelectedItemsType"
+                hx-post="/lang/{{ .ParamLangCode }}"
+                hx-trigger="change"
+                hx-target="#table"
+                hx-swap="innerHTML"
+                hx-include="[name='ParamItemsType'], [name='ParamLangCode'], [name='ParamFilepath']"
+                class="form-select form-select" aria-label="Small select example">
+            <option value="all" {{ if eq .ParamItemsType "all" }}selected{{ end }}>all</option>
+            <option value="with-update" {{ if eq .ParamItemsType "with-update" }}selected{{ end }}>with update</option>
+            <option value="with-update-or-pr" {{ if eq .ParamItemsType "with-update-or-pr" }}selected{{ end }}>with update or pr</option>
+            <option value="with-pr" {{ if eq .ParamItemsType "with-pr" }}selected{{ end }}>with pr</option>
+        </select>
+    </div>
+    <div class="col-10">
+        <form
+                hx-post="/lang/{{ .ParamLangCode }}"
+                hx-target="#table"
+                hx-swap="innerHTML"
+                hx-include="[name='ParamItemsType'], [name='ParamLangCode'], [name='ParamFilepath'], [name='SelectedFilepath']"
+        >
+            <div class="input-group">
+                <input type="text"
+                       name="SelectedFilepath"
+                       class="form-control"
+                       placeholder="Lang Relative Path"
+                       value="{{ .ParamFilepath }}"/>
+                <button type="submit"
+                        class="btn btn-outline-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search"
+                         viewBox="0 0 16 16">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                    </svg>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{{ end }}
+
+<div id="table" class="pt-3">
+    {{ template "table" . }}
+</div>
+
+{{ define "table" }}
+<input type="hidden" name="URL" value="{{ .URL }}"/>
+<input type="hidden" name="ParamLangCode" value="{{ .ParamLangCode }}"/>
+<input type="hidden" name="ParamItemsType" value="{{ .ParamItemsType }}"/>
+<input type="hidden" name="ParamFilename" value="{{ .ParamFilename }}"/>
+<input type="hidden" name="ParamFilepath" value="{{ .ParamFilepath }}"/>
+<input type="hidden" name="ParamSort" value="{{ .ParamSort }}"/>
+<input type="hidden" name="ParamSortOrder" value="{{ .ParamSortOrder }}"/>
 
 <table class="table table-hover table-striped table-bordered small">
     <thead>
@@ -55,10 +112,12 @@
             <ul>
                 {{range .ENUpdates.AfterMergeCommit}}
                 <li>
-                    Commit: <a href="{{ .Commit.Link.URL }}">{{ .Commit.CommitInfo.Comment }}</a> {{ truncate .Commit.CommitInfo.DateTime 10 }}
+                    Commit: <a href="{{ .Commit.Link.URL }}">{{ .Commit.CommitInfo.Comment }}</a> {{ truncate
+                    .Commit.CommitInfo.DateTime 10 }}
                     {{ if .MergeCommit }}
                     <br/>
-                    Merge Commit: <a href="{{ .MergeCommit.Link.URL }}">{{ .MergeCommit.CommitInfo.Comment }}</a> {{ truncate .MergeCommit.CommitInfo.DateTime 10 }}
+                    Merge Commit: <a href="{{ .MergeCommit.Link.URL }}">{{ .MergeCommit.CommitInfo.Comment }}</a> {{
+                    truncate .MergeCommit.CommitInfo.DateTime 10 }}
                     {{ end }}
                 </li>
                 {{end}}
@@ -70,10 +129,12 @@
             <ul>
                 {{range .ENUpdates.AfterLastCommit}}
                 <li>
-                    Commit: <a href="{{ .Commit.Link.URL }}">{{ .Commit.CommitInfo.Comment }}</a> {{ truncate .Commit.CommitInfo.DateTime 10 }}
+                    Commit: <a href="{{ .Commit.Link.URL }}">{{ .Commit.CommitInfo.Comment }}</a> {{ truncate
+                    .Commit.CommitInfo.DateTime 10 }}
                     {{ if .MergeCommit }}
                     <br/>
-                    Merge Commit: <a href="{{ .MergeCommit.Link.URL }}">{{ .MergeCommit.CommitInfo.Comment }}</a> {{ truncate .MergeCommit.CommitInfo.DateTime 10 }}
+                    Merge Commit: <a href="{{ .MergeCommit.Link.URL }}">{{ .MergeCommit.CommitInfo.Comment }}</a> {{
+                    truncate .MergeCommit.CommitInfo.DateTime 10 }}
                     {{ end }}
                 </li>
                 {{end}}
@@ -85,10 +146,12 @@
             <ul>
                 {{range .ENUpdates.AfterForkCommit}}
                 <li>
-                    Commit: <a href="{{ .Commit.Link.URL }}">{{ .Commit.CommitInfo.Comment }}</a> {{ truncate .Commit.CommitInfo.DateTime 10 }}
+                    Commit: <a href="{{ .Commit.Link.URL }}">{{ .Commit.CommitInfo.Comment }}</a> {{ truncate
+                    .Commit.CommitInfo.DateTime 10 }}
                     {{ if .MergeCommit }}
                     <br/>
-                    Merge Commit: <a href="{{ .MergeCommit.Link.URL }}">{{ .MergeCommit.CommitInfo.Comment }}</a> {{ truncate .MergeCommit.CommitInfo.DateTime 10 }}
+                    Merge Commit: <a href="{{ .MergeCommit.Link.URL }}">{{ .MergeCommit.CommitInfo.Comment }}</a> {{
+                    truncate .MergeCommit.CommitInfo.DateTime 10 }}
                     {{ end }}
                 </li>
                 {{end}}
@@ -100,10 +163,12 @@
             <ul>
                 {{range .ENUpdates.BeforeForkCommit}}
                 <li>
-                    Commit: <a href="{{ .Commit.Link.URL }}">{{ .Commit.CommitInfo.Comment }}</a> {{ truncate .Commit.CommitInfo.DateTime 10 }}
+                    Commit: <a href="{{ .Commit.Link.URL }}">{{ .Commit.CommitInfo.Comment }}</a> {{ truncate
+                    .Commit.CommitInfo.DateTime 10 }}
                     {{ if .MergeCommit }}
                     <br/>
-                    Merge Commit: <a href="{{ .MergeCommit.Link.URL }}">{{ .MergeCommit.CommitInfo.Comment }}</a> {{ truncate .MergeCommit.CommitInfo.DateTime 10 }}
+                    Merge Commit: <a href="{{ .MergeCommit.Link.URL }}">{{ .MergeCommit.CommitInfo.Comment }}</a> {{
+                    truncate .MergeCommit.CommitInfo.DateTime 10 }}
                     {{ end }}
                 </li>
                 {{end}}
@@ -111,7 +176,7 @@
             {{end}}
         </td>
         <td>
-            <ul>
+            <ul class="list-unstyled">
                 {{range .PRs}}
                 <li>
                     <a href="{{ .URL }}">{{ .Text }}</a>
@@ -123,8 +188,11 @@
     {{end}}
     </tbody>
 </table>
+{{ end }}
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
 </body>
 </html>
+

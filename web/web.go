@@ -13,7 +13,8 @@ type Server struct {
 func NewServer(viewModelStore ViewModelStore) *Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", createListLangCodesHandler(viewModelStore))
-	mux.HandleFunc("/lang/{code}", createLangDashboardHandler(viewModelStore))
+	mux.HandleFunc("GET /lang/{code}", createLangDashboardHandler(viewModelStore))
+	mux.HandleFunc("POST /lang/{code}", createLangDashboardTableHandler(viewModelStore))
 
 	httpServer := &http.Server{
 		Addr:              ":8080",
