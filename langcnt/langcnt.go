@@ -22,7 +22,7 @@ func (c *LangCodesProvider) SetLangCodesFilter(langCodes []string) {
 // LangCodes returns all lang codes based on the 'content' directory in the Kubernetes repository.
 // If a filter is set via SetLangCodesFilter, it omits lang codes that are not in the filter.
 func (c *LangCodesProvider) LangCodes() ([]string, error) {
-	allLangCodes, err := listDirectories(filepath.Join(c.RepoDir, "content"))
+	allLangCodes, err := listLangDirectories(filepath.Join(c.RepoDir, "content"))
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (c *LangCodesProvider) LangCodes() ([]string, error) {
 	return langCodes, nil
 }
 
-func listDirectories(path string) ([]string, error) {
+func listLangDirectories(path string) ([]string, error) {
 	var dirs []string
 
 	files, err := os.ReadDir(path)
@@ -52,7 +52,7 @@ func listDirectories(path string) ([]string, error) {
 	}
 
 	for _, file := range files {
-		if file.IsDir() {
+		if file.IsDir() && file.Name() != "en" {
 			dirs = append(dirs, file.Name())
 		}
 	}
