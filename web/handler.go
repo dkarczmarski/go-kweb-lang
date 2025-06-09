@@ -97,13 +97,17 @@ func createLangDashboardTableHandler(store ViewModelStore) func(w http.ResponseW
 	}
 }
 
-func findRequestValue(r *http.Request, formKey1, formKey2, urlKey string) string {
-	if v := r.FormValue(formKey1); v != "" {
+func findRequestValue(r *http.Request, newValueKey, currentValueKey, urlKey string) string {
+	if r.FormValue(newValueKey) == "" && r.FormValue(currentValueKey) != "" {
+		// reset value if the new input is empty but the previous one was not
+		return ""
+	}
+	if v := r.FormValue(newValueKey); v != "" {
 		// this value comes from hidden inputs that store previous state.
 		// it is empty when the page is opened for the first time.
 		return v
 	}
-	if v := r.FormValue(formKey2); v != "" {
+	if v := r.FormValue(currentValueKey); v != "" {
 		// this value represents a newly set value from user interaction on the page.
 		return v
 	}
@@ -146,13 +150,12 @@ func handleLangDashboardRequest(
 		queryParams = append(queryParams, fmt.Sprintf("%s=%s", "sort-order", sortOrderParam))
 	}
 
-	query := strings.Join(queryParams, "&")
-
 	url := r.URL.Path
+	query := strings.Join(queryParams, "&")
 	if len(query) > 0 {
 		url += "?" + query
-		w.Header().Set("HX-Push", url)
 	}
+	w.Header().Set("HX-Push", url)
 
 	model, err := store.GetLangDashboard(code)
 	if err != nil {

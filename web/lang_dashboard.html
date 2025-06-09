@@ -30,7 +30,7 @@
                 hx-trigger="change"
                 hx-target="#table"
                 hx-swap="innerHTML"
-                hx-include="[name='ParamItemsType'], [name='ParamLangCode'], [name='ParamFilepath']"
+                hx-include="[name='ParamItemsType'], [name='ParamLangCode'], [name='ParamFilepath'], [name='SelectedFilepath']"
                 class="form-select form-select" aria-label="Small select example">
             <option value="all" {{ if eq .ParamItemsType "all" }}selected{{ end }}>all</option>
             <option value="with-update" {{ if eq .ParamItemsType "with-update" }}selected{{ end }}>with update</option>
@@ -43,7 +43,7 @@
                 hx-post="/lang/{{ .ParamLangCode }}"
                 hx-target="#table"
                 hx-swap="innerHTML"
-                hx-include="[name='ParamItemsType'], [name='ParamLangCode'], [name='ParamFilepath'], [name='SelectedFilepath']"
+                hx-include="[name='ParamItemsType'], [name='ParamLangCode'], [name='ParamFilepath'], [name='SelectedItemsType'], [name='SelectedFilepath']"
         >
             <div class="input-group">
                 <input type="text"
