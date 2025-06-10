@@ -127,11 +127,11 @@ func handleLangDashboardRequest(
 		return nil, errors.New("missing lang code")
 	}
 
-	itemsTypeParam := findRequestValue(r, "SelectedItemsType", "ParamItemsType", "items-type")
-	filenameParam := findRequestValue(r, "", "ParamFilename", "filename")
-	filepathParam := findRequestValue(r, "SelectedFilepath", "ParamFilepath", "filepath")
-	sortParam := findRequestValue(r, "SelectedSort", "ParamSort", "sort")
-	sortOrderParam := findRequestValue(r, "SelectedSortOrder", "ParamSortOrder", "sort-order")
+	itemsTypeParam := findRequestValue(r, "NewItemsType", "CurrentItemsType", "items-type")
+	filenameParam := findRequestValue(r, "", "CurrentFilename", "filename")
+	filepathParam := findRequestValue(r, "NewFilepath", "CurrentFilepath", "filepath")
+	sortParam := findRequestValue(r, "SelectedSort", "CurrentSort", "sort")
+	sortOrderParam := findRequestValue(r, "SelectedSortOrder", "CurrentSortOrder", "sort-order")
 
 	var queryParams []string
 	if len(itemsTypeParam) > 0 {
@@ -204,10 +204,10 @@ func handleLangDashboardRequest(
 
 	model.URL = r.URL.RawPath
 
-	model.ParamLangCode = code
-	model.ParamItemsType = itemsTypeParam
-	model.ParamFilename = filenameParam
-	model.ParamFilepath = filepathParam
+	model.CurrentLangCode = code
+	model.CurrentItemsType = itemsTypeParam
+	model.CurrentFilename = filenameParam
+	model.CurrentFilepath = filepathParam
 
 	if len(filenameParam) == 0 {
 		model.ShowPanel = true

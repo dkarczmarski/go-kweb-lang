@@ -25,32 +25,32 @@
 <div class="row pt-3">
 
     <div class="col-2">
-        <select name="SelectedItemsType"
-                hx-post="/lang/{{ .ParamLangCode }}"
+        <select name="NewItemsType"
+                hx-post="/lang/{{ .CurrentLangCode }}"
                 hx-trigger="change"
                 hx-target="#table"
                 hx-swap="innerHTML"
-                hx-include="[name='ParamItemsType'], [name='ParamLangCode'], [name='ParamFilepath'], [name='SelectedFilepath']"
+                hx-include="[name='CurrentItemsType'], [name='CurrentLangCode'], [name='CurrentFilepath'], [name='NewFilepath']"
                 class="form-select form-select" aria-label="Small select example">
-            <option value="all" {{ if eq .ParamItemsType "all" }}selected{{ end }}>all</option>
-            <option value="with-update" {{ if eq .ParamItemsType "with-update" }}selected{{ end }}>with update</option>
-            <option value="with-update-or-pr" {{ if eq .ParamItemsType "with-update-or-pr" }}selected{{ end }}>with update or pr</option>
-            <option value="with-pr" {{ if eq .ParamItemsType "with-pr" }}selected{{ end }}>with pr</option>
+            <option value="all" {{ if eq .CurrentItemsType "all" }}selected{{ end }}>all</option>
+            <option value="with-update" {{ if eq .CurrentItemsType "with-update" }}selected{{ end }}>with update</option>
+            <option value="with-update-or-pr" {{ if eq .CurrentItemsType "with-update-or-pr" }}selected{{ end }}>with update or pr</option>
+            <option value="with-pr" {{ if eq .CurrentItemsType "with-pr" }}selected{{ end }}>with pr</option>
         </select>
     </div>
     <div class="col-10">
         <form
-                hx-post="/lang/{{ .ParamLangCode }}"
+                hx-post="/lang/{{ .CurrentLangCode }}"
                 hx-target="#table"
                 hx-swap="innerHTML"
-                hx-include="[name='ParamItemsType'], [name='ParamLangCode'], [name='ParamFilepath'], [name='SelectedItemsType'], [name='SelectedFilepath']"
+                hx-include="[name='CurrentItemsType'], [name='CurrentLangCode'], [name='CurrentFilepath'], [name='NewItemsType'], [name='NewFilepath']"
         >
             <div class="input-group">
                 <input type="text"
-                       name="SelectedFilepath"
+                       name="NewFilepath"
                        class="form-control"
                        placeholder="Lang Relative Path"
-                       value="{{ .ParamFilepath }}"/>
+                       value="{{ .CurrentFilepath }}"/>
                 <button type="submit"
                         class="btn btn-outline-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search"
@@ -70,12 +70,12 @@
 
 {{ define "table" }}
 <input type="hidden" name="URL" value="{{ .URL }}"/>
-<input type="hidden" name="ParamLangCode" value="{{ .ParamLangCode }}"/>
-<input type="hidden" name="ParamItemsType" value="{{ .ParamItemsType }}"/>
-<input type="hidden" name="ParamFilename" value="{{ .ParamFilename }}"/>
-<input type="hidden" name="ParamFilepath" value="{{ .ParamFilepath }}"/>
-<input type="hidden" name="ParamSort" value="{{ .ParamSort }}"/>
-<input type="hidden" name="ParamSortOrder" value="{{ .ParamSortOrder }}"/>
+<input type="hidden" name="CurrentLangCode" value="{{ .CurrentLangCode }}"/>
+<input type="hidden" name="CurrentItemsType" value="{{ .CurrentItemsType }}"/>
+<input type="hidden" name="CurrentFilename" value="{{ .CurrentFilename }}"/>
+<input type="hidden" name="CurrentFilepath" value="{{ .CurrentFilepath }}"/>
+<input type="hidden" name="CurrentSort" value="{{ .CurrentSort }}"/>
+<input type="hidden" name="CurrentSortOrder" value="{{ .CurrentSortOrder }}"/>
 
 <table class="table table-hover table-striped table-bordered small">
     <thead>

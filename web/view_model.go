@@ -12,12 +12,12 @@ type LangCodesViewModel struct {
 type LangDashboardViewModel struct {
 	URL string
 
-	ParamLangCode  string
-	ParamItemsType string
-	ParamFilename  string
-	ParamFilepath  string
-	ParamSort      string
-	ParamSortOrder string
+	CurrentLangCode  string
+	CurrentItemsType string
+	CurrentFilename  string
+	CurrentFilepath  string
+	CurrentSort      string
+	CurrentSortOrder string
 
 	ShowPanel bool
 
