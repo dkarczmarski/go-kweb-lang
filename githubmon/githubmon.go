@@ -206,7 +206,7 @@ func (mon *Monitor) isPRUpdated(ctx context.Context, langCode string) (bool, err
 		return false, err
 	}
 
-	isUpdated := len(lastUpdatedAt) == 0 || lastUpdatedAt != currentUpdatedAt
+	isUpdated := len(currentUpdatedAt) > 0 && (len(lastUpdatedAt) == 0 || lastUpdatedAt != currentUpdatedAt)
 
 	if isUpdated {
 		if err := mon.storage.WriteLastPRUpdatedAt(langCode, currentUpdatedAt); err != nil {
@@ -260,7 +260,7 @@ func (mon *Monitor) getCurrentLastPRUpdatedAt(ctx context.Context, langCode stri
 	}
 
 	if len(result.Items) == 0 {
-		return "", errors.New("no PRs found")
+		return "", nil
 	}
 
 	return result.Items[0].UpdatedAt, nil
