@@ -75,3 +75,29 @@ func TestGitHub_PRSearch_E2E(t *testing.T) {
 
 	t.Log(prs)
 }
+
+func TestGitHub_Retry_E2E(t *testing.T) {
+	ctx := context.Background()
+	gh := github.NewGitHub()
+
+	// infinite loop for observing the retry function
+	for {
+		result, err := gh.PRSearch(
+			ctx,
+			github.PRSearchFilter{
+				LangCode: "pl",
+				OnlyOpen: true,
+			},
+			github.PageRequest{
+				Sort:    "updated",
+				Order:   "asc",
+				PerPage: 1,
+			},
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Log(result)
+	}
+}

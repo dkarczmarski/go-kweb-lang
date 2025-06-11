@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -90,7 +91,7 @@ func NewGitHub(opts ...func(*Config)) *GitHub {
 func (gh *GitHub) GetLatestCommit(ctx context.Context) (*CommitInfo, error) {
 	urlStr := fmt.Sprintf("%v/repos/kubernetes/website/commits?per_page=1", gh.BaseURL)
 
-	resp, err := gh.httpGet(ctx, urlStr)
+	resp, err := gh.httpGetWithRetry(ctx, urlStr)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +127,7 @@ type commitResponse struct {
 func (gh *GitHub) PRSearch(ctx context.Context, filter PRSearchFilter, page PageRequest) (*PRSearchResult, error) {
 	urlStr := gh.buildPRSearchURL(filter, page)
 
-	resp, err := gh.httpGet(ctx, urlStr)
+	resp, err := gh.httpGetWithRetry(ctx, urlStr)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +199,7 @@ func (gh *GitHub) buildPRSearchURL(filter PRSearchFilter, page PageRequest) stri
 func (gh *GitHub) GetPRCommits(ctx context.Context, prNumber int) ([]string, error) {
 	urlStr := fmt.Sprintf("%v/repos/kubernetes/website/pulls/%d/commits", gh.BaseURL, prNumber)
 
-	resp, err := gh.httpGet(ctx, urlStr)
+	resp, err := gh.httpGetWithRetry(ctx, urlStr)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +226,7 @@ type commitItem struct {
 func (gh *GitHub) GetCommitFiles(ctx context.Context, commitID string) (*CommitFiles, error) {
 	urlStr := fmt.Sprintf("%v/repos/kubernetes/website/commits/%s", gh.BaseURL, commitID)
 
-	resp, err := gh.httpGet(ctx, urlStr)
+	resp, err := gh.httpGetWithRetry(ctx, urlStr)
 	if err != nil {
 		return nil, err
 	}
@@ -255,6 +256,56 @@ type commitModel struct {
 	} `json:"files"`
 }
 
+func (gh *GitHub) httpGetWithRetry(ctx context.Context, urlStr string) (*http.Response, error) {
+	var resp *http.Response
+	var err error
+
+	maxRetries := 10 // magic number
+	for i := 0; i < maxRetries; i++ {
+		if i > 0 {
+			log.Printf("[%d/%d] retry http GET %s", i, maxRetries, urlStr)
+		}
+
+		resp, err = gh.httpGet(ctx, urlStr)
+		if err == nil {
+			break
+		}
+
+		var terr *retryErr
+		if errors.As(err, &terr) {
+			if len(terr.retryAfterStr) > 0 {
+				if seconds, err := strconv.Atoi(terr.retryAfterStr); err == nil {
+					log.Printf("received http code %d with Retry-After header. wait for %d seconds",
+						terr.statusCode, seconds)
+					time.Sleep(time.Duration(seconds) * time.Second)
+				}
+			} else if len(terr.remainingStr) > 0 && len(terr.resetStr) > 0 {
+				remaining, _ := strconv.Atoi(terr.remainingStr)
+				resetUnix, _ := strconv.ParseInt(terr.resetStr, 10, 64)
+
+				if remaining == 0 && resetUnix > 0 {
+					resetTime := time.Unix(resetUnix, 0)
+					wait := time.Until(resetTime)
+					if wait > 0 {
+						log.Printf("received http code %d with X-RateLimit-Reset header. wait for %v seconds until reset at %v",
+							terr.statusCode, wait.Seconds(), resetTime)
+						time.Sleep(wait)
+					}
+				}
+			} else {
+				log.Printf("wait for 1 minute. connection error: %v", err)
+				time.Sleep(time.Minute)
+			}
+
+			time.Sleep(time.Second) // always wait at least one second
+		} else {
+			break
+		}
+	}
+
+	return resp, err
+}
+
 func (gh *GitHub) httpGet(ctx context.Context, urlStr string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
@@ -264,7 +315,7 @@ func (gh *GitHub) httpGet(ctx context.Context, urlStr string) (*http.Response, e
 	resp, err := gh.HTTPClient.Do(req)
 	if err != nil {
 		if isTimeoutErr(err) {
-			err = wrapRetryableErr(err)
+			err = &retryErr{err: err}
 		}
 
 		return nil, fmt.Errorf("error while sending request: %w", err)
@@ -275,8 +326,8 @@ func (gh *GitHub) httpGet(ctx context.Context, urlStr string) (*http.Response, e
 
 		body, _ := io.ReadAll(resp.Body)
 
-		if isRateLimitError(resp, body) {
-			err = wrapRetryableErr(errors.New("API rate limit exceeded"))
+		if ok, err := isRateLimitError(resp, body); ok {
+			return nil, err
 		}
 
 		return nil, fmt.Errorf("error while reading response: %w\nstatus: %s\nbody: %s",
@@ -291,26 +342,37 @@ func isTimeoutErr(err error) bool {
 	return errors.As(err, &netErr) && netErr.Timeout()
 }
 
-func isRateLimitError(resp *http.Response, body []byte) bool {
+func isRateLimitError(resp *http.Response, body []byte) (bool, error) {
 	if resp == nil {
-		return false
+		return false, nil
 	}
 
 	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
-		if remaining := resp.Header.Get("X-RateLimit-Remaining"); remaining == "0" {
-			return true
-		}
+		remainingStr := resp.Header.Get("X-RateLimit-Remaining")
+		resetStr := resp.Header.Get("X-RateLimit-Reset")
+		retryAfterStr := resp.Header.Get("Retry-After")
 
 		if len(body) > 0 && bytes.Contains(body, []byte("rate limit exceeded")) {
-			return true
+			return true, &retryErr{
+				err:           errors.New("API rate limit exceeded"),
+				statusCode:    resp.StatusCode,
+				remainingStr:  remainingStr,
+				resetStr:      resetStr,
+				retryAfterStr: retryAfterStr,
+			}
 		}
 	}
 
-	return false
+	return false, nil
 }
 
 type retryErr struct {
 	err error
+
+	statusCode    int
+	remainingStr  string
+	resetStr      string
+	retryAfterStr string
 }
 
 func (e *retryErr) Error() string {
@@ -323,8 +385,4 @@ func (e *retryErr) Unwrap() error {
 
 func (e *retryErr) IsRetryable() bool {
 	return true
-}
-
-func wrapRetryableErr(err error) error {
-	return &retryErr{err}
 }
