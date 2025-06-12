@@ -193,9 +193,9 @@ func ReadGitHubTokenFile(skipFileNotExist, skipEmptyFile bool) func(*Config) err
 					config.GitHubTokenFile, err)
 			}
 
-			value := string(b)
+			value := strings.TrimSpace(string(b))
 
-			if skipEmptyFile && len(strings.TrimSpace(value)) == 0 {
+			if skipEmptyFile && len(value) == 0 {
 				log.Printf("github token file is empty")
 
 				return nil
