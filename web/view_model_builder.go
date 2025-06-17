@@ -64,7 +64,7 @@ func buildLangTableModel(langCode string, fileInfos []FileInfo) LangModel {
 			continue
 		}
 
-		fileModel.LangRelPath = toLangFileLinkModel(fileInfo.LangRelPath)
+		fileModel.LangRelPath = toLangFileLinkModel(langCode, fileInfo.LangRelPath)
 		fileModel.LangFilenameLink = LinkModel{
 			Text: "#",
 			URL:  fmt.Sprintf("/lang/%s?filename=%s", langCode, fileInfo.LangRelPath),
@@ -171,10 +171,10 @@ func buildENUpdates(
 	return groups
 }
 
-func toLangFileLinkModel(langRelPath string) LinkModel {
+func toLangFileLinkModel(langCode, langRelPath string) LinkModel {
 	return LinkModel{
 		Text: langRelPath,
-		URL:  "https://github.com/kubernetes/website/blob/main/content/pl/" + langRelPath,
+		URL:  fmt.Sprintf("https://github.com/kubernetes/website/blob/main/content/%s/%s", langCode, langRelPath),
 	}
 }
 
