@@ -25,7 +25,10 @@ type LangDashboardViewModel struct {
 }
 
 type LangModel struct {
-	Files []FileModel
+	FilenameColumnLink string
+	StatusColumnLink   string
+	UpdatesColumnLink  string
+	Files              []FileModel
 }
 
 type FileModel struct {
@@ -50,6 +53,7 @@ type CommitLinkModel struct {
 }
 
 type ENUpdateGroups struct {
+	LastCommit       git.CommitInfo
 	AfterMergeCommit []ENUpdate
 	AfterLastCommit  []ENUpdate
 	AfterForkCommit  []ENUpdate

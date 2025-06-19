@@ -98,7 +98,7 @@ func createLangDashboardTableHandler(store ViewModelStore) func(w http.ResponseW
 }
 
 func findRequestValue(r *http.Request, newValueKey, currentValueKey, urlKey string) string {
-	if r.FormValue(newValueKey) == "" && r.FormValue(currentValueKey) != "" {
+	if newValueKey != "" && r.FormValue(newValueKey) == "" && r.FormValue(currentValueKey) != "" {
 		// reset value if the new input is empty but the previous one was not
 		return ""
 	}
@@ -130,9 +130,63 @@ func handleLangDashboardRequest(
 	itemsTypeParam := findRequestValue(r, "NewItemsType", "CurrentItemsType", "items-type")
 	filenameParam := findRequestValue(r, "", "CurrentFilename", "filename")
 	filepathParam := findRequestValue(r, "NewFilepath", "CurrentFilepath", "filepath")
-	sortParam := findRequestValue(r, "SelectedSort", "CurrentSort", "sort")
-	sortOrderParam := findRequestValue(r, "SelectedSortOrder", "CurrentSortOrder", "sort-order")
+	sortParam := findRequestValue(r, "", "CurrentSort", "sort")
+	sortOrderParam := findRequestValue(r, "", "CurrentSortOrder", "sort-order")
 
+	url := buildURL(r.URL.Path, itemsTypeParam, filenameParam, filepathParam, sortParam, sortOrderParam)
+	w.Header().Set("HX-Push", url)
+
+	model, err := store.GetLangDashboard(code)
+	if err != nil {
+		http.Error(w, "", http.StatusInternalServerError)
+		return nil, err
+	}
+
+	if model == nil {
+		http.NotFound(w, r)
+		return nil, err
+	}
+
+	itemsType := parseItemsTypeParam(itemsTypeParam)
+	sort := parseSortParam(sortParam)
+	sortOrder := parseSortOrderParam(sortOrderParam)
+
+	model.URL = r.URL.RawPath
+
+	model.CurrentLangCode = code
+	model.CurrentItemsType = itemsTypeParam
+	model.CurrentFilename = filenameParam
+	model.CurrentFilepath = filepathParam
+	model.CurrentSort = sortParam
+	model.CurrentSortOrder = sortOrderParam
+
+	if len(filenameParam) == 0 {
+		model.ShowPanel = true
+	}
+
+	model.TableModel.FilenameColumnLink = buildColumnLinkURL(
+		"filename", r.URL.Path, itemsTypeParam, filenameParam, filepathParam, sortParam, sortOrderParam,
+	)
+	model.TableModel.StatusColumnLink = buildColumnLinkURL(
+		"status", r.URL.Path, itemsTypeParam, filenameParam, filepathParam, sortParam, sortOrderParam,
+	)
+	model.TableModel.UpdatesColumnLink = buildColumnLinkURL(
+		"updates", r.URL.Path, itemsTypeParam, filenameParam, filepathParam, sortParam, sortOrderParam,
+	)
+
+	FilterAndSort(model, itemsType, filenameParam, filepathParam, sort, sortOrder)
+
+	return model, nil
+}
+
+func truncate(s string, length int) string {
+	if len(s) > length {
+		return s[:length]
+	}
+	return s
+}
+
+func buildURL(baseURL, itemsTypeParam, filenameParam, filepathParam, sortParam, sortOrderParam string) string {
 	var queryParams []string
 	if len(itemsTypeParam) > 0 {
 		queryParams = append(queryParams, fmt.Sprintf("%s=%s", "items-type", itemsTypeParam))
@@ -150,49 +204,68 @@ func handleLangDashboardRequest(
 		queryParams = append(queryParams, fmt.Sprintf("%s=%s", "sort-order", sortOrderParam))
 	}
 
-	url := r.URL.Path
+	url := baseURL
 	query := strings.Join(queryParams, "&")
 	if len(query) > 0 {
 		url += "?" + query
 	}
-	w.Header().Set("HX-Push", url)
 
-	model, err := store.GetLangDashboard(code)
-	if err != nil {
-		http.Error(w, "", http.StatusInternalServerError)
-		return nil, err
+	return url
+}
+
+func buildColumnLinkURL(sortFieldName, baseURL, itemsTypeParam, filenameParam, filepathParam, sortParam, sortOrderParam string) string {
+	if sortFieldName == sortParam {
+		if sortOrderParam == "asc" {
+			sortOrderParam = "desc"
+		} else {
+			sortOrderParam = "asc"
+		}
+
+		return buildURL(baseURL, itemsTypeParam, filenameParam, filepathParam, sortFieldName, sortOrderParam)
+	} else {
+		return buildURL(baseURL, itemsTypeParam, filenameParam, filepathParam, sortFieldName, "")
 	}
+}
 
-	if model == nil {
-		http.NotFound(w, r)
-		return nil, err
-	}
+func parseItemsTypeParam(itemsTypeParam string) int {
+	var itemsType int
 
-	var itemsFilter int
 	switch itemsTypeParam {
 	case "all":
-		itemsFilter = ItemsAll
+		itemsType = ItemsAll
 	case "with-update":
-		itemsFilter = ItemsWithUpdate
+		itemsType = ItemsWithUpdate
 	case "with-update-or-pr":
-		itemsFilter = ItemsWithUpdateOrPR
+		itemsType = ItemsWithUpdateOrPR
 	case "with-pr":
-		itemsFilter = ItemsWithPR
+		itemsType = ItemsWithPR
 	default:
-		itemsFilter = ItemsWithUpdateOrPR
+		itemsType = ItemsWithUpdateOrPR
 	}
 
+	return itemsType
+}
+
+func parseSortParam(sortParam string) int {
 	var sort int
+
 	switch sortParam {
 	case "filename":
 		sort = SortByFileName
-	case "lastcommit":
-		sort = SortByLastLangFileCommit
+	case "status":
+		sort = SortByStatus
+	case "updates":
+		sort = SortByEnUpdate
 	default:
 		sort = SortByFileName
 	}
 
+	return sort
+}
+
+func parseSortOrderParam(sortOrderParam string) int {
 	var sortOrder int
+
 	switch sortOrderParam {
 	case "asc":
 		sortOrder = SortOrderAsc
@@ -202,25 +275,5 @@ func handleLangDashboardRequest(
 		sortOrder = SortOrderDesc
 	}
 
-	model.URL = r.URL.RawPath
-
-	model.CurrentLangCode = code
-	model.CurrentItemsType = itemsTypeParam
-	model.CurrentFilename = filenameParam
-	model.CurrentFilepath = filepathParam
-
-	if len(filenameParam) == 0 {
-		model.ShowPanel = true
-	}
-
-	FilterAndSort(model, itemsFilter, filenameParam, filepathParam, sort, sortOrder)
-
-	return model, nil
-}
-
-func truncate(s string, length int) string {
-	if len(s) > length {
-		return s[:length]
-	}
-	return s
+	return sortOrder
 }

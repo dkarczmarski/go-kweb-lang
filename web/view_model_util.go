@@ -15,7 +15,8 @@ const (
 
 const (
 	SortByFileName = iota
-	SortByLastLangFileCommit
+	SortByStatus
+	SortByEnUpdate
 )
 
 const (
@@ -81,8 +82,10 @@ func FilterAndSort(
 			switch sort {
 			case SortByFileName:
 				cmpValue = cmp.Compare(a.LangRelPath.Text, b.LangRelPath.Text)
-			case SortByLastLangFileCommit:
-				cmpValue = cmp.Compare(a.LangLastCommit.DateTime, b.LangLastCommit.DateTime)
+			case SortByStatus:
+				cmpValue = cmp.Compare(a.ENStatus, b.ENStatus)
+			case SortByEnUpdate:
+				cmpValue = cmp.Compare(a.ENUpdates.LastCommit.DateTime, b.ENUpdates.LastCommit.DateTime)
 			}
 
 			switch sortOrder {

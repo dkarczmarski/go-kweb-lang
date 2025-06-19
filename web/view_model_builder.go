@@ -147,28 +147,41 @@ func buildENUpdates(
 	langLastCommit git.CommitInfo,
 	langMergeCommit *git.CommitInfo,
 ) ENUpdateGroups {
-	if langForkCommit == nil || langMergeCommit == nil {
-		return ENUpdateGroups{
-			AfterLastCommit: enUpdates,
-		}
-	}
-
 	var groups ENUpdateGroups
-	for _, enUpdate := range enUpdates {
-		enUpdateDataTime := convertDateStrToUtc(enUpdate.Commit.CommitInfo.DateTime)
 
-		if enUpdateDataTime < langForkCommit.DateTime {
-			groups.BeforeForkCommit = append(groups.BeforeForkCommit, enUpdate)
-		} else if enUpdateDataTime < langLastCommit.DateTime {
-			groups.AfterForkCommit = append(groups.AfterForkCommit, enUpdate)
-		} else if enUpdateDataTime < langMergeCommit.DateTime {
-			groups.AfterLastCommit = append(groups.AfterLastCommit, enUpdate)
-		} else {
-			groups.AfterMergeCommit = append(groups.AfterMergeCommit, enUpdate)
+	if langForkCommit == nil || langMergeCommit == nil {
+		groups.AfterLastCommit = enUpdates
+	} else {
+		for _, enUpdate := range enUpdates {
+			enUpdateDataTime := convertDateStrToUtc(enUpdate.Commit.CommitInfo.DateTime)
+
+			if enUpdateDataTime < langForkCommit.DateTime {
+				groups.BeforeForkCommit = append(groups.BeforeForkCommit, enUpdate)
+			} else if enUpdateDataTime < langLastCommit.DateTime {
+				groups.AfterForkCommit = append(groups.AfterForkCommit, enUpdate)
+			} else if enUpdateDataTime < langMergeCommit.DateTime {
+				groups.AfterLastCommit = append(groups.AfterLastCommit, enUpdate)
+			} else {
+				groups.AfterMergeCommit = append(groups.AfterMergeCommit, enUpdate)
+			}
 		}
 	}
+
+	groups.LastCommit = findLastCommitInGroup(enUpdates)
 
 	return groups
+}
+
+func findLastCommitInGroup(enUpdates []ENUpdate) git.CommitInfo {
+	var lastCommit git.CommitInfo
+
+	for _, enUpdate := range enUpdates {
+		if lastCommit.DateTime < enUpdate.Commit.CommitInfo.DateTime {
+			lastCommit = enUpdate.Commit.CommitInfo
+		}
+	}
+
+	return lastCommit
 }
 
 func toLangFileLinkModel(langCode, langRelPath string) LinkModel {
