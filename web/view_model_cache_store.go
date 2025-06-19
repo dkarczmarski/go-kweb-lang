@@ -46,23 +46,23 @@ func (s *ViewModelCacheStore) SetLangCodes(model *LangCodesViewModel) error {
 	return s.cacheStore.Write(bucketLangCodesView, singleKey, model)
 }
 
-func (s *ViewModelCacheStore) GetLangDashboard(langCode string) (*LangDashboardViewModel, error) {
+func (s *ViewModelCacheStore) GetLangDashboardFiles(langCode string) ([]FileModel, error) {
 	return proxycache.Get(
 		context.Background(),
 		s.cacheStore,
-		langDashboardBucketName(langCode),
+		langDashboardFilesBucketName(langCode),
 		singleKey,
 		nil,
-		func(ctx context.Context) (*LangDashboardViewModel, error) {
+		func(ctx context.Context) ([]FileModel, error) {
 			return nil, nil
 		},
 	)
 }
 
-func (s *ViewModelCacheStore) SetLangDashboard(langCode string, model *LangDashboardViewModel) error {
-	return s.cacheStore.Write(langDashboardBucketName(langCode), singleKey, model)
+func (s *ViewModelCacheStore) SetLangDashboardFiles(langCode string, files []FileModel) error {
+	return s.cacheStore.Write(langDashboardFilesBucketName(langCode), singleKey, files)
 }
 
-func langDashboardBucketName(langCode string) string {
-	return fmt.Sprintf("lang/%v/view-lang-dashboard", langCode)
+func langDashboardFilesBucketName(langCode string) string {
+	return fmt.Sprintf("lang/%v/view-lang-dashboard-files", langCode)
 }

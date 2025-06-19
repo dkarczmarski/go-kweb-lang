@@ -136,14 +136,9 @@ func handleLangDashboardRequest(
 	url := buildURL(r.URL.Path, itemsTypeParam, filenameParam, filepathParam, sortParam, sortOrderParam)
 	w.Header().Set("HX-Push", url)
 
-	model, err := store.GetLangDashboard(code)
+	files, err := store.GetLangDashboardFiles(code)
 	if err != nil {
 		http.Error(w, "", http.StatusInternalServerError)
-		return nil, err
-	}
-
-	if model == nil {
-		http.NotFound(w, r)
 		return nil, err
 	}
 
@@ -151,8 +146,9 @@ func handleLangDashboardRequest(
 	sort := parseSortParam(sortParam)
 	sortOrder := parseSortOrderParam(sortOrderParam)
 
-	model.URL = r.URL.RawPath
+	var model LangDashboardViewModel
 
+	model.URL = r.URL.RawPath
 	model.CurrentLangCode = code
 	model.CurrentItemsType = itemsTypeParam
 	model.CurrentFilename = filenameParam
@@ -174,9 +170,11 @@ func handleLangDashboardRequest(
 		"updates", r.URL.Path, itemsTypeParam, filenameParam, filepathParam, sortParam, sortOrderParam,
 	)
 
-	FilterAndSort(model, itemsType, filenameParam, filepathParam, sort, sortOrder)
+	model.TableModel.Files = files
 
-	return model, nil
+	FilterAndSort(&model, itemsType, filenameParam, filepathParam, sort, sortOrder)
+
+	return &model, nil
 }
 
 func truncate(s string, length int) string {

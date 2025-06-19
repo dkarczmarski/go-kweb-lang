@@ -3,6 +3,6 @@ package web
 type ViewModelStore interface {
 	GetLangCodes() (*LangCodesViewModel, error)
 	SetLangCodes(model *LangCodesViewModel) error
-	GetLangDashboard(langCode string) (*LangDashboardViewModel, error)
-	SetLangDashboard(langCode string, model *LangDashboardViewModel) error
+	GetLangDashboardFiles(langCode string) ([]FileModel, error)
+	SetLangDashboardFiles(langCode string, files []FileModel) error
 }

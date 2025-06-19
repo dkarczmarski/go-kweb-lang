@@ -42,18 +42,8 @@ func buildLangCodesTableModel(langCodesProvider LangCodesProvider) ([]LinkModel,
 	return model, nil
 }
 
-func buildLangDashboardViewModel(langCode string, fileInfos []FileInfo) *LangDashboardViewModel {
-	tableModel := buildLangTableModel(langCode, fileInfos)
-
-	langDashboardViewModel := &LangDashboardViewModel{
-		TableModel: tableModel,
-	}
-
-	return langDashboardViewModel
-}
-
-func buildLangTableModel(langCode string, fileInfos []FileInfo) LangModel {
-	var table LangModel
+func buildLangTableFilesModel(langCode string, fileInfos []FileInfo) []FileModel {
+	var files []FileModel
 
 	for _, fileInfo := range fileInfos {
 		var fileModel FileModel
@@ -101,10 +91,10 @@ func buildLangTableModel(langCode string, fileInfos []FileInfo) LangModel {
 		}
 		fileModel.PRs = prLinks
 
-		table.Files = append(table.Files, fileModel)
+		files = append(files, fileModel)
 	}
 
-	return table
+	return files
 }
 
 func convertCommitToUtc(commit git.CommitInfo) git.CommitInfo {

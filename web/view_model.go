@@ -21,10 +21,10 @@ type LangDashboardViewModel struct {
 
 	ShowPanel bool
 
-	TableModel LangModel
+	TableModel TableModel
 }
 
-type LangModel struct {
+type TableModel struct {
 	FilenameColumnLink string
 	StatusColumnLink   string
 	UpdatesColumnLink  string
