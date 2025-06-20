@@ -8,6 +8,7 @@ import (
 	"go-kweb-lang/gitseek"
 	"go-kweb-lang/langcnt"
 	"go-kweb-lang/pullreq"
+	"go-kweb-lang/web/internal/view"
 )
 
 type RefreshViewModelTask struct {
@@ -43,7 +44,7 @@ func (t *RefreshViewModelTask) Run(ctx context.Context) error {
 		}
 	}
 
-	langCodesViewModel, err := buildLangCodesViewModel(t.langCodesProvider)
+	langCodesViewModel, err := view.BuildLangCodesModel(t.langCodesProvider)
 	if err != nil {
 		return fmt.Errorf("failed to build view model: %w", err)
 	}
@@ -63,15 +64,15 @@ func (t *RefreshViewModelTask) refreshLangModel(ctx context.Context, langCode st
 
 	prIndex, err := t.filePRFinder.LangIndex(langCode)
 	if err != nil {
-		return fmt.Errorf("error while getting pull request index for lang code %v: %w", langCode, err)
+		return fmt.Errorf("error while getting pull request index for lang code %s: %w", langCode, err)
 	}
 
-	var fileInfos []FileInfo
+	fileInfos := make([]view.FileInfo, 0, len(seekerFileInfos))
 	for _, seekerFileInfo := range seekerFileInfos {
 		file := filepath.Join("content", langCode, seekerFileInfo.LangRelPath)
 		prs := prIndex[file]
 
-		fileInfo := FileInfo{
+		fileInfo := view.FileInfo{
 			FileInfo: seekerFileInfo,
 			PRs:      prs,
 		}
@@ -79,7 +80,7 @@ func (t *RefreshViewModelTask) refreshLangModel(ctx context.Context, langCode st
 		fileInfos = append(fileInfos, fileInfo)
 	}
 
-	langDashboardFilesModel := buildLangTableFilesModel(langCode, fileInfos)
+	langDashboardFilesModel := view.BuildLangDashboardFilesModel(langCode, fileInfos)
 
 	if err := t.viewModelStore.SetLangDashboardFiles(langCode, langDashboardFilesModel); err != nil {
 		return fmt.Errorf("failed to store language dashboard view model: %w", err)

@@ -1,9 +1,13 @@
-package web
+package view
 
 import (
 	"fmt"
 	"log"
+	"net/http"
+	"strings"
 	"time"
+
+	"go-kweb-lang/web/internal/reqhelper"
 
 	"go-kweb-lang/git"
 )
@@ -12,7 +16,7 @@ type LangCodesProvider interface {
 	LangCodes() ([]string, error)
 }
 
-func buildLangCodesViewModel(langCodesProvider LangCodesProvider) (*LangCodesViewModel, error) {
+func BuildLangCodesModel(langCodesProvider LangCodesProvider) (*LangCodesViewModel, error) {
 	tableModel, err := buildLangCodesTableModel(langCodesProvider)
 	if err != nil {
 		return nil, fmt.Errorf("error while building index web model: %w", err)
@@ -42,15 +46,13 @@ func buildLangCodesTableModel(langCodesProvider LangCodesProvider) ([]LinkModel,
 	return model, nil
 }
 
-func buildLangTableFilesModel(langCode string, fileInfos []FileInfo) []FileModel {
+func BuildLangDashboardFilesModel(langCode string, fileInfos []FileInfo) []FileModel {
 	var files []FileModel
 
 	for _, fileInfo := range fileInfos {
 		var fileModel FileModel
 
-		if len(fileInfo.ENFileStatus) == 0 &&
-			len(fileInfo.ENUpdates) == 0 &&
-			len(fileInfo.PRs) == 0 {
+		if len(fileInfo.ENFileStatus) == 0 && len(fileInfo.ENUpdates) == 0 && len(fileInfo.PRs) == 0 {
 			continue
 		}
 
@@ -145,6 +147,7 @@ func buildENUpdates(
 		for _, enUpdate := range enUpdates {
 			enUpdateDataTime := convertDateStrToUtc(enUpdate.Commit.CommitInfo.DateTime)
 
+			// assumes all dates have already been converted to UTC.
 			if enUpdateDataTime < langForkCommit.DateTime {
 				groups.BeforeForkCommit = append(groups.BeforeForkCommit, enUpdate)
 			} else if enUpdateDataTime < langLastCommit.DateTime {
@@ -189,4 +192,133 @@ func toCommitLinkModel(commit git.CommitInfo) CommitLinkModel {
 		},
 		CommitInfo: commit,
 	}
+}
+
+func BuildLangDashboardModel(
+	r *http.Request,
+	requestModel reqhelper.RequestModel,
+	files []FileModel,
+) (*LangDashboardViewModel, error) {
+	var model LangDashboardViewModel
+
+	model.URL = r.URL.RawPath
+	model.CurrentLangCode = requestModel.LangCode
+	model.CurrentItemsType = requestModel.ItemsTypeParam
+	model.CurrentFilename = requestModel.FilenameParam
+	model.CurrentFilepath = requestModel.FilepathParam
+	model.CurrentSort = requestModel.SortParam
+	model.CurrentSortOrder = requestModel.SortOrderParam
+
+	if len(requestModel.FilenameParam) == 0 {
+		model.ShowPanel = true
+	}
+
+	model.TableModel.FilenameColumnLink = buildColumnLinkURL("filename", r.URL.Path, requestModel)
+	model.TableModel.StatusColumnLink = buildColumnLinkURL("status", r.URL.Path, requestModel)
+	model.TableModel.UpdatesColumnLink = buildColumnLinkURL("updates", r.URL.Path, requestModel)
+	model.TableModel.Files = filterAndSortFromRequest(files, requestModel)
+
+	return &model, nil
+}
+
+func BuildURL(baseURL string, requestModel reqhelper.RequestModel) string {
+	var queryParams []string
+	if len(requestModel.ItemsTypeParam) > 0 {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%s", "items-type", requestModel.ItemsTypeParam))
+	}
+	if len(requestModel.FilenameParam) > 0 {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%s", "filename", requestModel.FilenameParam))
+	}
+	if len(requestModel.FilepathParam) > 0 {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%s", "filepath", requestModel.FilepathParam))
+	}
+	if len(requestModel.SortParam) > 0 {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%s", "sort", requestModel.SortParam))
+	}
+	if len(requestModel.SortOrderParam) > 0 {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%s", "sort-order", requestModel.SortOrderParam))
+	}
+
+	url := baseURL
+	query := strings.Join(queryParams, "&")
+	if len(query) > 0 {
+		url += "?" + query
+	}
+
+	return url
+}
+
+func buildColumnLinkURL(sortFieldName, baseURL string, requestModel reqhelper.RequestModel) string {
+	if sortFieldName == requestModel.SortParam {
+		if requestModel.SortOrderParam == "asc" {
+			requestModel.SortOrderParam = "desc"
+		} else {
+			requestModel.SortOrderParam = "asc"
+		}
+
+		return BuildURL(baseURL, requestModel)
+	} else {
+		requestModel.SortOrderParam = ""
+
+		return BuildURL(baseURL, requestModel)
+	}
+}
+
+func filterAndSortFromRequest(files []FileModel, requestModel reqhelper.RequestModel) []FileModel {
+	itemsType := parseItemsTypeParam(requestModel.ItemsTypeParam)
+	sort := parseSortParam(requestModel.SortParam)
+	sortOrder := parseSortOrderParam(requestModel.SortOrderParam)
+
+	return FilterAndSort(files, itemsType, requestModel.FilenameParam, requestModel.FilepathParam, sort, sortOrder)
+}
+
+func parseItemsTypeParam(itemsTypeParam string) int {
+	var itemsType int
+
+	switch itemsTypeParam {
+	case "all":
+		itemsType = ItemsAll
+	case "with-update":
+		itemsType = ItemsWithUpdate
+	case "with-update-or-pr":
+		itemsType = ItemsWithUpdateOrPR
+	case "with-pr":
+		itemsType = ItemsWithPR
+	default:
+		itemsType = ItemsWithUpdateOrPR
+	}
+
+	return itemsType
+}
+
+func parseSortParam(sortParam string) int {
+	var sort int
+
+	switch sortParam {
+	case "filename":
+		sort = SortByFileName
+	case "status":
+		sort = SortByStatus
+	case "updates":
+		sort = SortByEnUpdate
+	default:
+		sort = SortByFileName
+	}
+
+	return sort
+}
+
+func parseSortOrderParam(sortOrderParam string) int {
+	var sortOrder int
+
+	switch sortOrderParam {
+	case "asc":
+		sortOrder = SortOrderAsc
+	case "desc":
+		sortOrder = SortOrderDesc
+	default:
+		sortOrder = SortOrderDesc
+	}
+
+	return sortOrder
 }

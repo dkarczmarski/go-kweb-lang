@@ -1,4 +1,4 @@
-package web
+package view
 
 import (
 	"cmp"
@@ -25,48 +25,41 @@ const (
 )
 
 func FilterAndSort(
-	model *LangDashboardViewModel,
-	filter int,
+	files []FileModel,
+	itemsType int,
 	fileName string,
 	filePath string,
 	sort int,
 	sortOrder int,
-) {
+) []FileModel {
 	var newFiles []FileModel
 
 	if len(fileName) > 0 {
-		for _, f := range model.TableModel.Files {
+		for _, f := range files {
 			if f.LangRelPath.Text == fileName {
 				newFiles = append(newFiles, f)
 				break
 			}
 		}
 	} else {
-		for _, f := range model.TableModel.Files {
+		for _, f := range files {
 			if len(filePath) > 0 && !strings.Contains(f.LangRelPath.Text, filePath) {
 				continue
 			}
 
-			switch filter {
+			switch itemsType {
 			case ItemsAll:
 				break
 			case ItemsWithUpdate:
-				if !(len(f.ENUpdates.AfterMergeCommit) > 0 ||
-					len(f.ENUpdates.AfterLastCommit) > 0 ||
-					len(f.ENUpdates.AfterForkCommit) > 0 ||
-					len(f.ENUpdates.BeforeForkCommit) > 0) {
+				if !hasAnyENUpdate(f) {
 					continue
 				}
 			case ItemsWithUpdateOrPR:
-				if !(len(f.ENUpdates.AfterMergeCommit) > 0 ||
-					len(f.ENUpdates.AfterLastCommit) > 0 ||
-					len(f.ENUpdates.AfterForkCommit) > 0 ||
-					len(f.ENUpdates.BeforeForkCommit) > 0 ||
-					len(f.PRs) > 0) {
+				if !hasAnyENUpdate(f) && !hasAnyPR(f) {
 					continue
 				}
 			case ItemsWithPR:
-				if !(len(f.PRs) > 0) {
+				if !hasAnyPR(f) {
 					continue
 				}
 			default:
@@ -99,5 +92,17 @@ func FilterAndSort(
 		})
 	}
 
-	model.TableModel.Files = newFiles
+	return newFiles
+}
+
+func hasAnyENUpdate(f FileModel) bool {
+	u := f.ENUpdates
+	return len(u.AfterMergeCommit) > 0 ||
+		len(u.AfterLastCommit) > 0 ||
+		len(u.AfterForkCommit) > 0 ||
+		len(u.BeforeForkCommit) > 0
+}
+
+func hasAnyPR(f FileModel) bool {
+	return len(f.PRs) > 0
 }

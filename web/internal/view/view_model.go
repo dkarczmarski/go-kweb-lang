@@ -1,4 +1,4 @@
-package web
+package view
 
 import (
 	"go-kweb-lang/git"

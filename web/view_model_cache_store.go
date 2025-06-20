@@ -5,9 +5,10 @@ import (
 	"fmt"
 
 	"go-kweb-lang/proxycache"
+	"go-kweb-lang/web/internal/view"
 )
 
-// CacheStore is an interface used to decouple this package from the concrete store implementation
+// CacheStore is an interface used to decouple this package from the concrete store.FileStore implementation.
 type CacheStore interface {
 	Read(bucket, key string, buff any) (bool, error)
 	Write(bucket, key string, data any) error
@@ -29,40 +30,40 @@ const (
 	singleKey           = ""
 )
 
-func (s *ViewModelCacheStore) GetLangCodes() (*LangCodesViewModel, error) {
+func (s *ViewModelCacheStore) GetLangCodes() (*view.LangCodesViewModel, error) {
 	return proxycache.Get(
-		context.Background(),
+		context.Background(), // this context is not used
 		s.cacheStore,
 		bucketLangCodesView,
 		singleKey,
 		nil,
-		func(ctx context.Context) (*LangCodesViewModel, error) {
-			return &LangCodesViewModel{}, nil
+		func(_ context.Context) (*view.LangCodesViewModel, error) {
+			return &view.LangCodesViewModel{}, nil
 		},
 	)
 }
 
-func (s *ViewModelCacheStore) SetLangCodes(model *LangCodesViewModel) error {
+func (s *ViewModelCacheStore) SetLangCodes(model *view.LangCodesViewModel) error {
 	return s.cacheStore.Write(bucketLangCodesView, singleKey, model)
 }
 
-func (s *ViewModelCacheStore) GetLangDashboardFiles(langCode string) ([]FileModel, error) {
+func (s *ViewModelCacheStore) GetLangDashboardFiles(langCode string) ([]view.FileModel, error) {
 	return proxycache.Get(
-		context.Background(),
+		context.Background(), // this context is not used
 		s.cacheStore,
 		langDashboardFilesBucketName(langCode),
 		singleKey,
 		nil,
-		func(ctx context.Context) ([]FileModel, error) {
+		func(_ context.Context) ([]view.FileModel, error) {
 			return nil, nil
 		},
 	)
 }
 
-func (s *ViewModelCacheStore) SetLangDashboardFiles(langCode string, files []FileModel) error {
+func (s *ViewModelCacheStore) SetLangDashboardFiles(langCode string, files []view.FileModel) error {
 	return s.cacheStore.Write(langDashboardFilesBucketName(langCode), singleKey, files)
 }
 
 func langDashboardFilesBucketName(langCode string) string {
-	return fmt.Sprintf("lang/%v/view-lang-dashboard-files", langCode)
+	return fmt.Sprintf("lang/%s/view-lang-dashboard-files", langCode)
 }
