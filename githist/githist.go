@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"go-kweb-lang/git"
 	"go-kweb-lang/proxycache"
@@ -142,7 +143,8 @@ func findFirstCommit(mainBranchCommits []git.CommitInfo, commits []git.CommitInf
 	for i := 0; i < commitsLen; i++ {
 		commit := commits[i]
 		if containsCommit(mainBranchCommits, commit.CommitID) {
-			return &commit
+			clonedCommitInfo := cloneCommitInfo(commit)
+			return &clonedCommitInfo
 		}
 	}
 
@@ -296,5 +298,15 @@ func (gh *GitHist) GetLastMainBranchCommit(ctx context.Context) (git.CommitInfo,
 		return git.CommitInfo{}, nil
 	}
 
-	return commits[0], nil
+	return cloneCommitInfo(commits[0]), nil
+}
+
+// cloneCommitInfo clones a single commit info to avoid retaining references to large underlying data
+// and prevent memory leaks.
+func cloneCommitInfo(commit git.CommitInfo) git.CommitInfo {
+	return git.CommitInfo{
+		CommitID: strings.Clone(commit.CommitID),
+		DateTime: strings.Clone(commit.DateTime),
+		Comment:  strings.Clone(commit.Comment),
+	}
 }
