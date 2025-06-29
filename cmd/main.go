@@ -29,6 +29,7 @@ var (
 	flagRunInterval     = flag.Int("run-interval", 0, "run repeatedly with delay of N minutes between runs")
 	flagGitHubToken     = flag.String("github-token", "", "github api access token")
 	flagGitHubTokenFile = flag.String("github-token-file", "", "file path with github api access token")
+	flagNoWeb           = flag.Bool("no-web", false, "disable web server")
 	flagWebHTTPAddr     = flag.String("web-http-addr", "", "TCP address for the server to listen on")
 )
 
@@ -117,18 +118,22 @@ func Run(ctx context.Context, cfg *appinit.Config) error {
 	}
 
 	server := cfg.Server
+	if server != nil {
+		go func() {
+			<-ctx.Done()
+			log.Println("server is shutting down")
+			ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*10)
+			defer cancelCtx()
+			_ = server.Shutdown(ctx)
+		}()
 
-	go func() {
+		log.Println("starting web server")
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("error while running http server: %w", err)
+		}
+	} else {
 		<-ctx.Done()
-		log.Println("server is shutting down")
-		ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancelCtx()
-		_ = server.Shutdown(ctx)
-	}()
-
-	log.Println("starting web server")
-	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("error while running http server: %w", err)
+		log.Println("application stopped")
 	}
 
 	return nil
@@ -149,6 +154,7 @@ func main() {
 			flagRunInterval,
 			flagGitHubToken,
 			flagGitHubTokenFile,
+			flagNoWeb,
 			flagWebHTTPAddr,
 		),
 		appinit.ShowParams(true),

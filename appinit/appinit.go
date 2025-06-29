@@ -41,6 +41,7 @@ type Config struct {
 	RefreshPRTask        *tasks.RefreshPRTask
 	RefreshTask          *tasks.RefreshTask
 	GitHubMonitor        *githubmon.Monitor
+	NoWeb                bool
 	WebHTTPAddr          string
 	Server               *web.Server
 }
@@ -100,6 +101,9 @@ func ParseEnvParams() func(*Config) error {
 		getEnvValue("GITHUB_TOKEN_FILE", func(value string) {
 			config.GitHubTokenFile = value
 		})
+		getEnvValue("NO_WEB", func(value string) {
+			config.NoWeb, _ = strconv.ParseBool(value)
+		})
 		getEnvValue("WEB_HTTP_ADDR", func(value string) {
 			config.WebHTTPAddr = value
 		})
@@ -116,6 +120,7 @@ func ParseFlagParams(
 	flagInterval *int,
 	flagGitHubToken *string,
 	flagGitHubTokenFile *string,
+	flagNoWeb *bool,
 	flagWebHTTPAddr *string,
 ) func(*Config) error {
 	return func(config *Config) error {
@@ -149,6 +154,10 @@ func ParseFlagParams(
 			config.GitHubTokenFile = *flagGitHubTokenFile
 		}
 
+		if *flagNoWeb {
+			config.NoWeb = *flagNoWeb
+		}
+
 		if len(*flagWebHTTPAddr) > 0 {
 			config.WebHTTPAddr = *flagWebHTTPAddr
 		}
@@ -167,6 +176,7 @@ func ShowParams(withPrint bool) func(*Config) error {
 			log.Printf("RUN_INTERVAL: %v", config.RunInterval)
 			log.Printf("GITHUB_TOKEN: %s", config.GitHubToken)
 			log.Printf("GITHUB_TOKEN_FILE: %s", config.GitHubTokenFile)
+			log.Printf("NO_WEB: %v", config.NoWeb)
 			log.Printf("WEB_HTTP_ADDR: %s", config.WebHTTPAddr)
 		}
 
@@ -477,6 +487,10 @@ func NewGitHubMonitor() func(*Config) error {
 
 func NewServer() func(*Config) error {
 	return func(config *Config) error {
+		if config.NoWeb {
+			return nil
+		}
+
 		viewModelCacheStore := config.ViewModelCacheStore
 		if viewModelCacheStore == nil {
 			return fmt.Errorf("param ViewModelCacheStore is not set: %w", ErrBadConfiguration)
