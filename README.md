@@ -207,12 +207,14 @@ go build -o kweb-lang ./cmd
 
 ### parameters
 
-- the environment variable `CACHE_DIR` or the argument `-cache-dir` specifies the directory for the internal cache.
-- the environment variable `REPO_DIR` or the argument `-repo-dir` specifies the directory where the git clone will be created.
-- the environment variable `GITHUB_TOKEN` or the arguments `-github-token` or `-github-token-file` specify the string or the file containing the GitHub personal access token.
+- the environment variable `CACHE_DIR` or the argument `-cache-dir` specifies the directory for the internal cache. the default value is `./.appdata/cache`.
+- the environment variable `REPO_DIR` or the argument `-repo-dir` specifies the directory where the git clone will be created. the default value is `./.appdata/kubernetes-website`.
+- the environment variable `GITHUB_TOKEN` or the argument `-github-token` specifies the string with the GitHub personal access token.
+- the environment variable `GITHUB_TOKEN_FILE` or the argument `-github-token-file` specifies the file containing the GitHub personal access token. the default value is `.github-token.txt` and that file does not have to exist.
 - the environment variable `LANG_CODES` or the argument `-lang-codes` specifies the language code for which the dashboard should be generated; multiple values can be provided, separated by commas.
+- the environment variable `WEB_HTTP_ADDR` or the argument `-web-http-addr` specifies the TCP address for the server to listen on. the default value is `:8080`.
 - the argument `-run-once` specifies that the data should be refreshed only once at application startup.
-- the argument `-run-interval` specifies how many minutes between each data refresh.
+- the argument `-run-interval` specifies the number of minutes between each data refresh.
 
 ### usage examples
 

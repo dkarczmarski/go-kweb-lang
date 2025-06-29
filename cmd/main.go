@@ -29,6 +29,7 @@ var (
 	flagRunInterval     = flag.Int("run-interval", 0, "run repeatedly with delay of N minutes between runs")
 	flagGitHubToken     = flag.String("github-token", "", "github api access token")
 	flagGitHubTokenFile = flag.String("github-token-file", "", "file path with github api access token")
+	flagWebHTTPAddr     = flag.String("web-http-addr", "", "TCP address for the server to listen on")
 )
 
 func createRepoIfNotExists(ctx context.Context, repoDirPath string, gitRepo *git.Git) error {
@@ -148,6 +149,7 @@ func main() {
 			flagRunInterval,
 			flagGitHubToken,
 			flagGitHubTokenFile,
+			flagWebHTTPAddr,
 		),
 		appinit.ShowParams(true),
 		appinit.ReadGitHubTokenFile(true, true),

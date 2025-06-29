@@ -10,14 +10,14 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func NewServer(viewModelStore ViewModelStore) *Server {
+func NewServer(webHTTPAddr string, viewModelStore ViewModelStore) *Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", createListLangCodesHandler(viewModelStore))
 	mux.HandleFunc("GET /lang/{code}", createLangDashboardHandler(viewModelStore))
 	mux.HandleFunc("POST /lang/{code}", createLangDashboardTableHandler(viewModelStore))
 
 	httpServer := &http.Server{
-		Addr:              ":8080",
+		Addr:              webHTTPAddr,
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,

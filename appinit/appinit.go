@@ -41,6 +41,7 @@ type Config struct {
 	RefreshPRTask        *tasks.RefreshPRTask
 	RefreshTask          *tasks.RefreshTask
 	GitHubMonitor        *githubmon.Monitor
+	WebHTTPAddr          string
 	Server               *web.Server
 }
 
@@ -63,6 +64,7 @@ func SetDefaultParams() func(*Config) error {
 		config.RepoDir = "./.appdata/kubernetes-website"
 		config.CacheDir = "./.appdata/cache"
 		config.GitHubTokenFile = ".github-token.txt"
+		config.WebHTTPAddr = ":8080"
 
 		return nil
 	}
@@ -98,6 +100,9 @@ func ParseEnvParams() func(*Config) error {
 		getEnvValue("GITHUB_TOKEN_FILE", func(value string) {
 			config.GitHubTokenFile = value
 		})
+		getEnvValue("WEB_HTTP_ADDR", func(value string) {
+			config.WebHTTPAddr = value
+		})
 
 		return nil
 	}
@@ -111,6 +116,7 @@ func ParseFlagParams(
 	flagInterval *int,
 	flagGitHubToken *string,
 	flagGitHubTokenFile *string,
+	flagWebHTTPAddr *string,
 ) func(*Config) error {
 	return func(config *Config) error {
 		if len(*flagLangCodes) > 0 {
@@ -143,6 +149,10 @@ func ParseFlagParams(
 			config.GitHubTokenFile = *flagGitHubTokenFile
 		}
 
+		if len(*flagWebHTTPAddr) > 0 {
+			config.WebHTTPAddr = *flagWebHTTPAddr
+		}
+
 		return nil
 	}
 }
@@ -157,6 +167,7 @@ func ShowParams(withPrint bool) func(*Config) error {
 			log.Printf("RUN_INTERVAL: %v", config.RunInterval)
 			log.Printf("GITHUB_TOKEN: %s", config.GitHubToken)
 			log.Printf("GITHUB_TOKEN_FILE: %s", config.GitHubTokenFile)
+			log.Printf("WEB_HTTP_ADDR: %s", config.WebHTTPAddr)
 		}
 
 		return nil
@@ -471,7 +482,12 @@ func NewServer() func(*Config) error {
 			return fmt.Errorf("param ViewModelCacheStore is not set: %w", ErrBadConfiguration)
 		}
 
-		config.Server = web.NewServer(viewModelCacheStore)
+		webHTTPAddr := config.WebHTTPAddr
+		if len(webHTTPAddr) == 0 {
+			return fmt.Errorf("param WebHTTPAddr is not set: %w", ErrBadConfiguration)
+		}
+
+		config.Server = web.NewServer(webHTTPAddr, viewModelCacheStore)
 
 		return nil
 	}
