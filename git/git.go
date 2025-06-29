@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"go-kweb-lang/git/internal"
 )
@@ -261,7 +262,7 @@ func execToCommitInfo(out string, err error) (CommitInfo, error) {
 		return CommitInfo{}, err
 	}
 
-	return lineToCommitInfo(out), nil
+	return lineToCommitInfo(out)
 }
 
 func execToCommitInfoSlice(out string, err error) ([]CommitInfo, error) {
@@ -277,7 +278,11 @@ func execToCommitInfoSlice(out string, err error) ([]CommitInfo, error) {
 	commits := make([]CommitInfo, 0, len(lines))
 
 	for _, line := range lines {
-		commits = append(commits, lineToCommitInfo(line))
+		commit, err := lineToCommitInfo(line)
+		if err != nil {
+			return nil, err
+		}
+		commits = append(commits, commit)
 	}
 
 	return commits, nil
@@ -315,9 +320,9 @@ func outputToLines(out string) []string {
 	return strings.Split(strings.TrimSuffix(out, "\n"), "\n")
 }
 
-func lineToCommitInfo(line string) CommitInfo {
+func lineToCommitInfo(line string) (CommitInfo, error) {
 	if len(strings.TrimSpace(line)) == 0 {
-		return CommitInfo{}
+		return CommitInfo{}, nil
 	}
 
 	segs := strings.SplitN(line, " ", 3)
@@ -325,9 +330,25 @@ func lineToCommitInfo(line string) CommitInfo {
 		log.Fatalf("line syntax error: %s", line)
 	}
 
+	normalizedDateTimeStr, err := normalizeDateTimeStr(segs[1])
+	if err != nil {
+		return CommitInfo{}, fmt.Errorf("failed to normalize date time: %w", err)
+	}
+
 	return CommitInfo{
 		CommitID: segs[0],
-		DateTime: segs[1],
+		DateTime: normalizedDateTimeStr,
 		Comment:  strings.TrimRight(segs[2], "\n"),
+	}, nil
+}
+
+func normalizeDateTimeStr(dateTimeStr string) (string, error) {
+	parsedTime, err := time.Parse(time.RFC3339, dateTimeStr)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse date time string %s: %w", dateTimeStr, err)
 	}
+
+	formatted := parsedTime.Format("2006-01-02T15:04:05+00:00")
+
+	return formatted, nil
 }
