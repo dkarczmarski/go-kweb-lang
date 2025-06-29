@@ -277,7 +277,9 @@ func (gh *GitHub) httpGetWithRetry(ctx context.Context, urlStr string) (*http.Re
 				if seconds, err := strconv.Atoi(terr.retryAfterStr); err == nil {
 					log.Printf("received http code %d with Retry-After header. wait for %d seconds",
 						terr.statusCode, seconds)
-					time.Sleep(time.Duration(seconds) * time.Second)
+					if err := sleepCtx(ctx, time.Duration(seconds)*time.Second); err != nil {
+						return nil, err
+					}
 				}
 			} else if len(terr.remainingStr) > 0 && len(terr.resetStr) > 0 {
 				remaining, _ := strconv.Atoi(terr.remainingStr)
@@ -289,21 +291,40 @@ func (gh *GitHub) httpGetWithRetry(ctx context.Context, urlStr string) (*http.Re
 					if wait > 0 {
 						log.Printf("received http code %d with X-RateLimit-Reset header. wait for %v seconds until reset at %v",
 							terr.statusCode, wait.Seconds(), resetTime)
-						time.Sleep(wait)
+						if err := sleepCtx(ctx, wait); err != nil {
+							return nil, err
+						}
 					}
 				}
 			} else {
 				log.Printf("wait for 1 minute. connection error: %v", err)
-				time.Sleep(time.Minute)
+				if err := sleepCtx(ctx, time.Minute); err != nil {
+					return nil, err
+				}
 			}
 
-			time.Sleep(time.Second) // always wait at least one second
+			// always wait at least one second
+			if err := sleepCtx(ctx, time.Second); err != nil {
+				return nil, err
+			}
 		} else {
 			break
 		}
 	}
 
 	return resp, err
+}
+
+func sleepCtx(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
 
 func (gh *GitHub) httpGet(ctx context.Context, urlStr string) (*http.Response, error) {
