@@ -46,9 +46,8 @@ func buildLangCodesTableModel(langCodesProvider LangCodesProvider) ([]LinkModel,
 	return model, nil
 }
 
-func BuildLangDashboardFilesModel(langCode string, fileInfos []FileInfo) []FileModel {
+func BuildLangDashboardFilesModel(langCode string, fileInfos []FileInfo) LangDashboardFilesModel {
 	var files []FileModel
-
 	for _, fileInfo := range fileInfos {
 		var fileModel FileModel
 
@@ -96,7 +95,9 @@ func BuildLangDashboardFilesModel(langCode string, fileInfos []FileInfo) []FileM
 		files = append(files, fileModel)
 	}
 
-	return files
+	return LangDashboardFilesModel{
+		Files: files,
+	}
 }
 
 func convertCommitToUtc(commit git.CommitInfo) git.CommitInfo {
@@ -197,7 +198,7 @@ func toCommitLinkModel(commit git.CommitInfo) CommitLinkModel {
 func BuildLangDashboardModel(
 	r *http.Request,
 	requestModel reqhelper.RequestModel,
-	files []FileModel,
+	langDashboardFilesModel LangDashboardFilesModel,
 ) (*LangDashboardViewModel, error) {
 	var model LangDashboardViewModel
 
@@ -216,7 +217,7 @@ func BuildLangDashboardModel(
 	model.TableModel.FilenameColumnLink = buildColumnLinkURL("filename", r.URL.Path, requestModel)
 	model.TableModel.StatusColumnLink = buildColumnLinkURL("status", r.URL.Path, requestModel)
 	model.TableModel.UpdatesColumnLink = buildColumnLinkURL("updates", r.URL.Path, requestModel)
-	model.TableModel.Files = filterAndSortFromRequest(files, requestModel)
+	model.TableModel.Files = filterAndSortFromRequest(langDashboardFilesModel.Files, requestModel)
 
 	return &model, nil
 }

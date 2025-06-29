@@ -111,14 +111,14 @@ func handleLangDashboardRequest(
 		return nil, err
 	}
 
-	files, err := store.GetLangDashboardFiles(requestModel.LangCode)
+	dashboardFiles, err := store.GetLangDashboardFiles(requestModel.LangCode)
 	if err != nil {
 		return nil, err
 	}
 
 	handleHtmx(w, r, requestModel)
 
-	return view.BuildLangDashboardModel(r, requestModel, files)
+	return view.BuildLangDashboardModel(r, requestModel, dashboardFiles)
 }
 
 func handleHtmx(w http.ResponseWriter, r *http.Request, requestModel reqhelper.RequestModel) {

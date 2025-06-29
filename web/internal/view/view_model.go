@@ -31,6 +31,10 @@ type TableModel struct {
 	Files              []FileModel
 }
 
+type LangDashboardFilesModel struct {
+	Files []FileModel
+}
+
 type FileModel struct {
 	LangRelPath      LinkModel
 	LangFilenameLink LinkModel
