@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"go-kweb-lang/git"
 	"go-kweb-lang/githist"
@@ -27,6 +28,7 @@ type Config struct {
 	RunOnce              bool
 	RunInterval          int
 	GitHubToken          string
+	GitHubUserAgent      string
 	GitHubTokenFile      string
 	LangCodesProvider    *langcnt.LangCodesProvider
 	GitRepo              *git.Git
@@ -214,15 +216,21 @@ func ReadGitHubTokenFile(skipFileNotExist, skipEmptyFile bool) func(*Config) err
 					config.GitHubTokenFile, err)
 			}
 
-			value := strings.TrimSpace(string(b))
+			lines := strings.SplitN(string(b), "\n", 3)
 
-			if skipEmptyFile && len(value) == 0 {
+			token := strings.TrimSpace(lines[0])
+			if skipEmptyFile && len(token) == 0 {
 				log.Printf("github token file is empty")
-
-				return nil
+			} else {
+				config.GitHubToken = token
 			}
 
-			config.GitHubToken = value
+			if len(lines) > 1 {
+				userAgent := strings.TrimSpace(lines[1])
+				if len(userAgent) != 0 {
+					config.GitHubUserAgent = userAgent
+				}
+			}
 		}
 
 		return nil
@@ -345,9 +353,16 @@ func RegisterGitSeekInvalidator() func(*Config) error {
 
 func NewGitHub() func(*Config) error {
 	return func(config *Config) error {
-		config.GitHub = github.NewGitHub(func(githubConfig *github.Config) {
-			githubConfig.Token = config.GitHubToken
-		})
+		config.GitHub = github.NewGitHub(
+			github.WithDefaults(),
+			github.WithAuthorization(config.GitHubToken, config.GitHubUserAgent),
+			// todo: adjust this value when no authorization token is used
+			//
+			// magic number,
+			// with authorization github allows at most 30 calls per minute, so
+			// for safety we use a 3-second delay between requests
+			github.WithThrottle(3*time.Second),
+		)
 
 		return nil
 	}

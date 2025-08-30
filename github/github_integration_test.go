@@ -42,10 +42,10 @@ func TestGitHub_GetCommitFiles_Integration(t *testing.T) {
 			mockServer := newMockServer(t, tc.expectedURL, url.Values{}, tc.response)
 			defer mockServer.Close()
 
-			gh := &github.GitHub{
-				HTTPClient: mockServer.Client(),
-				BaseURL:    mockServer.URL,
-			}
+			gh := github.NewGitHub(func(config *github.Config) {
+				config.HTTPClient = mockServer.Client()
+				config.BaseURL = mockServer.URL
+			})
 
 			actualResult, err := gh.GetCommitFiles(ctx, tc.commitID)
 			if err != nil {
@@ -83,10 +83,10 @@ func TestGitHub_GetPRCommits_Integration(t *testing.T) {
 			mockServer := newMockServer(t, tc.expectedURL, url.Values{}, tc.response)
 			defer mockServer.Close()
 
-			gh := &github.GitHub{
-				HTTPClient: mockServer.Client(),
-				BaseURL:    mockServer.URL,
-			}
+			gh := github.NewGitHub(func(config *github.Config) {
+				config.HTTPClient = mockServer.Client()
+				config.BaseURL = mockServer.URL
+			})
 
 			actualResult, err := gh.GetPRCommits(ctx, tc.prNumber)
 			if err != nil {
@@ -150,10 +150,10 @@ func TestGitHub_PRSearch_Integration(t *testing.T) {
 			mockServer := newMockServer(t, tc.expectedURL, tc.expectedQueryParams, tc.response)
 			defer mockServer.Close()
 
-			gh := &github.GitHub{
-				HTTPClient: mockServer.Client(),
-				BaseURL:    mockServer.URL,
-			}
+			gh := github.NewGitHub(func(config *github.Config) {
+				config.HTTPClient = mockServer.Client()
+				config.BaseURL = mockServer.URL
+			})
 
 			actualResult, err := gh.PRSearch(ctx, tc.filter, tc.page)
 			if err != nil {

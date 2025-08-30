@@ -89,7 +89,7 @@ func runInterval(
 			log.Fatal(err)
 		}
 
-		log.Println("context cancelled or deadline exceeded:", err)
+		log.Printf("context cancelled or deadline exceeded: %v", err)
 	}
 }
 

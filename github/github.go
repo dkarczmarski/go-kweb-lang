@@ -15,16 +15,22 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"go-kweb-lang/github/internal/throttle"
 )
 
 type Config struct {
-	BaseURL string
-	Token   string
+	BaseURL          string
+	HTTPClient       *http.Client
+	Token            string
+	UserAgent        string
+	ThrottleInterval time.Duration
 }
 
 type GitHub struct {
-	BaseURL    string
-	HTTPClient *http.Client
+	baseURL    string
+	httpClient *http.Client
+	throttler  *throttle.Throttler
 }
 
 type CommitInfo struct {
@@ -60,36 +66,59 @@ type CommitFiles struct {
 	Files    []string
 }
 
-func NewGitHub(opts ...func(*Config)) *GitHub {
-	config := Config{
-		BaseURL: "https://api.github.com",
+func WithDefaults() func(*Config) {
+	return func(config *Config) {
+		config.BaseURL = "https://api.github.com"
+		config.HTTPClient = &http.Client{
+			Timeout: time.Minute,
+		}
 	}
+}
+
+func WithAuthorization(token, userAgent string) func(config *Config) {
+	return func(config *Config) {
+		var transport http.RoundTripper
+
+		if len(token) > 0 {
+			transport = &authorizationTransport{
+				Token:     token,
+				UserAgent: userAgent,
+			}
+
+			config.HTTPClient.Transport = transport
+		}
+	}
+}
+
+func WithThrottle(interval time.Duration) func(config *Config) {
+	return func(config *Config) {
+		if interval > 0 {
+			config.ThrottleInterval = interval
+		}
+	}
+}
+
+func NewGitHub(opts ...func(*Config)) *GitHub {
+	var config Config
 
 	for _, opt := range opts {
 		opt(&config)
 	}
 
-	var transport http.RoundTripper
-
-	if len(config.Token) > 0 {
-		transport = &authorizationTransport{
-			Token: config.Token,
-		}
-	}
-
-	httpClient := &http.Client{
-		Timeout:   time.Minute,
-		Transport: transport,
+	var throttler *throttle.Throttler
+	if config.ThrottleInterval > 0 {
+		throttler = throttle.NewThrottler(config.ThrottleInterval)
 	}
 
 	return &GitHub{
-		BaseURL:    config.BaseURL,
-		HTTPClient: httpClient,
+		baseURL:    config.BaseURL,
+		httpClient: config.HTTPClient,
+		throttler:  throttler,
 	}
 }
 
 func (gh *GitHub) GetLatestCommit(ctx context.Context) (*CommitInfo, error) {
-	urlStr := fmt.Sprintf("%v/repos/kubernetes/website/commits?per_page=1", gh.BaseURL)
+	urlStr := fmt.Sprintf("%v/repos/kubernetes/website/commits?per_page=1", gh.baseURL)
 
 	resp, err := gh.httpGetWithRetry(ctx, urlStr)
 	if err != nil {
@@ -148,7 +177,7 @@ func (gh *GitHub) PRSearch(ctx context.Context, filter PRSearchFilter, page Page
 }
 
 func (gh *GitHub) buildPRSearchURL(filter PRSearchFilter, page PageRequest) string {
-	baseURL := fmt.Sprintf("%v/search/issues", gh.BaseURL)
+	baseURL := fmt.Sprintf("%v/search/issues", gh.baseURL)
 
 	qParts := []string{
 		"repo:kubernetes/website",
@@ -197,7 +226,7 @@ func (gh *GitHub) buildPRSearchURL(filter PRSearchFilter, page PageRequest) stri
 }
 
 func (gh *GitHub) GetPRCommits(ctx context.Context, prNumber int) ([]string, error) {
-	urlStr := fmt.Sprintf("%v/repos/kubernetes/website/pulls/%d/commits", gh.BaseURL, prNumber)
+	urlStr := fmt.Sprintf("%v/repos/kubernetes/website/pulls/%d/commits", gh.baseURL, prNumber)
 
 	resp, err := gh.httpGetWithRetry(ctx, urlStr)
 	if err != nil {
@@ -224,7 +253,7 @@ type commitItem struct {
 }
 
 func (gh *GitHub) GetCommitFiles(ctx context.Context, commitID string) (*CommitFiles, error) {
-	urlStr := fmt.Sprintf("%v/repos/kubernetes/website/commits/%s", gh.BaseURL, commitID)
+	urlStr := fmt.Sprintf("%v/repos/kubernetes/website/commits/%s", gh.baseURL, commitID)
 
 	resp, err := gh.httpGetWithRetry(ctx, urlStr)
 	if err != nil {
@@ -302,11 +331,6 @@ func (gh *GitHub) httpGetWithRetry(ctx context.Context, urlStr string) (*http.Re
 					return nil, err
 				}
 			}
-
-			// always wait at least one second
-			if err := sleepCtx(ctx, time.Second); err != nil {
-				return nil, err
-			}
 		} else {
 			break
 		}
@@ -333,7 +357,14 @@ func (gh *GitHub) httpGet(ctx context.Context, urlStr string) (*http.Response, e
 		return nil, fmt.Errorf("error while creating request: %w", err)
 	}
 
-	resp, err := gh.HTTPClient.Do(req)
+	if gh.throttler != nil {
+		// small delay to avoid secondary rate limit
+		if err := gh.throttler.Throttle(ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	resp, err := gh.httpClient.Do(req)
 	if err != nil {
 		if isTimeoutErr(err) {
 			err = &retryErr{err: err}
