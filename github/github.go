@@ -154,6 +154,9 @@ type commitResponse struct {
 }
 
 func (gh *GitHub) PRSearch(ctx context.Context, filter PRSearchFilter, page PageRequest) (*PRSearchResult, error) {
+	// normalize lang code
+	filter.LangCode = toShortLangCode(filter.LangCode)
+
 	urlStr := gh.buildPRSearchURL(filter, page)
 
 	resp, err := gh.httpGetWithRetry(ctx, urlStr)
@@ -174,6 +177,15 @@ func (gh *GitHub) PRSearch(ctx context.Context, filter PRSearchFilter, page Page
 	}
 
 	return &result, nil
+}
+
+// for example zh-cn -> zh , pt-br -> pt
+func toShortLangCode(langCode string) string {
+	if len(langCode) > 2 && langCode[2] == '-' {
+		langCode = langCode[:2]
+	}
+
+	return langCode
 }
 
 func (gh *GitHub) buildPRSearchURL(filter PRSearchFilter, page PageRequest) string {
