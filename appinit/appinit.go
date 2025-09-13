@@ -43,6 +43,8 @@ type Config struct {
 	RefreshPRTask        *tasks.RefreshPRTask
 	RefreshTask          *tasks.RefreshTask
 	GitHubMonitor        *githubmon.Monitor
+	SkipGitChecking      bool
+	SkipPRChecking       bool
 	NoWeb                bool
 	WebHTTPAddr          string
 	Server               *web.Server
@@ -122,6 +124,8 @@ func ParseFlagParams(
 	flagInterval *int,
 	flagGitHubToken *string,
 	flagGitHubTokenFile *string,
+	flagSkipGit *bool,
+	flagSkipPR *bool,
 	flagNoWeb *bool,
 	flagWebHTTPAddr *string,
 ) func(*Config) error {
@@ -156,6 +160,14 @@ func ParseFlagParams(
 			config.GitHubTokenFile = *flagGitHubTokenFile
 		}
 
+		if *flagSkipGit {
+			config.SkipPRChecking = *flagSkipGit
+		}
+
+		if *flagSkipPR {
+			config.SkipPRChecking = *flagSkipPR
+		}
+
 		if *flagNoWeb {
 			config.NoWeb = *flagNoWeb
 		}
@@ -178,6 +190,8 @@ func ShowParams(withPrint bool) func(*Config) error {
 			log.Printf("RUN_INTERVAL: %v", config.RunInterval)
 			log.Printf("GITHUB_TOKEN: %s", config.GitHubToken)
 			log.Printf("GITHUB_TOKEN_FILE: %s", config.GitHubTokenFile)
+			log.Printf("SKIP_GIT: %v", config.SkipGitChecking)
+			log.Printf("SKIP_PR: %v", config.SkipPRChecking)
 			log.Printf("NO_WEB: %v", config.NoWeb)
 			log.Printf("WEB_HTTP_ADDR: %s", config.WebHTTPAddr)
 		}
@@ -494,6 +508,8 @@ func NewGitHubMonitor() func(*Config) error {
 			gh,
 			langCodesProvider,
 			githubmon.NewMonitorFileStorage(cacheStore),
+			config.SkipGitChecking,
+			config.SkipPRChecking,
 		)
 
 		return nil

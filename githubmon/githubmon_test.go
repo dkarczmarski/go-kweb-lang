@@ -133,7 +133,7 @@ func TestMonitor_Check(t *testing.T) {
 
 			tc.initMocks(ctx, githubMock, langMock, storageMock, task)
 
-			mon := githubmon.NewMonitor(githubMock, langMock, storageMock)
+			mon := githubmon.NewMonitor(githubMock, langMock, storageMock, false, false)
 
 			err := mon.Check(ctx, task)
 

@@ -14,9 +14,11 @@ import (
 )
 
 type Monitor struct {
-	gitHub       GitHub
-	langProvider LangProvider
-	storage      MonitorStorage
+	gitHub          GitHub
+	langProvider    LangProvider
+	storage         MonitorStorage
+	skipGitChecking bool
+	skipPRChecking  bool
 }
 
 type GitHub interface {
@@ -103,11 +105,19 @@ func (s *MonitorFileStorage) WriteLastPRUpdatedAt(langCode, value string) error 
 	)
 }
 
-func NewMonitor(gitHub GitHub, langProvider LangProvider, storage MonitorStorage) *Monitor {
+func NewMonitor(
+	gitHub GitHub,
+	langProvider LangProvider,
+	storage MonitorStorage,
+	skipGitChecking bool,
+	skipPRChecking bool,
+) *Monitor {
 	return &Monitor{
-		gitHub:       gitHub,
-		langProvider: langProvider,
-		storage:      storage,
+		gitHub:          gitHub,
+		langProvider:    langProvider,
+		storage:         storage,
+		skipGitChecking: skipGitChecking,
+		skipPRChecking:  skipPRChecking,
 	}
 }
 
@@ -179,14 +189,24 @@ func (mon *Monitor) Check(
 	ctx context.Context,
 	onUpdateTask OnUpdateTask,
 ) error {
-	repoUpdated, err := mon.isRepoUpdated(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to check if git repo has been updated: %w", err)
+	var repoUpdated bool
+
+	if !mon.skipGitChecking {
+		var err error
+		repoUpdated, err = mon.isRepoUpdated(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to check if git repo has been updated: %w", err)
+		}
 	}
 
-	prUpdatedLangCodes, err := mon.prUpdatedLangCodes(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to check if pull requests have been updated: %w", err)
+	var prUpdatedLangCodes []string
+
+	if !mon.skipPRChecking {
+		var err error
+		prUpdatedLangCodes, err = mon.prUpdatedLangCodes(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to check if pull requests have been updated: %w", err)
+		}
 	}
 
 	if repoUpdated || len(prUpdatedLangCodes) > 0 {

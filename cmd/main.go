@@ -25,6 +25,8 @@ var (
 	flagRunInterval     = flag.Int("run-interval", 0, "run repeatedly with delay of N minutes between runs")
 	flagGitHubToken     = flag.String("github-token", "", "github api access token")
 	flagGitHubTokenFile = flag.String("github-token-file", "", "file path with github api access token")
+	flagSkipGit         = flag.Bool("skip-git", false, "skip git repo checking")
+	flagSkipPR          = flag.Bool("skip-pr", false, "skip pull request checking")
 	flagNoWeb           = flag.Bool("no-web", false, "disable web server")
 	flagWebHTTPAddr     = flag.String("web-http-addr", "", "TCP address for the server to listen on")
 )
@@ -64,8 +66,13 @@ func fileExists(path string) (bool, error) {
 }
 
 func runCheckAndRefresh(ctx context.Context, cfg *appinit.Config) error {
-	if err := createRepoIfNotExists(ctx, cfg.RepoDir, cfg.GitRepo); err != nil {
-		return err
+	skipGitChecking := cfg.SkipGitChecking
+	// skipPRChecking := cfg.SkipPRChecking
+
+	if !skipGitChecking {
+		if err := createRepoIfNotExists(ctx, cfg.RepoDir, cfg.GitRepo); err != nil {
+			return err
+		}
 	}
 
 	gitHubMonitor := cfg.GitHubMonitor
@@ -147,6 +154,8 @@ func main() {
 			flagRunInterval,
 			flagGitHubToken,
 			flagGitHubTokenFile,
+			flagSkipGit,
+			flagSkipPR,
 			flagNoWeb,
 			flagWebHTTPAddr,
 		),
