@@ -89,7 +89,7 @@
                hx-target="#table"
                hx-swap="innerHTML"
                class="text-decoration-none text-reset">
-            Lang<br/>Relative Path
+            Lang Relative Path
             {{ if eq .CurrentSort "filename" }}
             {{ if eq .CurrentSortOrder "asc" }}
             <i class="bi bi-arrow-down"></i>
@@ -99,7 +99,7 @@
             {{ end }}
             </a>
         </th>
-        <th scope="col">EN<br/>
+        <th scope="col">
             <a href="{{ .TableModel.StatusColumnLink }}"
                hx-post="{{ .TableModel.StatusColumnLink }}"
                hx-target="#table"
@@ -121,7 +121,7 @@
                hx-target="#table"
                hx-swap="innerHTML"
                class="text-decoration-none text-reset">
-                EN<br/>Updates
+                EN Updates
                 {{ if eq .CurrentSort "updates" }}
                 {{ if eq .CurrentSortOrder "asc" }}
                 <i class="bi bi-arrow-down"></i>
@@ -131,7 +131,7 @@
                 {{ end }}
             </a>
         </th>
-        <th scope="col">Lang<br/>PR</th>
+        <th scope="col">PR</th>
     </tr>
     </thead>
     <tbody>
@@ -153,7 +153,7 @@
             Fork Commit: {{ truncate .LangForkCommit.DateTime 10 }}
             {{ end }}
         </td>
-        <td>{{ .ENStatus }}</td>
+        <td>{{ .Status }}</td>
         <td>
             {{ if .ENUpdates.AfterMergeCommit }}
             After Lang Merge Commit:

@@ -46,7 +46,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 						Comment:  "Comment1",
 					},
 					LangForkCommit: nil,
-					ENFileStatus:   "NON_EXISTENT",
+					FileStatus:     gitseek.StatusEnFileDoesNotExist,
 					ENUpdates:      nil,
 				},
 			},
@@ -92,8 +92,8 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 						DateTime: "DT0",
 						Comment:  "Comment1",
 					},
-					ENFileStatus: "NON_EXISTENT",
-					ENUpdates:    nil,
+					FileStatus: gitseek.StatusEnFileDoesNotExist,
+					ENUpdates:  nil,
 				},
 			},
 		},
@@ -145,7 +145,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 						DateTime: "DT0",
 						Comment:  "Comment1",
 					},
-					ENFileStatus: "DELETED",
+					FileStatus: gitseek.StatusEnFileNoLongerExists,
 					ENUpdates: []gitseek.ENUpdate{
 						{
 							Commit: git.CommitInfo{
@@ -200,8 +200,8 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 						DateTime: "DT0",
 						Comment:  "Comment1",
 					},
-					ENFileStatus: "",
-					ENUpdates:    nil,
+					FileStatus: "",
+					ENUpdates:  nil,
 				},
 			},
 		},
@@ -257,7 +257,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 						DateTime: "DT0",
 						Comment:  "Comment1",
 					},
-					ENFileStatus: "MODIFIED",
+					FileStatus: gitseek.StatusEnFileUpdated,
 					ENUpdates: []gitseek.ENUpdate{
 						{
 							Commit: git.CommitInfo{
@@ -323,7 +323,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 						DateTime: "DT0",
 						Comment:  "Comment1",
 					},
-					ENFileStatus: "MODIFIED",
+					FileStatus: gitseek.StatusEnFileUpdated,
 					ENUpdates: []gitseek.ENUpdate{
 						{
 							Commit: git.CommitInfo{

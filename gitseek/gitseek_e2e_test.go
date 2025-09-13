@@ -51,7 +51,7 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 						DateTime: "2021-06-21T21:45:58-07:00",
 						Comment:  "Merge pull request #28532 from lcc3108/patch-1",
 					},
-					ENFileStatus: "MODIFIED",
+					FileStatus: "MODIFIED",
 					ENUpdates: []gitseek.ENUpdate{
 						{
 							Commit: git.CommitInfo{
@@ -77,7 +77,7 @@ func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {
 						Comment:  "Init Polish localization (#18419) (#18659)",
 					},
 					LangForkCommit: nil,
-					ENFileStatus:   "NON_EXISTENT",
+					FileStatus:     "NON_EXISTENT",
 					ENUpdates: []gitseek.ENUpdate{
 						{
 							Commit: git.CommitInfo{

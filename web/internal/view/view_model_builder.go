@@ -41,7 +41,7 @@ func BuildLangDashboardFilesModel(langCode string, fileInfos []dashboard.Item) L
 	for _, fileInfo := range fileInfos {
 		var fileModel FileModel
 
-		if len(fileInfo.ENFileStatus) == 0 && len(fileInfo.ENUpdates) == 0 && len(fileInfo.PRs) == 0 {
+		if len(fileInfo.FileStatus) == 0 && len(fileInfo.ENUpdates) == 0 && len(fileInfo.PRs) == 0 {
 			continue
 		}
 
@@ -53,7 +53,7 @@ func BuildLangDashboardFilesModel(langCode string, fileInfos []dashboard.Item) L
 		fileModel.LangLastCommit = convertCommitToUtc(fileInfo.LangLastCommit)
 		fileModel.LangMergeCommit = convertCommitToUtcPtr(fileInfo.LangMergeCommit)
 		fileModel.LangForkCommit = convertCommitToUtcPtr(fileInfo.LangForkCommit)
-		fileModel.ENStatus = fileInfo.ENFileStatus
+		fileModel.Status = fileInfo.FileStatus
 
 		var enUpdates []ENUpdate
 		for _, enUpdate := range fileInfo.ENUpdates {

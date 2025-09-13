@@ -76,7 +76,7 @@ func FilterAndSort(
 			case SortByFileName:
 				cmpValue = cmp.Compare(a.LangRelPath.Text, b.LangRelPath.Text)
 			case SortByStatus:
-				cmpValue = cmp.Compare(a.ENStatus, b.ENStatus)
+				cmpValue = cmp.Compare(a.Status, b.Status)
 			case SortByEnUpdate:
 				cmpValue = cmp.Compare(a.ENUpdates.LastCommit.DateTime, b.ENUpdates.LastCommit.DateTime)
 			}

@@ -14,12 +14,18 @@ import (
 	"go-kweb-lang/proxycache"
 )
 
+const (
+	StatusEnFileDoesNotExist   = "en-file-does-not-exist"
+	StatusEnFileNoLongerExists = "en-file-no-longer-exists"
+	StatusEnFileUpdated        = "en-file-updated"
+)
+
 type FileInfo struct {
 	LangRelPath     string
 	LangLastCommit  git.CommitInfo
 	LangMergeCommit *git.CommitInfo
 	LangForkCommit  *git.CommitInfo
-	ENFileStatus    string
+	FileStatus      string
 	ENUpdates       []ENUpdate
 }
 
@@ -172,12 +178,13 @@ func (gs *GitSeek) checkFile(ctx context.Context, langRelPath string, langCode s
 	}
 	if !exists {
 		if len(enCommitsAfter) > 0 {
-			fileInfo.ENFileStatus = "DELETED"
+			fileInfo.FileStatus = StatusEnFileNoLongerExists
 		} else {
-			fileInfo.ENFileStatus = "NON_EXISTENT"
+			fileInfo.FileStatus = StatusEnFileDoesNotExist
 		}
 	} else if len(enCommitsAfter) > 0 {
-		fileInfo.ENFileStatus = "MODIFIED"
+		// todo: EN file might be updated ( by commit date )
+		fileInfo.FileStatus = StatusEnFileUpdated
 	}
 
 	for _, enCommitAfter := range enCommitsAfter {

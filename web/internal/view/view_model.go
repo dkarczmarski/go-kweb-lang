@@ -41,7 +41,7 @@ type FileModel struct {
 	LangLastCommit   git.CommitInfo
 	LangMergeCommit  *git.CommitInfo
 	LangForkCommit   *git.CommitInfo
-	ENStatus         string
+	Status           string
 	ENUpdates        ENUpdateGroups
 	PRs              []LinkModel
 }

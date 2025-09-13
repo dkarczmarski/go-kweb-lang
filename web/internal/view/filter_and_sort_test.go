@@ -387,30 +387,30 @@ func TestFilterAndSort(t *testing.T) {
 			files: []view.FileModel{
 				{
 					LangRelPath: view.LinkModel{Text: "a1"},
-					ENStatus:    "C",
+					Status:      "C",
 				},
 				{
 					LangRelPath: view.LinkModel{Text: "a2"},
-					ENStatus:    "A",
+					Status:      "A",
 				},
 				{
 					LangRelPath: view.LinkModel{Text: "a3"},
-					ENStatus:    "B",
+					Status:      "B",
 				},
 			},
 			sort: view.SortByStatus,
 			expected: []view.FileModel{
 				{
 					LangRelPath: view.LinkModel{Text: "a2"},
-					ENStatus:    "A",
+					Status:      "A",
 				},
 				{
 					LangRelPath: view.LinkModel{Text: "a3"},
-					ENStatus:    "B",
+					Status:      "B",
 				},
 				{
 					LangRelPath: view.LinkModel{Text: "a1"},
-					ENStatus:    "C",
+					Status:      "C",
 				},
 			},
 		},
