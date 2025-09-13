@@ -3,24 +3,24 @@ package tasks
 import (
 	"context"
 
-	"go-kweb-lang/web"
+	"go-kweb-lang/dashboard"
 )
 
 type RefreshTask struct {
 	refreshRepoTask      *RefreshRepoTask
 	refreshPRTask        *RefreshPRTask
-	refreshViewModelTask *web.RefreshViewModelTask
+	refreshDashboardTask *dashboard.RefreshTask
 }
 
 func NewRefreshTask(
 	refreshRepoTask *RefreshRepoTask,
 	refreshPRTask *RefreshPRTask,
-	refreshViewModelTask *web.RefreshViewModelTask,
+	refreshDashboardTask *dashboard.RefreshTask,
 ) *RefreshTask {
 	return &RefreshTask{
 		refreshRepoTask:      refreshRepoTask,
 		refreshPRTask:        refreshPRTask,
-		refreshViewModelTask: refreshViewModelTask,
+		refreshDashboardTask: refreshDashboardTask,
 	}
 }
 
@@ -37,7 +37,7 @@ func (t *RefreshTask) OnUpdate(ctx context.Context, repoUpdated bool, prUpdatedL
 		}
 	}
 
-	if err := t.refreshViewModelTask.Run(ctx); err != nil {
+	if err := t.refreshDashboardTask.Run(ctx); err != nil {
 		return err
 	}
 

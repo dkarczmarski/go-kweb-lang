@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 
+	"go-kweb-lang/dashboard"
+
 	"go-kweb-lang/web/internal/weberror"
 
 	"go-kweb-lang/web/internal/reqhelper"
@@ -16,17 +18,19 @@ import (
 //go:embed lang_codes.html
 var langCodesHTML string
 
-func createListLangCodesHandler(store ViewModelStore) func(w http.ResponseWriter, r *http.Request) {
+func createListLangCodesHandler(dashboardStore *dashboard.Store) func(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.New("lang_codes.html")
 	htmlTmpl := template.Must(tmpl.Parse(langCodesHTML))
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		model, err := store.GetLangCodes()
+		dashboardIndex, err := dashboardStore.ReadDashboardIndex()
 		if err != nil {
 			logAndHTTPError(w, "failed to get language codes", err, http.StatusInternalServerError)
 
 			return
 		}
+
+		model := view.BuildLangCodesModel(dashboardIndex)
 
 		if err := htmlTmpl.Execute(w, model); err != nil {
 			logAndHTTPError(w, "failed to execute template", err, http.StatusInternalServerError)
@@ -39,7 +43,7 @@ func createListLangCodesHandler(store ViewModelStore) func(w http.ResponseWriter
 //go:embed lang_dashboard.html
 var langDashboardHTML string
 
-func createLangDashboardHandler(store ViewModelStore) func(w http.ResponseWriter, r *http.Request) {
+func createLangDashboardHandler(dashboardStore *dashboard.Store) func(w http.ResponseWriter, r *http.Request) {
 	funcMap := template.FuncMap{
 		"truncate": truncate,
 	}
@@ -48,7 +52,7 @@ func createLangDashboardHandler(store ViewModelStore) func(w http.ResponseWriter
 	htmlTmpl := template.Must(tmpl.Parse(langDashboardHTML))
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		model, err := handleLangDashboardRequest(w, r, store)
+		model, err := handleLangDashboardRequest(w, r, dashboardStore)
 		if err != nil {
 			logAndHTTPError(w, "failed to prepare view model", err, http.StatusInternalServerError)
 
@@ -63,7 +67,7 @@ func createLangDashboardHandler(store ViewModelStore) func(w http.ResponseWriter
 	}
 }
 
-func createLangDashboardTableHandler(store ViewModelStore) func(w http.ResponseWriter, r *http.Request) {
+func createLangDashboardTableHandler(dashboardStore *dashboard.Store) func(w http.ResponseWriter, r *http.Request) {
 	funcMap := template.FuncMap{
 		"truncate": truncate,
 	}
@@ -79,7 +83,7 @@ func createLangDashboardTableHandler(store ViewModelStore) func(w http.ResponseW
 			return
 		}
 
-		model, err := handleLangDashboardRequest(w, r, store)
+		model, err := handleLangDashboardRequest(w, r, dashboardStore)
 		if err != nil {
 			logAndHTTPError(w, "failed to prepare view model", err, http.StatusInternalServerError)
 
@@ -104,21 +108,23 @@ func truncate(s string, length int) string {
 func handleLangDashboardRequest(
 	w http.ResponseWriter,
 	r *http.Request,
-	store ViewModelStore,
+	dashboardStore *dashboard.Store,
 ) (*view.LangDashboardViewModel, error) {
 	requestModel, err := reqhelper.ParseListLangDashboardRequest(r)
 	if err != nil {
 		return nil, err
 	}
 
-	dashboardFiles, err := store.GetLangDashboardFiles(requestModel.LangCode)
+	langDashboard, err := dashboardStore.ReadDashboard(requestModel.LangCode)
 	if err != nil {
 		return nil, err
 	}
 
 	handleHtmx(w, r, requestModel)
 
-	return view.BuildLangDashboardModel(r, requestModel, dashboardFiles)
+	langDashboardFilesModel := view.BuildLangDashboardFilesModel(langDashboard.LangCode, langDashboard.Items)
+
+	return view.BuildLangDashboardModel(r, requestModel, langDashboardFilesModel)
 }
 
 func handleHtmx(w http.ResponseWriter, r *http.Request, requestModel reqhelper.RequestModel) {

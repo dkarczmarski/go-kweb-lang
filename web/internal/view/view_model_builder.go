@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"go-kweb-lang/dashboard"
+
 	"go-kweb-lang/web/internal/reqhelper"
 
 	"go-kweb-lang/git"
@@ -16,37 +18,25 @@ type LangCodesProvider interface {
 	LangCodes() ([]string, error)
 }
 
-func BuildLangCodesModel(langCodesProvider LangCodesProvider) (*LangCodesViewModel, error) {
-	tableModel, err := buildLangCodesTableModel(langCodesProvider)
-	if err != nil {
-		return nil, fmt.Errorf("error while building index web model: %w", err)
-	}
+func BuildLangCodesModel(dashboardIndex *dashboard.LangIndex) *LangCodesViewModel {
+	items := dashboardIndex.Items
 
-	langCodesViewModel := &LangCodesViewModel{
-		LangCodes: tableModel,
-	}
-
-	return langCodesViewModel, nil
-}
-
-func buildLangCodesTableModel(langCodesProvider LangCodesProvider) ([]LinkModel, error) {
-	langCodes, err := langCodesProvider.LangCodes()
-	if err != nil {
-		return nil, fmt.Errorf("error while getting available languages: %w", err)
-	}
-
-	model := make([]LinkModel, 0, len(langCodes))
-	for _, langCode := range langCodes {
+	model := make([]LinkModel, 0, len(items))
+	for _, item := range items {
 		model = append(model, LinkModel{
-			Text: langCode,
-			URL:  "lang/" + langCode,
+			Text: item.LangCode,
+			URL:  "lang/" + item.LangCode,
 		})
 	}
 
-	return model, nil
+	langCodesViewModel := &LangCodesViewModel{
+		LangCodes: model,
+	}
+
+	return langCodesViewModel
 }
 
-func BuildLangDashboardFilesModel(langCode string, fileInfos []FileInfo) LangDashboardFilesModel {
+func BuildLangDashboardFilesModel(langCode string, fileInfos []dashboard.Item) LangDashboardFilesModel {
 	var files []FileModel
 	for _, fileInfo := range fileInfos {
 		var fileModel FileModel

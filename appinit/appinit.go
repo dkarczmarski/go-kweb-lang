@@ -9,6 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"go-kweb-lang/dashboard"
+	"go-kweb-lang/web"
+
 	"go-kweb-lang/git"
 	"go-kweb-lang/githist"
 	"go-kweb-lang/github"
@@ -18,7 +21,6 @@ import (
 	"go-kweb-lang/pullreq"
 	"go-kweb-lang/store"
 	"go-kweb-lang/tasks"
-	"go-kweb-lang/web"
 )
 
 type Config struct {
@@ -33,15 +35,15 @@ type Config struct {
 	LangCodesProvider    *langcnt.LangCodesProvider
 	GitRepo              *git.Git
 	CacheStore           *store.FileStore
-	ViewModelCacheStore  *web.ViewModelCacheStore
+	DashboardStore       *dashboard.Store
 	GitRepoHist          *githist.GitHist
 	GitSeek              *gitseek.GitSeek
 	GitHub               *github.GitHub
 	FilePRFinder         *pullreq.FilePRFinder
 	RefreshRepoTask      *tasks.RefreshRepoTask
-	RefreshViewModelTask *web.RefreshViewModelTask
 	RefreshPRTask        *tasks.RefreshPRTask
 	RefreshTask          *tasks.RefreshTask
+	RefreshDashboardTask *dashboard.RefreshTask
 	GitHubMonitor        *githubmon.Monitor
 	SkipGitChecking      bool
 	SkipPRChecking       bool
@@ -293,14 +295,14 @@ func NewCacheStore() func(*Config) error {
 	}
 }
 
-func NewViewModelCacheStore() func(*Config) error {
+func NewDashboardStore() func(*Config) error {
 	return func(config *Config) error {
 		cacheStore := config.CacheStore
 		if cacheStore == nil {
 			return fmt.Errorf("param CacheStore is not set: %w", ErrBadConfiguration)
 		}
 
-		config.ViewModelCacheStore = web.NewViewModelCacheStore(cacheStore)
+		config.DashboardStore = dashboard.NewStore(cacheStore)
 
 		return nil
 	}
@@ -413,7 +415,7 @@ func NewRefreshRepoTask() func(*Config) error {
 	}
 }
 
-func NewRefreshViewModelTask() func(*Config) error {
+func NewRefreshDashboardTask() func(*Config) error {
 	return func(config *Config) error {
 		langCodesProvider := config.LangCodesProvider
 		if langCodesProvider == nil {
@@ -430,16 +432,16 @@ func NewRefreshViewModelTask() func(*Config) error {
 			return fmt.Errorf("param FilePRFinder is not set: %w", ErrBadConfiguration)
 		}
 
-		viewModelCacheStore := config.ViewModelCacheStore
-		if viewModelCacheStore == nil {
-			return fmt.Errorf("param ViewModelCacheStore is not set: %w", ErrBadConfiguration)
+		dashboardStore := config.DashboardStore
+		if dashboardStore == nil {
+			return fmt.Errorf("param DashboardStore is not set: %w", ErrBadConfiguration)
 		}
 
-		config.RefreshViewModelTask = web.NewRefreshViewModelTask(
+		config.RefreshDashboardTask = dashboard.NewRefreshTask(
 			langCodesProvider,
 			gitSeeker,
 			filePRFinder,
-			viewModelCacheStore,
+			dashboardStore,
 		)
 
 		return nil
@@ -476,12 +478,12 @@ func NewRefreshTask() func(*Config) error {
 			return fmt.Errorf("param RefreshPRTask is not set: %w", ErrBadConfiguration)
 		}
 
-		refreshViewModelTask := config.RefreshViewModelTask
-		if refreshViewModelTask == nil {
-			return fmt.Errorf("param RefreshViewModelTask is not set: %w", ErrBadConfiguration)
+		refreshDashboardTask := config.RefreshDashboardTask
+		if refreshDashboardTask == nil {
+			return fmt.Errorf("param RefreshDashboardTask is not set: %w", ErrBadConfiguration)
 		}
 
-		config.RefreshTask = tasks.NewRefreshTask(refreshRepoTask, refreshPRTask, refreshViewModelTask)
+		config.RefreshTask = tasks.NewRefreshTask(refreshRepoTask, refreshPRTask, refreshDashboardTask)
 
 		return nil
 	}
@@ -522,9 +524,9 @@ func NewServer() func(*Config) error {
 			return nil
 		}
 
-		viewModelCacheStore := config.ViewModelCacheStore
-		if viewModelCacheStore == nil {
-			return fmt.Errorf("param ViewModelCacheStore is not set: %w", ErrBadConfiguration)
+		dashboardStore := config.DashboardStore
+		if dashboardStore == nil {
+			return fmt.Errorf("param DashboardStore is not set: %w", ErrBadConfiguration)
 		}
 
 		webHTTPAddr := config.WebHTTPAddr
@@ -532,7 +534,7 @@ func NewServer() func(*Config) error {
 			return fmt.Errorf("param WebHTTPAddr is not set: %w", ErrBadConfiguration)
 		}
 
-		config.Server = web.NewServer(webHTTPAddr, viewModelCacheStore)
+		config.Server = web.NewServer(webHTTPAddr, dashboardStore)
 
 		return nil
 	}

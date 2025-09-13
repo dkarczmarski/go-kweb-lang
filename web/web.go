@@ -4,17 +4,19 @@ import (
 	"context"
 	"net/http"
 	"time"
+
+	"go-kweb-lang/dashboard"
 )
 
 type Server struct {
 	httpServer *http.Server
 }
 
-func NewServer(webHTTPAddr string, viewModelStore ViewModelStore) *Server {
+func NewServer(webHTTPAddr string, dashboardStore *dashboard.Store) *Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", createListLangCodesHandler(viewModelStore))
-	mux.HandleFunc("GET /lang/{code}", createLangDashboardHandler(viewModelStore))
-	mux.HandleFunc("POST /lang/{code}", createLangDashboardTableHandler(viewModelStore))
+	mux.HandleFunc("/", createListLangCodesHandler(dashboardStore))
+	mux.HandleFunc("GET /lang/{code}", createLangDashboardHandler(dashboardStore))
+	mux.HandleFunc("POST /lang/{code}", createLangDashboardTableHandler(dashboardStore))
 
 	httpServer := &http.Server{
 		Addr:              webHTTPAddr,
