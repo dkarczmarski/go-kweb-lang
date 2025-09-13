@@ -21,9 +21,8 @@ import (
 )
 
 var (
-	flagRepoDir  = flag.String("repo-dir", "", "kubernetes website repository directory path")
-	flagCacheDir = flag.String("cache-dir", "",
-		"cache directory path")
+	flagRepoDir         = flag.String("repo-dir", "", "kubernetes website repository directory path")
+	flagCacheDir        = flag.String("cache-dir", "", "cache directory path")
 	flagLangCodes       = flag.String("lang-codes", "", "allowed lang codes")
 	flagRunOnce         = flag.Bool("run-once", false, "run synchronization once at startup")
 	flagRunInterval     = flag.Int("run-interval", 0, "run repeatedly with delay of N minutes between runs")
@@ -93,22 +92,16 @@ func runInterval(
 	}
 }
 
-func Run(ctx context.Context, cfg *appinit.Config) error {
-	ctx, _ = signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
-
+func runCheckAndRefresh(ctx context.Context, cfg *appinit.Config) error {
 	if err := createRepoIfNotExists(ctx, cfg.RepoDir, cfg.GitRepo); err != nil {
 		return err
 	}
 
-	if cfg.RunOnce && cfg.RunInterval == 0 {
+	if cfg.RunOnce {
+		// synchronous
 		runOnce(ctx, cfg.LangCodesProvider, cfg.RefreshTask)
-	}
-
-	if cfg.RunInterval > 0 {
-		if err := cfg.RefreshViewModelTask.Run(ctx); err != nil {
-			return fmt.Errorf("error while refreshing web model: %w", err)
-		}
-
+	} else if cfg.RunInterval > 0 {
+		// asynchronous
 		go runInterval(
 			ctx,
 			cfg.GitHubMonitor,
@@ -117,6 +110,10 @@ func Run(ctx context.Context, cfg *appinit.Config) error {
 		)
 	}
 
+	return nil
+}
+
+func runWebServer(ctx context.Context, cfg *appinit.Config) error {
 	server := cfg.Server
 	if server != nil {
 		go func() {
@@ -129,11 +126,25 @@ func Run(ctx context.Context, cfg *appinit.Config) error {
 
 		log.Println("starting web server")
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			return fmt.Errorf("error while running http server: %w", err)
+			return fmt.Errorf("failed to run http server: %w", err)
 		}
 	} else {
 		<-ctx.Done()
 		log.Println("application stopped")
+	}
+
+	return nil
+}
+
+func Run(ctx context.Context, cfg *appinit.Config) error {
+	ctx, _ = signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+
+	if err := runCheckAndRefresh(ctx, cfg); err != nil {
+		return err
+	}
+
+	if err := runWebServer(ctx, cfg); err != nil {
+		return err
 	}
 
 	return nil
