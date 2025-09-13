@@ -15,9 +15,6 @@ import (
 
 	"go-kweb-lang/appinit"
 	"go-kweb-lang/git"
-	"go-kweb-lang/githubmon"
-	"go-kweb-lang/langcnt"
-	"go-kweb-lang/tasks"
 )
 
 var (
@@ -66,48 +63,33 @@ func fileExists(path string) (bool, error) {
 	return true, nil
 }
 
-func runOnce(ctx context.Context, langCodesProvider *langcnt.LangCodesProvider, refreshTask *tasks.RefreshTask) {
-	langCodes, err := langCodesProvider.LangCodes()
-	if err != nil {
-		log.Fatal(fmt.Errorf("error while getting available languages: %w", err))
-	}
-
-	if err := refreshTask.OnUpdate(ctx, true, langCodes); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func runInterval(
-	ctx context.Context,
-	gitHubMonitor *githubmon.Monitor,
-	refreshTask *tasks.RefreshTask,
-	delay time.Duration,
-) {
-	if err := gitHubMonitor.StartIntervalCheck(ctx, delay, refreshTask); err != nil {
-		if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-			log.Fatal(err)
-		}
-
-		log.Printf("context cancelled or deadline exceeded: %v", err)
-	}
-}
-
 func runCheckAndRefresh(ctx context.Context, cfg *appinit.Config) error {
 	if err := createRepoIfNotExists(ctx, cfg.RepoDir, cfg.GitRepo); err != nil {
 		return err
 	}
 
+	gitHubMonitor := cfg.GitHubMonitor
+
 	if cfg.RunOnce {
 		// synchronous
-		runOnce(ctx, cfg.LangCodesProvider, cfg.RefreshTask)
+		retryDelay := time.Second * 15 // magic number
+
+		if err := gitHubMonitor.RetryCheck(ctx, retryDelay, cfg.RefreshTask); err != nil {
+			return err
+		}
 	} else if cfg.RunInterval > 0 {
 		// asynchronous
-		go runInterval(
-			ctx,
-			cfg.GitHubMonitor,
-			cfg.RefreshTask,
-			time.Minute*time.Duration(cfg.RunInterval),
-		)
+		go func() {
+			intervalDelay := time.Minute * time.Duration(cfg.RunInterval)
+
+			if err := gitHubMonitor.IntervalCheck(ctx, intervalDelay, cfg.RefreshTask); err != nil {
+				if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+					log.Fatal(err)
+				}
+
+				log.Printf("context cancelled or deadline exceeded: %v", err)
+			}
+		}()
 	}
 
 	return nil

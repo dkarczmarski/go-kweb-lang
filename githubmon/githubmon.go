@@ -36,7 +36,7 @@ type MonitorStorage interface {
 	WriteLastPRUpdatedAt(langCode, value string) error
 }
 
-type MonitorTask interface {
+type OnUpdateTask interface {
 	OnUpdate(ctx context.Context, repoUpdated bool, prUpdatedLangCodes []string) error
 }
 
@@ -111,39 +111,73 @@ func NewMonitor(gitHub GitHub, langProvider LangProvider, storage MonitorStorage
 	}
 }
 
-func (mon *Monitor) StartIntervalCheck(
+func (mon *Monitor) IntervalCheck(
 	ctx context.Context,
-	delay time.Duration,
-	task MonitorTask,
+	intervalDelay time.Duration,
+	onUpdateTask OnUpdateTask,
+) error {
+	retryDelay := time.Second * 15 // magic number
+
+	for {
+		err := mon.RetryCheck(ctx, retryDelay, onUpdateTask)
+		if err != nil {
+			return err
+		}
+
+		timer := time.NewTimer(intervalDelay)
+		select {
+		case <-ctx.Done():
+			if !timer.Stop() {
+				<-timer.C
+			}
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
+}
+
+func (mon *Monitor) RetryCheck(
+	ctx context.Context,
+	retryDelay time.Duration,
+	onUpdateTask OnUpdateTask,
 ) error {
 	type retryableError interface {
 		IsRetryable() bool
 	}
 
 	for {
-		err := mon.Check(ctx, task)
+		err := mon.Check(ctx, onUpdateTask)
 		if err != nil {
 			var retErr retryableError
 
 			isRetryable := errors.As(err, &retErr) && retErr.IsRetryable()
 			if !isRetryable {
-				return fmt.Errorf("error while checking github for updates: %w", err)
+				return fmt.Errorf("failed to check GitHub for updates: %w", err)
 			}
 
-			log.Printf("error while checking for github updates: %v", err)
+			log.Printf("failed to check for GitHub updates: %v", err)
+			log.Printf("retrying in %s...", retryDelay)
+
+			timer := time.NewTimer(retryDelay)
+			select {
+			case <-ctx.Done():
+				if !timer.Stop() {
+					<-timer.C
+				}
+				return ctx.Err()
+			case <-timer.C:
+			}
+
+			continue
 		}
 
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(delay):
-		}
+		return nil
 	}
 }
 
 func (mon *Monitor) Check(
 	ctx context.Context,
-	task MonitorTask,
+	onUpdateTask OnUpdateTask,
 ) error {
 	repoUpdated, err := mon.isRepoUpdated(ctx)
 	if err != nil {
@@ -152,12 +186,12 @@ func (mon *Monitor) Check(
 
 	prUpdatedLangCodes, err := mon.prUpdatedLangCodes(ctx)
 	if err != nil {
-		return fmt.Errorf("error while checking if pull requests have been updated: %w", err)
+		return fmt.Errorf("failed to check if pull requests have been updated: %w", err)
 	}
 
 	if repoUpdated || len(prUpdatedLangCodes) > 0 {
-		if err := task.OnUpdate(ctx, repoUpdated, prUpdatedLangCodes); err != nil {
-			return fmt.Errorf("error while performing on-update task: %w", err)
+		if err := onUpdateTask.OnUpdate(ctx, repoUpdated, prUpdatedLangCodes); err != nil {
+			return fmt.Errorf("failed to perform on-update task: %w", err)
 		}
 	}
 
