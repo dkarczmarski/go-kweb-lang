@@ -241,17 +241,22 @@ func BuildURL(baseURL string, requestModel reqhelper.RequestModel) string {
 
 func buildColumnLinkURL(sortFieldName, baseURL string, requestModel reqhelper.RequestModel) string {
 	if sortFieldName == requestModel.SortParam {
+		rm := requestModel
+		rm.SortParam = sortFieldName
+
 		if requestModel.SortOrderParam == "asc" {
-			requestModel.SortOrderParam = "desc"
+			rm.SortOrderParam = "desc"
 		} else {
-			requestModel.SortOrderParam = "asc"
+			rm.SortOrderParam = "asc"
 		}
 
-		return BuildURL(baseURL, requestModel)
+		return BuildURL(baseURL, rm)
 	} else {
-		requestModel.SortOrderParam = ""
+		rm := requestModel
+		rm.SortParam = sortFieldName
+		rm.SortOrderParam = ""
 
-		return BuildURL(baseURL, requestModel)
+		return BuildURL(baseURL, rm)
 	}
 }
 
