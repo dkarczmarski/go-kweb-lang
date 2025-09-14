@@ -37,12 +37,20 @@ func ParseListLangDashboardRequest(r *http.Request) (RequestModel, error) {
 
 	return RequestModel{
 		LangCode:       langCode,
-		ItemsTypeParam: itemsTypeParam,
+		ItemsTypeParam: valueOrDefault(itemsTypeParam, "all"),
 		FilenameParam:  filenameParam,
 		FilepathParam:  filepathParam,
-		SortParam:      sortParam,
-		SortOrderParam: sortOrderParam,
+		SortParam:      valueOrDefault(sortParam, "filename"),
+		SortOrderParam: valueOrDefault(sortOrderParam, "asc"),
 	}, nil
+}
+
+func valueOrDefault(value, defaultValue string) string {
+	if len(value) > 0 {
+		return value
+	}
+
+	return defaultValue
 }
 
 func findRequestValue(r *http.Request, newValueKey, currentValueKey, urlKey string) string {
