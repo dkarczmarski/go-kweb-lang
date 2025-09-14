@@ -1,17 +1,19 @@
 # what is it
 
-... initially, **go-kweb-lang** was my private tool that helped me keep the translation content for the [kubernetes/website](https://github.com/kubernetes/website) project up to date, specifically for the *language directory* `content/pl` compared to the *original* in `content/en`. when I realized that this tool effectively helped me detect files requiring updates, I thought it could be generalized to work for all languages and made the project public so that everyone contributing to the *kubernetes/website* project could benefit from it.
+**go-kweb-lang** was my private tool that helped me keep the translation content for the [kubernetes/website](https://github.com/kubernetes/website) project up to date, specifically for the *language directory* `content/pl` compared to the *original* in `content/en`. when I realized that this tool effectively helped me detect files requiring updates, I thought it could be generalized to work for all languages and made the project public so that everyone contributing to the *kubernetes/website* project could benefit from it.
 
 **go-kweb-lang** is a tool written in pure *go*, designed to assist teams creating and maintaining translations for the *kubernetes/website* project. this tool provides a live dashboard showing which *language files* need to be updated and exactly what updates have occurred in the original content since the last version of the *language file*. an *update* is defined as one or more commits made after the last modification date of the *language file*. this tool also provides convenient *update* links to the GitHub repository pages, allowing you to easily view detailed information about the changes in commits and related pull requests.
 
-the running tool is available at: http://kweb-lang.smallforge.dev, and its data is refreshed every 1 minute.
+**go-kweb-lang** helps best when you keep your translation files structure aligned with the *original* file structure. I keep the original formatting, comments, and everything else to ensure synchronization by line numbers between the *original* and *translation* files. thanks to this, when you see update commit, you only need the diff view to know exactly where to make the update. for example: PR [42502](https://github.com/kubernetes/website/pull/42502/files) for the *original* file and synchronization PR [50332](https://github.com/kubernetes/website/pull/50332/files) for the *translation*. 
+
+the running tool is available at: https://kweb-lang.smallforge.dev, and its data is refreshed every 1 minute.
 
 ### main features
 
 - detects changed files with a detailed list of updates
 - detects files that existed but have been removed from the `content/en` directory
-- continuously refreshes data (every 1 minute)
 - matches submitted pull requests with the `language/{lang_code}` label to the relevant files
+- continuously refreshes data (every 1 minute)
 
 # how it works
 
@@ -47,7 +49,7 @@ this tool detects updates by analyzing the change history of files primarily bas
 
 There may be cases of false positive update detections in several scenarios:
 
-1. if the update to *the original file* fixes a language error in english that does not exist in the *language files*. although an update was made to the original file after the last modification date of the *language file*, there is actually nothing to update in the *language file* because the change only affected the *original language*. from a technical point of view, an update was made, but there is nothing meaningful to update.
+1. if the update to *the original file* fixes a language error in english that does not exist in the *language files*. although an update was made to the original file after the last modification date of the *language file*, there is actually nothing to update in the *language file* because the change only affected the *original language*. from a technical point of view, an update was made, but there is nothing meaningful to update. for example: https://github.com/kubernetes/website/commit/9693458ae21b1a683d38ed35f1f327ba6cfc229c .
 
 2. if subsequent updates to the *original file* were made during the translation process - that is, in the period between the fork commit and the merge commit of the *language file*. the status of such a change is indeterminate: it is impossible to clearly determine based on dates alone whether *the language translation* already includes these *new changes* or not.
 
@@ -105,7 +107,8 @@ to choose the 'safest point' and ensure that no updates are missed, this tool us
 
 to make it easier to identify *false positives* in cases of overlapping updates, the results are divided into groups. these groups are defined by the key timestamps of *the langauge file*:
 - the date of the last commit
-- the dates of the fork commit and the merge commit for the branch where the last change was made
+- the dates of the fork commit
+- and the merge commit for the branch where the last change was made
 
 this mechanism works correctly both when a commit is made directly to the main branch and when it is made in a separate branch. if the commit is made directly to main (not in a branch), there is no fork commit point. in that case, the last commit point is used instead.
 
@@ -117,7 +120,7 @@ the file `OWNERS` is excluded from update checks because checking it does not ma
 
 ### deleted files
 
-if there is a *language file* translating an *original file* that once existed but no longer does, such a file will also appear on the dashboard and will be marked as `NON_EXISTENT`. for such a file, the update will be the commit that deleted the original file. in some cases, the date of this commit may even be earlier than the last modification date of the *language file*.
+if there is a *language file* translating an *original file* that once existed but no longer does, such a file will also appear on the dashboard and will be marked as `en-file-no-longer-exists`. for such a file, the update will be the commit that deleted the original file. in some cases, the date of this commit may even be earlier than the last modification date of the *language file*.
 
 # data refreshing
 
@@ -173,16 +176,17 @@ the dashboard page mainly consists of a single table with the following columns:
 
 to the right of the file’s relative path, there is a `#` link that renders the dashboard only for this specific file. such a link can be useful if you want to share information about a single specific file with someone.
 
-**EN Status** - the status of the language file compared to the original file:
+**Status** - the status of the language file compared to the original file:
 
-- **MODIFIED** - *the original file* has been modified and has at least one update.
-- **NON_EXISTENT** - *the language file* has no corresponding file in the `content/en` directory.
-- **DELETED** - *the language file* exists, but *the original file* once existed and has since been deleted. in the updates list, there will be a commit removing this file.
+- **en-file-updated** - *the original file* has been modified and has at least one update.
+- **en-file-does-not-exist** - *the language file* has no corresponding file in the `content/en` directory.
+- **en-file-no-longer-exists** - *the language file* exists, but *the original file* once existed and has since been deleted. in the updates list, there will be a commit removing this file.
+- **waiting-for-review** - *the language file* has not yet been merged into the main branch and is waiting for review.
 - *(no status)* - none of the above situations apply. the file may still appear on the dashboard if there is an open PR associated with it.
 
 **EN Updates** - the list of *updates* to the corresponding *original file* that were made after the last modification date of *the language file*. to make it easier to analyze changes (especially in the case of false positives), *updates* are grouped by the key timestamps of *the language file* (fork commit date, last commit date, merge commit date). in a special case, if *the original file* existed but has since been deleted, the date of the commit that deleted it may even be earlier than the fork commit of the language file. if *the update* was made in a separate branch, both the commit introducing the change and the merge commit that merged it are shown. this can be very useful if the commit and merge commit are far apart in time.
 
-**Lang PR** - the list of pull requests related to this file that have the `language/{lang_code}` label.
+**PR** - the list of pull requests related to this file that have the `language/{lang_code}` label.
 
 # running
 
@@ -190,19 +194,20 @@ the following decisions need to be made when running this tool:
 - where the working directory for the *kubernetes/website* repository will be located
 - where the cache directory will be located
 - which languages you want to monitor
+- whether you want to use GitHub token to increase the API access limit, or you want to completely skip fetching PRs 
 
 if these are not specified, default parameters will be used. both directories will be created in the current working directory. if languages are not explicitly specified, data will be generated for all available languages. since calculating data for all languages can take a long time, it is recommended to specify only the language you need.
 
 additionally, you can provide a GitHub personal access token to use higher rate limits for the GitHub API.
 
-you can see the running application with all languages at: http://kweb-lang.smallforge.dev .
+you can see the running application with all languages at: https://kweb-lang.smallforge.dev .
 
 ### building
 
 ```bash
 git clone https://github.com/dkarczmarski/go-kweb-lang
 cd go-kweb-lang
-go build -o kweb-lang ./cmd
+go build -o go-kweb-lang ./cmd
 ```
 
 ### parameters
@@ -215,17 +220,26 @@ go build -o kweb-lang ./cmd
 - the environment variable `WEB_HTTP_ADDR` or the argument `-web-http-addr` specifies the TCP address for the server to listen on. the default value is `:8080`.
 - the argument `-run-once` specifies that the data should be refreshed only once at application startup.
 - the argument `-run-interval` specifies the number of minutes between each data refresh.
+- the argument `-no-web` disables the web server.
+- the argument `-skip-git` disables checking the git repository.
+- the argument `-skip-pr` disables pull request checking. it might be handy when you don't provide a GitHub access token.
 
 ### usage examples
 
 run only for the `pl` language and calculate dashboard data once at startup:
 
 ```
-kweb-lang -lang-codes=pl -run-once
+go-kweb-lang -lang-codes=pl -run-once
 ```
 
 run for the `pl` and `de` languages, refresh data every 1 minute, and use a token from the `.github-token.txt` file to communicate with the GitHub API:
 
 ```
-kweb-lang -lang-codes=de,pl -run-interval=1 -github-token-file=.github-token.txt
+go-kweb-lang -lang-codes=de,pl -run-interval=1 -github-token-file=.github-token.txt
+```
+
+run for the `pl` and `de` languages, refresh the data every 1 minute, and skip PR checking (when you don't provide a GitHub API token):
+
+```
+go-kweb-lang -lang-codes=de,pl -run-interval=1 -skip-pr
 ```
