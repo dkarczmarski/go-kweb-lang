@@ -6,7 +6,7 @@
 
 **go-kweb-lang** helps best when you keep your translation files structure aligned with the *original* file structure. I keep the original formatting, comments, and everything else to ensure synchronization by line numbers between the *original* and *translation* files. thanks to this, when you see update commit, you only need the diff view to know exactly where to make the update. for example: PR [42502](https://github.com/kubernetes/website/pull/42502/files) for the *original* file and synchronization PR [50332](https://github.com/kubernetes/website/pull/50332/files) for the *translation*. 
 
-the running tool is available at: https://kweb-lang.smallforge.dev, and its data is refreshed every 1 minute.
+the running tool is available at: https://go-kweb-lang.smallforge.dev, and its data is refreshed every 1 minute.
 
 ### main features
 
@@ -200,7 +200,7 @@ if these are not specified, default parameters will be used. both directories wi
 
 additionally, you can provide a GitHub personal access token to use higher rate limits for the GitHub API.
 
-you can see the running application with all languages at: https://kweb-lang.smallforge.dev .
+you can see the running application with all languages at: https://go-kweb-lang.smallforge.dev .
 
 ### building
 
