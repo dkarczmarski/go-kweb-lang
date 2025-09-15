@@ -18,7 +18,7 @@ func TestMonitor_Check(t *testing.T) {
 			githubMock *mocks.MockGitHub,
 			langMock *mocks.MockLangProvider,
 			storageMock *mocks.MockMonitorStorage,
-			task *mocks.MockMonitorTask,
+			task *mocks.MockOnUpdateTask,
 		)
 		checkErr func(err error) bool
 	}{
@@ -28,7 +28,7 @@ func TestMonitor_Check(t *testing.T) {
 				githubMock *mocks.MockGitHub,
 				langMock *mocks.MockLangProvider,
 				storageMock *mocks.MockMonitorStorage,
-				task *mocks.MockMonitorTask,
+				task *mocks.MockOnUpdateTask,
 			) {
 				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("", nil)
 				githubMock.EXPECT().GetLatestCommit(ctx).
@@ -54,7 +54,7 @@ func TestMonitor_Check(t *testing.T) {
 				githubMock *mocks.MockGitHub,
 				langMock *mocks.MockLangProvider,
 				storageMock *mocks.MockMonitorStorage,
-				task *mocks.MockMonitorTask,
+				task *mocks.MockOnUpdateTask,
 			) {
 				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("DT-0", nil)
 				githubMock.EXPECT().GetLatestCommit(ctx).
@@ -76,7 +76,7 @@ func TestMonitor_Check(t *testing.T) {
 				githubMock *mocks.MockGitHub,
 				langMock *mocks.MockLangProvider,
 				storageMock *mocks.MockMonitorStorage,
-				task *mocks.MockMonitorTask,
+				task *mocks.MockOnUpdateTask,
 			) {
 				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("DT-0", nil)
 				githubMock.EXPECT().GetLatestCommit(ctx).
@@ -101,7 +101,7 @@ func TestMonitor_Check(t *testing.T) {
 				githubMock *mocks.MockGitHub,
 				langMock *mocks.MockLangProvider,
 				storageMock *mocks.MockMonitorStorage,
-				task *mocks.MockMonitorTask,
+				task *mocks.MockOnUpdateTask,
 			) {
 				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("DT-0", nil)
 				githubMock.EXPECT().GetLatestCommit(ctx).
@@ -129,7 +129,7 @@ func TestMonitor_Check(t *testing.T) {
 			githubMock := mocks.NewMockGitHub(ctrl)
 			langMock := mocks.NewMockLangProvider(ctrl)
 			storageMock := mocks.NewMockMonitorStorage(ctrl)
-			task := mocks.NewMockMonitorTask(ctrl)
+			task := mocks.NewMockOnUpdateTask(ctrl)
 
 			tc.initMocks(ctx, githubMock, langMock, storageMock, task)
 

@@ -360,32 +360,32 @@ func (c *MockMonitorStorageWriteLastRepoUpdatedAtCall) DoAndReturn(f func(string
 	return c
 }
 
-// MockMonitorTask is a mock of MonitorTask interface.
-type MockMonitorTask struct {
+// MockOnUpdateTask is a mock of OnUpdateTask interface.
+type MockOnUpdateTask struct {
 	ctrl     *gomock.Controller
-	recorder *MockMonitorTaskMockRecorder
+	recorder *MockOnUpdateTaskMockRecorder
 	isgomock struct{}
 }
 
-// MockMonitorTaskMockRecorder is the mock recorder for MockMonitorTask.
-type MockMonitorTaskMockRecorder struct {
-	mock *MockMonitorTask
+// MockOnUpdateTaskMockRecorder is the mock recorder for MockOnUpdateTask.
+type MockOnUpdateTaskMockRecorder struct {
+	mock *MockOnUpdateTask
 }
 
-// NewMockMonitorTask creates a new mock instance.
-func NewMockMonitorTask(ctrl *gomock.Controller) *MockMonitorTask {
-	mock := &MockMonitorTask{ctrl: ctrl}
-	mock.recorder = &MockMonitorTaskMockRecorder{mock}
+// NewMockOnUpdateTask creates a new mock instance.
+func NewMockOnUpdateTask(ctrl *gomock.Controller) *MockOnUpdateTask {
+	mock := &MockOnUpdateTask{ctrl: ctrl}
+	mock.recorder = &MockOnUpdateTaskMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockMonitorTask) EXPECT() *MockMonitorTaskMockRecorder {
+func (m *MockOnUpdateTask) EXPECT() *MockOnUpdateTaskMockRecorder {
 	return m.recorder
 }
 
 // OnUpdate mocks base method.
-func (m *MockMonitorTask) OnUpdate(ctx context.Context, repoUpdated bool, prUpdatedLangCodes []string) error {
+func (m *MockOnUpdateTask) OnUpdate(ctx context.Context, repoUpdated bool, prUpdatedLangCodes []string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "OnUpdate", ctx, repoUpdated, prUpdatedLangCodes)
 	ret0, _ := ret[0].(error)
@@ -393,31 +393,31 @@ func (m *MockMonitorTask) OnUpdate(ctx context.Context, repoUpdated bool, prUpda
 }
 
 // OnUpdate indicates an expected call of OnUpdate.
-func (mr *MockMonitorTaskMockRecorder) OnUpdate(ctx, repoUpdated, prUpdatedLangCodes any) *MockMonitorTaskOnUpdateCall {
+func (mr *MockOnUpdateTaskMockRecorder) OnUpdate(ctx, repoUpdated, prUpdatedLangCodes any) *MockOnUpdateTaskOnUpdateCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnUpdate", reflect.TypeOf((*MockMonitorTask)(nil).OnUpdate), ctx, repoUpdated, prUpdatedLangCodes)
-	return &MockMonitorTaskOnUpdateCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnUpdate", reflect.TypeOf((*MockOnUpdateTask)(nil).OnUpdate), ctx, repoUpdated, prUpdatedLangCodes)
+	return &MockOnUpdateTaskOnUpdateCall{Call: call}
 }
 
-// MockMonitorTaskOnUpdateCall wrap *gomock.Call
-type MockMonitorTaskOnUpdateCall struct {
+// MockOnUpdateTaskOnUpdateCall wrap *gomock.Call
+type MockOnUpdateTaskOnUpdateCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockMonitorTaskOnUpdateCall) Return(arg0 error) *MockMonitorTaskOnUpdateCall {
+func (c *MockOnUpdateTaskOnUpdateCall) Return(arg0 error) *MockOnUpdateTaskOnUpdateCall {
 	c.Call = c.Call.Return(arg0)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockMonitorTaskOnUpdateCall) Do(f func(context.Context, bool, []string) error) *MockMonitorTaskOnUpdateCall {
+func (c *MockOnUpdateTaskOnUpdateCall) Do(f func(context.Context, bool, []string) error) *MockOnUpdateTaskOnUpdateCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockMonitorTaskOnUpdateCall) DoAndReturn(f func(context.Context, bool, []string) error) *MockMonitorTaskOnUpdateCall {
+func (c *MockOnUpdateTaskOnUpdateCall) DoAndReturn(f func(context.Context, bool, []string) error) *MockOnUpdateTaskOnUpdateCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
