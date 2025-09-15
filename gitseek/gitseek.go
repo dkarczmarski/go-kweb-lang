@@ -104,7 +104,7 @@ func (gs *GitSeek) CheckFiles(ctx context.Context, langRelPaths []string, langCo
 	langRelPathsLen := len(langRelPaths)
 
 	for i, langRelPath := range langRelPaths {
-		log.Printf("[%v][%v/%v] checking for updates for %v", langCode, i, langRelPathsLen, langRelPath)
+		log.Printf("[gitseek][%s][%d/%d] checking for updates for %v", langCode, i+1, langRelPathsLen, langRelPath)
 
 		fileInfo, err := gs.checkFileCached(ctx, langRelPath, langCode)
 		if err != nil {
@@ -236,7 +236,7 @@ func checkFileToInvalidate(fullPath string) (bool, string, string) {
 }
 
 func (gs *GitSeek) invalidateRelPath(langCode, relPath string) error {
-	log.Printf("init gitseek cache invalidation for (%s)%s", langCode, relPath)
+	log.Printf("[gitseek] init gitseek cache invalidation for (%s)%s", langCode, relPath)
 
 	var dirsToInvalidate []string
 	if langCode == "en" {
@@ -252,7 +252,7 @@ func (gs *GitSeek) invalidateRelPath(langCode, relPath string) error {
 	}
 
 	for _, langCodeDir := range dirsToInvalidate {
-		log.Printf("invalidate gitseek cache for: (%s)%s", langCodeDir, relPath)
+		log.Printf("[gitseek] invalidate gitseek cache for: (%s)%s", langCodeDir, relPath)
 
 		bucket := fileInfoCacheBucket(langCodeDir)
 		if err := gs.cacheStore.Delete(bucket, relPath); err != nil {

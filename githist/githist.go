@@ -162,7 +162,7 @@ func (gh *GitHist) PullRefresh(ctx context.Context) error {
 		return fmt.Errorf("error while getting the last main branch commit: %w", err)
 	}
 
-	log.Printf("the last main branch commit is: %v", lastMainCommit)
+	log.Printf("[githist] the last main branch commit is: %v", lastMainCommit)
 
 	if err := gh.gitRepo.Fetch(ctx); err != nil {
 		return fmt.Errorf("git fetch error: %w", err)
@@ -188,7 +188,7 @@ func (gh *GitHist) PullRefresh(ctx context.Context) error {
 
 	invalidated := make(map[string]int)
 	for i, fc := range freshCommits {
-		log.Printf("[%d/%d] process fresh commit: %s", i, len(freshCommits), &fc)
+		log.Printf("[githist][%d/%d] process fresh commit: %s", i+1, len(freshCommits), &fc)
 
 		commitFiles, err := gh.gitRepo.ListFilesInCommit(ctx, fc.CommitID)
 		if err != nil {
@@ -205,16 +205,16 @@ func (gh *GitHist) PullRefresh(ctx context.Context) error {
 
 			filesToInvalidate = mergeCommitFiles
 
-			log.Printf("[%d/%d] files in the merge commit: %s", i, len(freshCommits), mergeCommitFiles)
+			log.Printf("[githist][%d/%d] files in the merge commit: %s", i+1, len(freshCommits), mergeCommitFiles)
 		} else {
 			filesToInvalidate = commitFiles
 
-			log.Printf("[%d/%d] files in the commit: %s", i, len(freshCommits), commitFiles)
+			log.Printf("[githist][%d/%d] files in the commit: %s", i+1, len(freshCommits), commitFiles)
 		}
 
 		for _, file := range filesToInvalidate {
 			if invalidatedAt, isInvalidated := invalidated[file]; !isInvalidated {
-				log.Printf("[%d/%d] invalidate file %s", i, len(freshCommits), file)
+				log.Printf("[githist][%d/%d] invalidate file %s", i+1, len(freshCommits), file)
 
 				if gh.invalidator != nil {
 					if err := gh.invalidator.InvalidateFile(file); err != nil {
@@ -224,8 +224,8 @@ func (gh *GitHist) PullRefresh(ctx context.Context) error {
 
 				invalidated[file] = i
 			} else {
-				log.Printf("[%d/%d] invalidate file %s - (skip) already done at %d",
-					i, len(freshCommits), file, invalidatedAt)
+				log.Printf("[githist][%d/%d] invalidate file %s - (skip) already done at %d",
+					i+1, len(freshCommits), file, invalidatedAt)
 			}
 		}
 	}

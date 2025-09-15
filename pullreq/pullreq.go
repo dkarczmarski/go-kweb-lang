@@ -125,13 +125,13 @@ func (p *FilePRFinder) fetchPRCommits(ctx context.Context, langCode string, pr g
 			isInvalid := cachedPrCommits.UpdatedAt != pr.UpdatedAt
 
 			if isInvalid {
-				log.Printf("PR #%v hit cache but is out of date: %v", pr.Number, cachedPrCommits.UpdatedAt)
+				log.Printf("[pullreq] PR #%v hit cache but is out of date: %v", pr.Number, cachedPrCommits.UpdatedAt)
 			}
 
 			return isInvalid
 		},
 		func(ctx context.Context) (PRCommits, error) {
-			log.Printf("fetching commit list for PR #%v", pr.Number)
+			log.Printf("[pullreq] fetching commit list for PR #%v", pr.Number)
 
 			commitIds, err := p.gitHub.GetPRCommits(ctx, pr.Number)
 			if err != nil {
@@ -189,7 +189,7 @@ func (p *FilePRFinder) convertToFilePRs(prsFiles map[int][]string) map[string][]
 
 // Update updates the file-to-PR index for the given langCode.
 func (p *FilePRFinder) Update(ctx context.Context, langCode string) error {
-	log.Printf("[%v] updating the index of PR files", langCode)
+	log.Printf("[pullreq][%v] updating the index of PR files", langCode)
 
 	prs, err := p.fetchLangOpenedPRs(ctx, langCode)
 	if err != nil {
@@ -197,15 +197,15 @@ func (p *FilePRFinder) Update(ctx context.Context, langCode string) error {
 	}
 
 	prsLen := len(prs)
-	log.Printf("[%v] fetched a PR list of size %v", langCode, prsLen)
+	log.Printf("[pullreq][%v] fetched a PR list of size %v", langCode, prsLen)
 
 	prsFiles := make(map[int][]string)
 	for prIndex, pr := range prs {
-		log.Printf("[%v][%v/%v] fetched info for PR #%v. updated at: %v",
-			langCode, prIndex, prsLen, pr.Number, pr.UpdatedAt)
+		log.Printf("[pullreq][%s][%d/%d] fetched info for PR #%v. updated at: %v",
+			langCode, prIndex+1, prsLen, pr.Number, pr.UpdatedAt)
 
-		log.Printf("[%v][%v/%v] getting commit ids for PR #%v",
-			langCode, prIndex, prsLen, pr.Number)
+		log.Printf("[pullreq][%s][%d/%d] getting commit ids for PR #%v",
+			langCode, prIndex+1, prsLen, pr.Number)
 
 		commitIds, err := p.fetchPRCommits(ctx, langCode, pr)
 		if err != nil {
@@ -214,20 +214,20 @@ func (p *FilePRFinder) Update(ctx context.Context, langCode string) error {
 
 		commitIdsLen := len(commitIds)
 
-		log.Printf("[%v][%v/%v] for PR #%v got commit list of size %v",
-			langCode, prIndex, prsLen, pr.Number, commitIdsLen)
+		log.Printf("[pullreq][%s][%d/%d] for PR #%v got commit list of size %v",
+			langCode, prIndex+1, prsLen, pr.Number, commitIdsLen)
 
 		for commitIndex, commitID := range commitIds {
-			log.Printf("[%v][%v/%v][%v/%v] getting file list for commit: %v",
-				langCode, prIndex, prsLen, commitIndex, commitIdsLen, commitID)
+			log.Printf("[pullreq][%s][%d/%d][%d/%d] getting file list for commit: %v",
+				langCode, prIndex+1, prsLen, commitIndex+1, commitIdsLen, commitID)
 
 			commitFiles, err := p.fetchCommitFiles(ctx, langCode, commitID)
 			if err != nil {
 				return fmt.Errorf("error while getting files for commit id %v: %w", commitID, err)
 			}
 
-			log.Printf("[%v][%v/%v][%v/%v] for commit %v got file list of size %v",
-				langCode, prIndex, prsLen, commitIndex, commitIdsLen, commitID, len(commitFiles.Files))
+			log.Printf("[pullreq][%s][%d/%d][%d/%d] for commit %v got file list of size %v",
+				langCode, prIndex+1, prsLen, commitIndex+1, commitIdsLen, commitID, len(commitFiles.Files))
 
 			prsFiles[pr.Number] = append(prsFiles[pr.Number], commitFiles.Files...)
 		}

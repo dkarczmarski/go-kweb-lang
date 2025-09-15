@@ -165,8 +165,8 @@ func (mon *Monitor) RetryCheck(
 				return fmt.Errorf("failed to check GitHub for updates: %w", err)
 			}
 
-			log.Printf("failed to check for GitHub updates: %v", err)
-			log.Printf("retrying in %s...", retryDelay)
+			log.Printf("[githubmon] failed to check for GitHub updates: %v", err)
+			log.Printf("[githubmon] retrying in %s...", retryDelay)
 
 			timer := time.NewTimer(retryDelay)
 			select {
@@ -219,7 +219,7 @@ func (mon *Monitor) Check(
 }
 
 func (mon *Monitor) isRepoUpdated(ctx context.Context) (bool, error) {
-	log.Printf("checking for git repo changes")
+	log.Printf("[githubmon] checking for git repo changes")
 
 	lastUpdatedAt, err := mon.storage.ReadLastRepoUpdatedAt()
 	if err != nil {
@@ -234,16 +234,16 @@ func (mon *Monitor) isRepoUpdated(ctx context.Context) (bool, error) {
 	isUpdated := len(lastUpdatedAt) == 0 || lastUpdatedAt != currentUpdatedAt
 
 	if isUpdated {
-		log.Printf("repo updated: lastUpdatedAt=%q -> currentUpdatedAt=%q", lastUpdatedAt, currentUpdatedAt)
+		log.Printf("[githubmon] repo updated (lastUpdatedAt=%q -> currentUpdatedAt=%q)", lastUpdatedAt, currentUpdatedAt)
 
 		if err := mon.storage.WriteLastRepoUpdatedAt(currentUpdatedAt); err != nil {
 			return false, err
 		}
 	} else {
-		log.Printf("repo not updated (lastUpdatedAt=%q)", lastUpdatedAt)
+		log.Printf("[githubmon] repo not updated since %s", lastUpdatedAt)
 	}
 
-	log.Printf("finished checking for git repo changes (isUpdated=%v)", isUpdated)
+	log.Printf("[githubmon] finished checking for git repo changes (isUpdated=%v)", isUpdated)
 
 	return isUpdated, nil
 }
@@ -271,19 +271,19 @@ func (mon *Monitor) isPRUpdated(ctx context.Context, langCode string) (bool, err
 	isUpdated := len(currentUpdatedAt) > 0 && (len(lastUpdatedAt) == 0 || lastUpdatedAt != currentUpdatedAt)
 
 	if isUpdated {
-		log.Printf("pull requests: [%s] updated at %s", langCode, currentUpdatedAt)
+		log.Printf("[githubmon][%s] PR updated at %s", langCode, currentUpdatedAt)
 		if err := mon.storage.WriteLastPRUpdatedAt(langCode, currentUpdatedAt); err != nil {
 			return false, err
 		}
 	} else {
-		log.Printf("pull requests: [%s] no updates since %s", langCode, lastUpdatedAt)
+		log.Printf("[githubmon][%s] no PR updates since %s", langCode, lastUpdatedAt)
 	}
 
 	return isUpdated, nil
 }
 
 func (mon *Monitor) prUpdatedLangCodes(ctx context.Context) ([]string, error) {
-	log.Printf("checking for PR changes")
+	log.Printf("[githubmon] checking for PR changes")
 
 	langCodes, err := mon.langProvider.LangCodes()
 	if err != nil {
@@ -304,9 +304,9 @@ func (mon *Monitor) prUpdatedLangCodes(ctx context.Context) ([]string, error) {
 	}
 
 	if len(updatedLangCodes) > 0 {
-		log.Printf("finished checking for PR changes. changes: %v", updatedLangCodes)
+		log.Printf("[githubmon] finished checking for PR changes. changes: %v", updatedLangCodes)
 	} else {
-		log.Printf("finished checking for PR changes. no changes")
+		log.Printf("[githubmon] finished checking for PR changes. no changes")
 	}
 
 	return updatedLangCodes, nil

@@ -314,6 +314,8 @@ func (gh *GitHub) httpGetWithRetry(ctx context.Context, urlStr string) (*http.Re
 
 		var terr *retryErr
 		if errors.As(err, &terr) {
+			log.Printf("connection error: %+v", terr)
+
 			if len(terr.retryAfterStr) > 0 {
 				if seconds, err := strconv.Atoi(terr.retryAfterStr); err == nil {
 					log.Printf("received http code %d with Retry-After header. wait for %d seconds",
@@ -322,13 +324,14 @@ func (gh *GitHub) httpGetWithRetry(ctx context.Context, urlStr string) (*http.Re
 						return nil, err
 					}
 				}
-			} else if len(terr.remainingStr) > 0 && len(terr.resetStr) > 0 {
-				remaining, _ := strconv.Atoi(terr.remainingStr)
+			} else if len(terr.resetStr) > 0 {
 				resetUnix, _ := strconv.ParseInt(terr.resetStr, 10, 64)
 
-				if remaining == 0 && resetUnix > 0 {
+				if resetUnix > 0 {
 					resetTime := time.Unix(resetUnix, 0)
 					wait := time.Until(resetTime)
+					wait += 3 * time.Second // increase it a bit
+
 					if wait > 0 {
 						log.Printf("received http code %d with X-RateLimit-Reset header. wait for %v seconds until reset at %v",
 							terr.statusCode, wait.Seconds(), resetTime)
@@ -338,7 +341,7 @@ func (gh *GitHub) httpGetWithRetry(ctx context.Context, urlStr string) (*http.Re
 					}
 				}
 			} else {
-				log.Printf("wait for 1 minute. connection error: %v", err)
+				log.Printf("wait for 1 minute")
 				if err := sleepCtx(ctx, time.Minute); err != nil {
 					return nil, err
 				}
@@ -418,6 +421,16 @@ func isRateLimitError(resp *http.Response, body []byte) (bool, error) {
 		if len(body) > 0 && bytes.Contains(body, []byte("rate limit exceeded")) {
 			return true, &retryErr{
 				err:           errors.New("API rate limit exceeded"),
+				statusCode:    resp.StatusCode,
+				remainingStr:  remainingStr,
+				resetStr:      resetStr,
+				retryAfterStr: retryAfterStr,
+			}
+		}
+
+		if len(body) > 0 && bytes.Contains(body, []byte("secondary rate limit")) {
+			return true, &retryErr{
+				err:           errors.New("secondary API rate limit exceeded"),
 				statusCode:    resp.StatusCode,
 				remainingStr:  remainingStr,
 				resetStr:      resetStr,
