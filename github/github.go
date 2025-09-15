@@ -394,8 +394,7 @@ func (gh *GitHub) httpGet(ctx context.Context, urlStr string) (*http.Response, e
 			return nil, err
 		}
 
-		return nil, fmt.Errorf("error while reading response: %w\nstatus: %s\nbody: %s",
-			err, resp.Status, string(body))
+		return nil, fmt.Errorf("error while reading response.\nstatus: %s\nbody: %s", resp.Status, string(body))
 	}
 
 	return resp, err
