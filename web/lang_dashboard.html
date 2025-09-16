@@ -139,7 +139,11 @@
     <tr>
         <td>
             <span class="text-nowrap">
+                {{ if eq .Status "waiting-for-review" }}
+                {{ .LangRelPath.Text }}
+                {{ else }}
                 <a href="{{ .LangRelPath.URL }}">{{ .LangRelPath.Text }}</a>
+                {{ end }}
                 <a href="{{ .LangFilenameLink.URL }}" class="invisible-link">&nbsp;#&nbsp;</a>
             </span>
             <br/>
@@ -147,7 +151,9 @@
             Merge Commit: {{ truncate .LangMergeCommit.DateTime 10 }}
             <br/>
             {{ end }}
+            {{ if .LangLastCommit.DateTime }}
             Last Commit: {{ truncate .LangLastCommit.DateTime 10 }}
+            {{ end }}
             {{ if .LangForkCommit }}
             <br/>
             Fork Commit: {{ truncate .LangForkCommit.DateTime 10 }}
