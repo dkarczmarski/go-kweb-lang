@@ -89,7 +89,7 @@ func TestMonitor_Check(t *testing.T) {
 				githubMock.EXPECT().PRSearch(ctx, github.PRSearchFilter{LangCode: "pl"}, gomock.Any()).
 					Return(&github.PRSearchResult{Items: []github.PRItem{{Number: 1, UpdatedAt: "PL-U1"}}}, nil)
 
-				task.EXPECT().OnUpdate(ctx, true, nil).Return(nil)
+				task.EXPECT().OnUpdate(ctx, true, []string{}).Return(nil)
 			},
 			checkErr: func(err error) bool {
 				return err == nil

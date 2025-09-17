@@ -385,17 +385,17 @@ func (m *MockOnUpdateTask) EXPECT() *MockOnUpdateTaskMockRecorder {
 }
 
 // OnUpdate mocks base method.
-func (m *MockOnUpdateTask) OnUpdate(ctx context.Context, repoUpdated bool, prUpdatedLangCodes []string) error {
+func (m *MockOnUpdateTask) OnUpdate(ctx context.Context, repoUpdated bool, changedLangCodesInPR []string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "OnUpdate", ctx, repoUpdated, prUpdatedLangCodes)
+	ret := m.ctrl.Call(m, "OnUpdate", ctx, repoUpdated, changedLangCodesInPR)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // OnUpdate indicates an expected call of OnUpdate.
-func (mr *MockOnUpdateTaskMockRecorder) OnUpdate(ctx, repoUpdated, prUpdatedLangCodes any) *MockOnUpdateTaskOnUpdateCall {
+func (mr *MockOnUpdateTaskMockRecorder) OnUpdate(ctx, repoUpdated, changedLangCodesInPR any) *MockOnUpdateTaskOnUpdateCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnUpdate", reflect.TypeOf((*MockOnUpdateTask)(nil).OnUpdate), ctx, repoUpdated, prUpdatedLangCodes)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnUpdate", reflect.TypeOf((*MockOnUpdateTask)(nil).OnUpdate), ctx, repoUpdated, changedLangCodesInPR)
 	return &MockOnUpdateTaskOnUpdateCall{Call: call}
 }
 

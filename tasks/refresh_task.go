@@ -24,14 +24,14 @@ func NewRefreshTask(
 	}
 }
 
-func (t *RefreshTask) OnUpdate(ctx context.Context, repoUpdated bool, prUpdatedLangCodes []string) error {
+func (t *RefreshTask) OnUpdate(ctx context.Context, repoUpdated bool, changedLangCodesInPR []string) error {
 	if repoUpdated {
 		if err := t.refreshRepoTask.Run(ctx); err != nil {
 			return err
 		}
 	}
 
-	for _, langCode := range prUpdatedLangCodes {
+	for _, langCode := range changedLangCodesInPR {
 		if err := t.refreshPRTask.Run(ctx, langCode); err != nil {
 			return err
 		}
