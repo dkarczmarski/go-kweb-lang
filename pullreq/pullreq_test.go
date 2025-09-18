@@ -193,13 +193,21 @@ func TestFilePRFinder_Update(t *testing.T) {
 					AnyTimes().
 					Return(nil)
 
-				gitHubMock.EXPECT().GetCommitFiles(ctx, "C1").Return(&github.CommitFiles{Files: []string{"F1"}}, nil)
-				gitHubMock.EXPECT().GetCommitFiles(ctx, "C2").Return(&github.CommitFiles{Files: []string{"F2", "F3"}}, nil)
-				gitHubMock.EXPECT().GetCommitFiles(ctx, "C3").Return(&github.CommitFiles{Files: []string{"F1", "F4"}}, nil)
-				gitHubMock.EXPECT().GetCommitFiles(ctx, "C4").Return(&github.CommitFiles{Files: []string{"F5"}}, nil)
+				gitHubMock.EXPECT().GetCommitFiles(ctx, "C1").
+					Return(&github.CommitFiles{Files: []string{"content/pl/F1"}}, nil)
+				gitHubMock.EXPECT().GetCommitFiles(ctx, "C2").
+					Return(&github.CommitFiles{Files: []string{"content/pl/F2", "content/pl/F3"}}, nil)
+				gitHubMock.EXPECT().GetCommitFiles(ctx, "C3").
+					Return(&github.CommitFiles{Files: []string{"content/pl/F1", "content/pl/F4"}}, nil)
+				gitHubMock.EXPECT().GetCommitFiles(ctx, "C4").
+					Return(&github.CommitFiles{Files: []string{"content/pl/F5"}}, nil)
 
 				storageMock.EXPECT().StoreLangIndex(langCode, map[string][]int{
-					"F1": {14, 12}, "F2": {14}, "F3": {14}, "F4": {14}, "F5": {15},
+					"content/pl/F1": {14, 12},
+					"content/pl/F2": {14},
+					"content/pl/F3": {14},
+					"content/pl/F4": {14},
+					"content/pl/F5": {15},
 				}).Return(nil)
 			},
 		},
@@ -307,7 +315,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 						true,
 						&github.CommitFiles{
 							CommitID: "C1",
-							Files:    []string{"F1"},
+							Files:    []string{"content/pl/F1"},
 						}, nil))
 
 				cacheStore.EXPECT().
@@ -326,7 +334,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 						true,
 						&github.CommitFiles{
 							CommitID: "C2",
-							Files:    []string{"F2", "F3"},
+							Files:    []string{"content/pl/F2", "content/pl/F3"},
 						}, nil))
 				cacheStore.EXPECT().
 					Read("lang/pl/pr-commit-files", "C3", gomock.Any()).
@@ -334,7 +342,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 						true,
 						&github.CommitFiles{
 							CommitID: "C3",
-							Files:    []string{"F1", "F4"},
+							Files:    []string{"content/pl/F1", "content/pl/F4"},
 						}, nil))
 
 				cacheStore.EXPECT().
@@ -353,11 +361,15 @@ func TestFilePRFinder_Update(t *testing.T) {
 						true,
 						&github.CommitFiles{
 							CommitID: "C4",
-							Files:    []string{"F5"},
+							Files:    []string{"content/pl/F5"},
 						}, nil))
 
 				storageMock.EXPECT().StoreLangIndex(langCode, map[string][]int{
-					"F1": {14, 12}, "F2": {14}, "F3": {14}, "F4": {14}, "F5": {15},
+					"content/pl/F1": {14, 12},
+					"content/pl/F2": {14},
+					"content/pl/F3": {14},
+					"content/pl/F4": {14},
+					"content/pl/F5": {15},
 				}).Return(nil)
 			},
 		},
@@ -467,7 +479,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 						true,
 						&github.CommitFiles{
 							CommitID: "C1",
-							Files:    []string{"F1"},
+							Files:    []string{"content/pl/F1"},
 						}, nil))
 
 				cacheStore.EXPECT().
@@ -486,7 +498,7 @@ func TestFilePRFinder_Update(t *testing.T) {
 						true,
 						&github.CommitFiles{
 							CommitID: "C2",
-							Files:    []string{"F2", "F3"},
+							Files:    []string{"content/pl/F2", "content/pl/F3"},
 						}, nil))
 
 				cacheStore.EXPECT().
@@ -517,10 +529,11 @@ func TestFilePRFinder_Update(t *testing.T) {
 						true,
 						&github.CommitFiles{
 							CommitID: "C3",
-							Files:    []string{"F1", "F4"},
+							Files:    []string{"content/pl/F1", "content/pl/F4"},
 						}, nil))
 
-				gitHubMock.EXPECT().GetCommitFiles(ctx, "C5").Return(&github.CommitFiles{Files: []string{"F5", "F6"}}, nil)
+				gitHubMock.EXPECT().GetCommitFiles(ctx, "C5").
+					Return(&github.CommitFiles{Files: []string{"content/pl/F5", "content/pl/F6"}}, nil)
 
 				cacheStore.EXPECT().
 					Write(
@@ -530,7 +543,95 @@ func TestFilePRFinder_Update(t *testing.T) {
 					).Return(nil)
 
 				storageMock.EXPECT().StoreLangIndex(langCode, map[string][]int{
-					"F1": {14, 12}, "F2": {14}, "F3": {14}, "F4": {14}, "F5": {15}, "F6": {15},
+					"content/pl/F1": {14, 12},
+					"content/pl/F2": {14},
+					"content/pl/F3": {14},
+					"content/pl/F4": {14},
+					"content/pl/F5": {15},
+					"content/pl/F6": {15},
+				}).Return(nil)
+			},
+		},
+		{
+			name: "filters out files outside content/<langCode>",
+			init: func(
+				cacheDir string,
+				gitHubMock *mocks.MockGitHub,
+				cacheStore *mocks.MockCacheStore,
+				storageMock *mocks.MockFilePRFinderStorage,
+			) {
+				gitHubMock.EXPECT().
+					PRSearch(
+						ctx,
+						github.PRSearchFilter{
+							LangCode:    langCode,
+							UpdatedFrom: "",
+							OnlyOpen:    true,
+						},
+						github.PageRequest{
+							Sort:    "updated",
+							Order:   "asc",
+							PerPage: 2,
+						},
+					).
+					Return(
+						&github.PRSearchResult{
+							Items: []github.PRItem{
+								{Number: 12, UpdatedAt: "D001"},
+							},
+							TotalCount: 1,
+						},
+						nil,
+					).Times(1)
+
+				gitHubMock.EXPECT().
+					PRSearch(
+						ctx,
+						github.PRSearchFilter{
+							LangCode:    langCode,
+							UpdatedFrom: "D001",
+							OnlyOpen:    true,
+						},
+						github.PageRequest{
+							Sort:    "updated",
+							Order:   "asc",
+							PerPage: 2,
+						},
+					).
+					Return(
+						&github.PRSearchResult{
+							Items:      []github.PRItem{},
+							TotalCount: 1,
+						},
+						nil,
+					).Times(1)
+
+				gitHubMock.EXPECT().GetPRCommits(ctx, 12).Return([]string{"C1"}, nil)
+
+				cacheStore.EXPECT().
+					Read(gomock.Any(), gomock.Any(), gomock.Any()).
+					AnyTimes().
+					DoAndReturn(storetests.MockReadNotFound())
+
+				cacheStore.EXPECT().
+					Write(gomock.Any(), gomock.Any(), gomock.Any()).
+					AnyTimes().
+					Return(nil)
+
+				gitHubMock.EXPECT().
+					GetCommitFiles(ctx, "C1").
+					Return(&github.CommitFiles{
+						Files: []string{
+							"content/pl/OK.md",
+							"content/en/SHOULD_IGNORE.md",
+							"README.md",
+							"content/pl/sub/file.txt",
+						},
+					}, nil)
+
+				storageMock.EXPECT().StoreLangIndex(langCode, map[string][]int{
+					"content/pl/OK.md":        {12},
+					"content/pl/sub/file.txt": {12},
 				}).Return(nil)
 			},
 		},

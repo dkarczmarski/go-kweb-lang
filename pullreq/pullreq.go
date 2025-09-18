@@ -7,8 +7,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 
 	"go-kweb-lang/github"
 	"go-kweb-lang/proxycache"
@@ -168,12 +170,12 @@ func (p *FilePRFinder) fetchCommitFiles(
 	)
 }
 
-func (p *FilePRFinder) convertToFilePRs(prsFiles map[int][]string) map[string][]int {
+func (p *FilePRFinder) convertToFilePRs(prsFiles map[int][]string, obligatoryPathPrefix string) map[string][]int {
 	filePRs := make(map[string][]int)
 
 	for pr, files := range prsFiles {
 		for _, file := range files {
-			if !slices.Contains(filePRs[file], pr) {
+			if !slices.Contains(filePRs[file], pr) && strings.HasPrefix(file, obligatoryPathPrefix) {
 				filePRs[file] = append(filePRs[file], pr)
 			}
 		}
@@ -233,7 +235,8 @@ func (p *FilePRFinder) Update(ctx context.Context, langCode string) error {
 		}
 	}
 
-	filePRs := p.convertToFilePRs(prsFiles)
+	obligatoryPathPrefix := filepath.Join("content", langCode)
+	filePRs := p.convertToFilePRs(prsFiles, obligatoryPathPrefix)
 
 	if err := p.storage.StoreLangIndex(langCode, filePRs); err != nil {
 		return fmt.Errorf("error while storing %v index: %w", langCode, err)
