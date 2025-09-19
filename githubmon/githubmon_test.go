@@ -35,6 +35,12 @@ func TestMonitor_Check(t *testing.T) {
 					Return(&github.CommitInfo{CommitID: "C-ID-1", DateTime: "DT-1"}, nil)
 				storageMock.EXPECT().WriteLastRepoUpdatedAt("DT-1").Return(nil)
 
+				storageMock.EXPECT().ReadLastPRUpdatedAt().Return("", nil)
+				// some change in PR
+				githubMock.EXPECT().PRSearch(ctx, github.PRSearchFilter{}, gomock.Any()).
+					Return(&github.PRSearchResult{Items: []github.PRItem{{Number: 111, UpdatedAt: "U111"}}}, nil)
+				storageMock.EXPECT().WriteLastPRUpdatedAt("U111")
+
 				langMock.EXPECT().LangCodes().Return([]string{"pl"}, nil)
 
 				storageMock.EXPECT().ReadLastLangPRUpdatedAt("pl").Return("", nil)
@@ -60,6 +66,12 @@ func TestMonitor_Check(t *testing.T) {
 				githubMock.EXPECT().GetLatestCommit(ctx).
 					Return(&github.CommitInfo{CommitID: "C-ID-1", DateTime: "DT-0"}, nil)
 
+				storageMock.EXPECT().ReadLastPRUpdatedAt().Return("", nil)
+				// some change in PR
+				githubMock.EXPECT().PRSearch(ctx, github.PRSearchFilter{}, gomock.Any()).
+					Return(&github.PRSearchResult{Items: []github.PRItem{{Number: 111, UpdatedAt: "U111"}}}, nil)
+				storageMock.EXPECT().WriteLastPRUpdatedAt("U111")
+
 				langMock.EXPECT().LangCodes().Return([]string{"pl"}, nil)
 
 				storageMock.EXPECT().ReadLastLangPRUpdatedAt("pl").Return("PL-U1", nil)
@@ -82,6 +94,12 @@ func TestMonitor_Check(t *testing.T) {
 				githubMock.EXPECT().GetLatestCommit(ctx).
 					Return(&github.CommitInfo{CommitID: "C-ID-1", DateTime: "DT-1"}, nil)
 				storageMock.EXPECT().WriteLastRepoUpdatedAt("DT-1").Return(nil)
+
+				storageMock.EXPECT().ReadLastPRUpdatedAt().Return("", nil)
+				// some change in PR
+				githubMock.EXPECT().PRSearch(ctx, github.PRSearchFilter{}, gomock.Any()).
+					Return(&github.PRSearchResult{Items: []github.PRItem{{Number: 111, UpdatedAt: "U111"}}}, nil)
+				storageMock.EXPECT().WriteLastPRUpdatedAt("U111")
 
 				langMock.EXPECT().LangCodes().Return([]string{"pl"}, nil)
 
@@ -107,6 +125,12 @@ func TestMonitor_Check(t *testing.T) {
 				githubMock.EXPECT().GetLatestCommit(ctx).
 					Return(&github.CommitInfo{CommitID: "C-ID-1", DateTime: "DT-0"}, nil)
 
+				storageMock.EXPECT().ReadLastPRUpdatedAt().Return("", nil)
+				// some change in PR
+				githubMock.EXPECT().PRSearch(ctx, github.PRSearchFilter{}, gomock.Any()).
+					Return(&github.PRSearchResult{Items: []github.PRItem{{Number: 111, UpdatedAt: "U111"}}}, nil)
+				storageMock.EXPECT().WriteLastPRUpdatedAt("U111")
+
 				langMock.EXPECT().LangCodes().Return([]string{"pl"}, nil)
 
 				storageMock.EXPECT().ReadLastLangPRUpdatedAt("pl").Return("PL-U1", nil)
@@ -115,6 +139,26 @@ func TestMonitor_Check(t *testing.T) {
 				storageMock.EXPECT().WriteLastLangPRUpdatedAt("pl", "PL-U2")
 
 				task.EXPECT().OnUpdate(ctx, false, []string{"pl"}).Return(nil)
+			},
+			checkErr: func(err error) bool {
+				return err == nil
+			},
+		},
+		{
+			name: "pre-check: PR unchanged so no language scan and no writes",
+			initMocks: func(ctx context.Context,
+				githubMock *mocks.MockGitHub,
+				langMock *mocks.MockLangProvider,
+				storageMock *mocks.MockMonitorStorage,
+				task *mocks.MockOnUpdateTask,
+			) {
+				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("DT-0", nil)
+				githubMock.EXPECT().GetLatestCommit(ctx).
+					Return(&github.CommitInfo{CommitID: "C-ID-1", DateTime: "DT-0"}, nil)
+
+				storageMock.EXPECT().ReadLastPRUpdatedAt().Return("U111", nil)
+				githubMock.EXPECT().PRSearch(ctx, github.PRSearchFilter{}, gomock.Any()).
+					Return(&github.PRSearchResult{Items: []github.PRItem{{Number: 111, UpdatedAt: "U111"}}}, nil)
 			},
 			checkErr: func(err error) bool {
 				return err == nil

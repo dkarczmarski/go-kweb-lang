@@ -245,6 +245,45 @@ func (c *MockMonitorStorageReadLastLangPRUpdatedAtCall) DoAndReturn(f func(strin
 	return c
 }
 
+// ReadLastPRUpdatedAt mocks base method.
+func (m *MockMonitorStorage) ReadLastPRUpdatedAt() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadLastPRUpdatedAt")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadLastPRUpdatedAt indicates an expected call of ReadLastPRUpdatedAt.
+func (mr *MockMonitorStorageMockRecorder) ReadLastPRUpdatedAt() *MockMonitorStorageReadLastPRUpdatedAtCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadLastPRUpdatedAt", reflect.TypeOf((*MockMonitorStorage)(nil).ReadLastPRUpdatedAt))
+	return &MockMonitorStorageReadLastPRUpdatedAtCall{Call: call}
+}
+
+// MockMonitorStorageReadLastPRUpdatedAtCall wrap *gomock.Call
+type MockMonitorStorageReadLastPRUpdatedAtCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockMonitorStorageReadLastPRUpdatedAtCall) Return(arg0 string, arg1 error) *MockMonitorStorageReadLastPRUpdatedAtCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockMonitorStorageReadLastPRUpdatedAtCall) Do(f func() (string, error)) *MockMonitorStorageReadLastPRUpdatedAtCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockMonitorStorageReadLastPRUpdatedAtCall) DoAndReturn(f func() (string, error)) *MockMonitorStorageReadLastPRUpdatedAtCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // ReadLastRepoUpdatedAt mocks base method.
 func (m *MockMonitorStorage) ReadLastRepoUpdatedAt() (string, error) {
 	m.ctrl.T.Helper()
@@ -318,6 +357,44 @@ func (c *MockMonitorStorageWriteLastLangPRUpdatedAtCall) Do(f func(string, strin
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockMonitorStorageWriteLastLangPRUpdatedAtCall) DoAndReturn(f func(string, string) error) *MockMonitorStorageWriteLastLangPRUpdatedAtCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// WriteLastPRUpdatedAt mocks base method.
+func (m *MockMonitorStorage) WriteLastPRUpdatedAt(value string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteLastPRUpdatedAt", value)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteLastPRUpdatedAt indicates an expected call of WriteLastPRUpdatedAt.
+func (mr *MockMonitorStorageMockRecorder) WriteLastPRUpdatedAt(value any) *MockMonitorStorageWriteLastPRUpdatedAtCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteLastPRUpdatedAt", reflect.TypeOf((*MockMonitorStorage)(nil).WriteLastPRUpdatedAt), value)
+	return &MockMonitorStorageWriteLastPRUpdatedAtCall{Call: call}
+}
+
+// MockMonitorStorageWriteLastPRUpdatedAtCall wrap *gomock.Call
+type MockMonitorStorageWriteLastPRUpdatedAtCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockMonitorStorageWriteLastPRUpdatedAtCall) Return(arg0 error) *MockMonitorStorageWriteLastPRUpdatedAtCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockMonitorStorageWriteLastPRUpdatedAtCall) Do(f func(string) error) *MockMonitorStorageWriteLastPRUpdatedAtCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockMonitorStorageWriteLastPRUpdatedAtCall) DoAndReturn(f func(string) error) *MockMonitorStorageWriteLastPRUpdatedAtCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
