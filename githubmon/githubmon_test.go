@@ -37,10 +37,10 @@ func TestMonitor_Check(t *testing.T) {
 
 				langMock.EXPECT().LangCodes().Return([]string{"pl"}, nil)
 
-				storageMock.EXPECT().ReadLastPRUpdatedAt("pl").Return("", nil)
+				storageMock.EXPECT().ReadLastLangPRUpdatedAt("pl").Return("", nil)
 				githubMock.EXPECT().PRSearch(ctx, github.PRSearchFilter{LangCode: "pl"}, gomock.Any()).
 					Return(&github.PRSearchResult{Items: []github.PRItem{{Number: 1, UpdatedAt: "PL-U1"}}}, nil)
-				storageMock.EXPECT().WriteLastPRUpdatedAt("pl", "PL-U1")
+				storageMock.EXPECT().WriteLastLangPRUpdatedAt("pl", "PL-U1")
 
 				task.EXPECT().OnUpdate(ctx, true, []string{"pl"}).Return(nil)
 			},
@@ -62,7 +62,7 @@ func TestMonitor_Check(t *testing.T) {
 
 				langMock.EXPECT().LangCodes().Return([]string{"pl"}, nil)
 
-				storageMock.EXPECT().ReadLastPRUpdatedAt("pl").Return("PL-U1", nil)
+				storageMock.EXPECT().ReadLastLangPRUpdatedAt("pl").Return("PL-U1", nil)
 				githubMock.EXPECT().PRSearch(ctx, github.PRSearchFilter{LangCode: "pl"}, gomock.Any()).
 					Return(&github.PRSearchResult{Items: []github.PRItem{{Number: 1, UpdatedAt: "PL-U1"}}}, nil)
 			},
@@ -85,7 +85,7 @@ func TestMonitor_Check(t *testing.T) {
 
 				langMock.EXPECT().LangCodes().Return([]string{"pl"}, nil)
 
-				storageMock.EXPECT().ReadLastPRUpdatedAt("pl").Return("PL-U1", nil)
+				storageMock.EXPECT().ReadLastLangPRUpdatedAt("pl").Return("PL-U1", nil)
 				githubMock.EXPECT().PRSearch(ctx, github.PRSearchFilter{LangCode: "pl"}, gomock.Any()).
 					Return(&github.PRSearchResult{Items: []github.PRItem{{Number: 1, UpdatedAt: "PL-U1"}}}, nil)
 
@@ -109,10 +109,10 @@ func TestMonitor_Check(t *testing.T) {
 
 				langMock.EXPECT().LangCodes().Return([]string{"pl"}, nil)
 
-				storageMock.EXPECT().ReadLastPRUpdatedAt("pl").Return("PL-U1", nil)
+				storageMock.EXPECT().ReadLastLangPRUpdatedAt("pl").Return("PL-U1", nil)
 				githubMock.EXPECT().PRSearch(ctx, github.PRSearchFilter{LangCode: "pl"}, gomock.Any()).
 					Return(&github.PRSearchResult{Items: []github.PRItem{{Number: 1, UpdatedAt: "PL-U2"}}}, nil)
-				storageMock.EXPECT().WriteLastPRUpdatedAt("pl", "PL-U2")
+				storageMock.EXPECT().WriteLastLangPRUpdatedAt("pl", "PL-U2")
 
 				task.EXPECT().OnUpdate(ctx, false, []string{"pl"}).Return(nil)
 			},
