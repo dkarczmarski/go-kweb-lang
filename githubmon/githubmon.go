@@ -43,8 +43,8 @@ type OnUpdateTask interface {
 }
 
 const (
-	bucketLastRepoUpdatedAt = "github-monitor-repo-last-updated-at"
-	bucketLastPRUpdatedAt   = "github-monitor-pr-last-updated-at"
+	bucketLastRepoUpdatedAt = "githubmon-repo-updated-at"
+	bucketLastPRUpdatedAt   = "githubmon-pr-updated-at"
 	singleKey               = ""
 )
 
