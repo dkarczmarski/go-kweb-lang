@@ -5,6 +5,7 @@ package pullreq_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"go-kweb-lang/github"
 	"go-kweb-lang/pullreq"
@@ -12,7 +13,10 @@ import (
 )
 
 func TestFilePRFinder_Update_E2E(t *testing.T) {
-	gitHub := github.NewGitHub()
+	gitHub := github.NewGitHub(
+		github.WithDefaults(),
+		github.WithThrottle(3*time.Second),
+	)
 	cacheStore := store.NewFileStore(t.TempDir())
 	filePRFinder := pullreq.NewFilePRFinder(
 		gitHub,

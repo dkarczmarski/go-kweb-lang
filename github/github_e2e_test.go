@@ -6,13 +6,17 @@ import (
 	"context"
 	"log"
 	"testing"
+	"time"
 
 	"go-kweb-lang/github"
 )
 
 func TestGitHub_GetCommitFiles_E2E(t *testing.T) {
 	ctx := context.Background()
-	gh := github.NewGitHub()
+	gh := github.NewGitHub(
+		github.WithDefaults(),
+		github.WithThrottle(3*time.Second),
+	)
 
 	files, err := gh.GetCommitFiles(ctx, "f9ef60a9cf2ce7fdc4e242c292d8ed728deab912")
 	if err != nil {
@@ -24,7 +28,10 @@ func TestGitHub_GetCommitFiles_E2E(t *testing.T) {
 
 func TestGitHub_GetPRCommits_E2E(t *testing.T) {
 	ctx := context.Background()
-	gh := github.NewGitHub()
+	gh := github.NewGitHub(
+		github.WithDefaults(),
+		github.WithThrottle(3*time.Second),
+	)
 
 	commitIds, err := gh.GetPRCommits(ctx, 50193)
 	if err != nil {
@@ -36,7 +43,10 @@ func TestGitHub_GetPRCommits_E2E(t *testing.T) {
 
 func TestGitHub_PRSearch_E2E(t *testing.T) {
 	ctx := context.Background()
-	gh := github.NewGitHub()
+	gh := github.NewGitHub(
+		github.WithDefaults(),
+		github.WithThrottle(3*time.Second),
+	)
 
 	var prs []github.PRItem
 
@@ -78,10 +88,13 @@ func TestGitHub_PRSearch_E2E(t *testing.T) {
 
 func TestGitHub_Retry_E2E(t *testing.T) {
 	ctx := context.Background()
-	gh := github.NewGitHub()
+	gh := github.NewGitHub(
+		github.WithDefaults(),
+		//		github.WithThrottle(3*time.Second),
+	)
 
 	// infinite loop for observing the retry function
-	for {
+	for i := 0; i < 10; i++ {
 		result, err := gh.PRSearch(
 			ctx,
 			github.PRSearchFilter{

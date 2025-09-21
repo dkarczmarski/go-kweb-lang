@@ -9,6 +9,9 @@ go-generate:
 test:
 	go test -v ./...
 
+test-e2e:
+	go test -v -count=1 -tags=e2e_test ./...
+
 dev-install-lint:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
