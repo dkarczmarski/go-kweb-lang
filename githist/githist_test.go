@@ -188,17 +188,6 @@ func TestGitHist_PullRefresh(t *testing.T) {
 					Return(nil).
 					Times(1)
 
-				cacheStore.EXPECT().
-					Read(bucketMainBranchCommits, "", gomock.Any()).
-					DoAndReturn(storetests.MockReadReturn[[]git.CommitInfo](
-						true,
-						[]git.CommitInfo{
-							{CommitID: "C-ID-1", DateTime: "DT-1", Comment: "Comment-1"},
-						},
-						nil,
-					)).
-					Times(1)
-
 				gitRepo.EXPECT().ListFreshCommits(ctx).Return(nil, nil)
 			},
 		},
@@ -210,12 +199,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 				cacheStore *mocks.MockCacheStore,
 				invalidator *mocks.MockInvalidator,
 			) {
-				mainBranch1 := []git.CommitInfo{
-					{CommitID: "C-ID-0", DateTime: "DT-0", Comment: "Comment-0"},
-				}
-				mainBranch2 := []git.CommitInfo{
-					{CommitID: "C-ID-2", DateTime: "DT-2", Comment: "Comment-2"},
-					{CommitID: "C-ID-1", DateTime: "DT-1", Comment: "Comment-1"},
+				mainBranch := []git.CommitInfo{
 					{CommitID: "C-ID-0", DateTime: "DT-0", Comment: "Comment-0"},
 				}
 
@@ -235,7 +219,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 
 					gitRepo.EXPECT().
 						ListMainBranchCommits(ctx).
-						Return(mainBranch1, nil),
+						Return(mainBranch, nil),
 
 					cacheStore.EXPECT().
 						Write(bucketMainBranchCommits, "", gomock.Any()).
@@ -249,20 +233,6 @@ func TestGitHist_PullRefresh(t *testing.T) {
 					// delete cache entry because fresh commits were found so main branch commits have changed
 					cacheStore.EXPECT().
 						Delete(bucketMainBranchCommits, "").
-						Return(nil),
-
-					// listMainBranchCommits after Delete()
-					// second Read -> not found -> ListMainBranchCommits -> Write
-					cacheStore.EXPECT().
-						Read(bucketMainBranchCommits, "", gomock.Any()).
-						DoAndReturn(storetests.MockReadNotFound()),
-
-					gitRepo.EXPECT().
-						ListMainBranchCommits(ctx).
-						Return(mainBranch2, nil),
-
-					cacheStore.EXPECT().
-						Write(bucketMainBranchCommits, "", gomock.Any()).
 						Return(nil),
 
 					//
@@ -293,7 +263,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 				cacheStore *mocks.MockCacheStore,
 				invalidator *mocks.MockInvalidator,
 			) {
-				mainBranch1 := []git.CommitInfo{
+				mainBranch := []git.CommitInfo{
 					{CommitID: "C-ID-13", DateTime: "DT-13", Comment: "Comment-13"},
 					{CommitID: "C-ID-103", DateTime: "DT-103", Comment: "Comment-103"},
 					{CommitID: "C-ID-0", DateTime: "DT-0", Comment: "Comment-0"},
@@ -306,16 +276,6 @@ func TestGitHist_PullRefresh(t *testing.T) {
 					{CommitID: "C-ID-102", DateTime: "DT-102", Comment: "Comment-102"},
 				}
 
-				mainBranch2 := []git.CommitInfo{
-					{CommitID: "C-ID-2", DateTime: "DT-2", Comment: "Comment-2"},
-					{CommitID: "C-ID-1", DateTime: "DT-1", Comment: "Comment-1"},
-					{CommitID: "C-ID-10", DateTime: "DT-10", Comment: "Comment-10"},
-					{CommitID: "C-ID-102", DateTime: "DT-102", Comment: "Comment-102"},
-					{CommitID: "C-ID-13", DateTime: "DT-13", Comment: "Comment-13"},
-					{CommitID: "C-ID-103", DateTime: "DT-103", Comment: "Comment-103"},
-					{CommitID: "C-ID-0", DateTime: "DT-0", Comment: "Comment-0"},
-				}
-
 				gomock.InOrder(
 					// GetLastMainBranchCommit
 					// first Read -> not found -> ListMainBranchCommits -> Write
@@ -325,7 +285,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 
 					gitRepo.EXPECT().
 						ListMainBranchCommits(ctx).
-						Return(mainBranch1, nil),
+						Return(mainBranch, nil),
 
 					cacheStore.EXPECT().
 						Write(bucketMainBranchCommits, "", gomock.Any()).
@@ -339,20 +299,6 @@ func TestGitHist_PullRefresh(t *testing.T) {
 					// delete cache entry because fresh commits were found so main branch commits have changed
 					cacheStore.EXPECT().
 						Delete(bucketMainBranchCommits, "").
-						Return(nil),
-
-					// listMainBranchCommits after Delete()
-					// second Read -> not found -> ListMainBranchCommits -> Write
-					cacheStore.EXPECT().
-						Read(bucketMainBranchCommits, "", gomock.Any()).
-						DoAndReturn(storetests.MockReadNotFound()),
-
-					gitRepo.EXPECT().
-						ListMainBranchCommits(ctx).
-						Return(mainBranch2, nil),
-
-					cacheStore.EXPECT().
-						Write(bucketMainBranchCommits, "", gomock.Any()).
 						Return(nil),
 
 					//
