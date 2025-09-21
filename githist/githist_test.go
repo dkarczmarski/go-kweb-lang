@@ -294,21 +294,25 @@ func TestGitHist_PullRefresh(t *testing.T) {
 				invalidator *mocks.MockInvalidator,
 			) {
 				mainBranch1 := []git.CommitInfo{
+					{CommitID: "C-ID-13", DateTime: "DT-13", Comment: "Comment-13"},
+					{CommitID: "C-ID-103", DateTime: "DT-103", Comment: "Comment-103"},
 					{CommitID: "C-ID-0", DateTime: "DT-0", Comment: "Comment-0"},
 				}
 
 				fresh := []git.CommitInfo{
 					{CommitID: "C-ID-2", DateTime: "DT-2", Comment: "Comment-2"},
 					{CommitID: "C-ID-1", DateTime: "DT-1", Comment: "Comment-1"},
+					{CommitID: "C-ID-10", DateTime: "DT-10", Comment: "Comment-10"},
+					{CommitID: "C-ID-102", DateTime: "DT-102", Comment: "Comment-102"},
 				}
 
 				mainBranch2 := []git.CommitInfo{
 					{CommitID: "C-ID-2", DateTime: "DT-2", Comment: "Comment-2"},
 					{CommitID: "C-ID-1", DateTime: "DT-1", Comment: "Comment-1"},
 					{CommitID: "C-ID-10", DateTime: "DT-10", Comment: "Comment-10"},
+					{CommitID: "C-ID-102", DateTime: "DT-102", Comment: "Comment-102"},
 					{CommitID: "C-ID-13", DateTime: "DT-13", Comment: "Comment-13"},
 					{CommitID: "C-ID-103", DateTime: "DT-103", Comment: "Comment-103"},
-					{CommitID: "C-ID-102", DateTime: "DT-102", Comment: "Comment-102"},
 					{CommitID: "C-ID-0", DateTime: "DT-0", Comment: "Comment-0"},
 				}
 
@@ -350,6 +354,21 @@ func TestGitHist_PullRefresh(t *testing.T) {
 					cacheStore.EXPECT().
 						Write(bucketMainBranchCommits, "", gomock.Any()).
 						Return(nil),
+
+					//
+					gitRepo.EXPECT().
+						ListFilesInCommit(ctx, "C-ID-102").
+						Return([]string{"dir/file4"}, nil),
+
+					// file invalidation
+					invalidator.EXPECT().InvalidateFile("dir/file4").Return(nil),
+
+					//
+					gitRepo.EXPECT().
+						ListFilesInCommit(ctx, "C-ID-10").
+						Return([]string{"dir/file4"}, nil),
+
+					// file invalidation - skipped, already done
 
 					//
 					gitRepo.EXPECT().
