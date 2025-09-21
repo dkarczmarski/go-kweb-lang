@@ -174,16 +174,19 @@ func TestGitHist_PullRefresh(t *testing.T) {
 			) {
 				gitRepo.EXPECT().ListMainBranchCommits(ctx).
 					Return([]git.CommitInfo{
-						{
-							CommitID: "C-ID-1",
-							DateTime: "DT-1",
-							Comment:  "Comment-1",
-						},
-					}, nil)
-				cacheStore.EXPECT().Read(gomock.Any(), gomock.Any(), gomock.Any()).
-					DoAndReturn(storetests.MockReadNotFound())
-				cacheStore.EXPECT().Write(gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
+						{CommitID: "C-ID-1", DateTime: "DT-1", Comment: "Comment-1"},
+					}, nil).
+					Times(1)
+
+				cacheStore.EXPECT().
+					Read(bucketMainBranchCommits, "", gomock.Any()).
+					DoAndReturn(storetests.MockReadNotFound()).
+					Times(1)
+
+				cacheStore.EXPECT().
+					Write(bucketMainBranchCommits, "", gomock.Any()).
+					Return(nil).
+					Times(1)
 
 				gitRepo.EXPECT().ListFreshCommits(ctx).Return(nil, nil)
 			},
@@ -196,44 +199,60 @@ func TestGitHist_PullRefresh(t *testing.T) {
 				cacheStore *mocks.MockCacheStore,
 				invalidator *mocks.MockInvalidator,
 			) {
-				gitRepo.EXPECT().ListMainBranchCommits(ctx).
-					Return([]git.CommitInfo{
-						{
-							CommitID: "C-ID-1",
-							DateTime: "DT-1",
-							Comment:  "Comment-1",
-						},
-					}, nil)
-				cacheStore.EXPECT().Read(gomock.Any(), gomock.Any(), gomock.Any()).
-					DoAndReturn(storetests.MockReadNotFound())
-				cacheStore.EXPECT().Write(gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
+				mainBranch := []git.CommitInfo{
+					{CommitID: "C-ID-0", DateTime: "DT-0", Comment: "Comment-0"},
+				}
 
-				gitRepo.EXPECT().ListFreshCommits(ctx).Return(
-					[]git.CommitInfo{
-						{
-							CommitID: "C-ID-1",
-							DateTime: "DT-1",
-							Comment:  "Comment-1",
-						},
-						{
-							CommitID: "C-ID-2",
-							DateTime: "Dß2",
-							Comment:  "Comment-2",
-						},
-					}, nil,
+				fresh := []git.CommitInfo{
+					{CommitID: "C-ID-2", DateTime: "DT-2", Comment: "Comment-2"},
+					{CommitID: "C-ID-1", DateTime: "DT-1", Comment: "Comment-1"},
+				}
+				filesC1 := []string{"content/fr/file1", "content/en/file2"}
+				filesC2 := []string{"dir/file3", "content/en/dir/file4"}
+
+				gomock.InOrder(
+					// GetLastMainBranchCommit
+					// first Read -> not found -> ListMainBranchCommits -> Write
+					cacheStore.EXPECT().
+						Read(bucketMainBranchCommits, "", gomock.Any()).
+						DoAndReturn(storetests.MockReadNotFound()),
+
+					gitRepo.EXPECT().
+						ListMainBranchCommits(ctx).
+						Return(mainBranch, nil),
+
+					cacheStore.EXPECT().
+						Write(bucketMainBranchCommits, "", gomock.Any()).
+						Return(nil),
+
+					// fresh commits
+					gitRepo.EXPECT().
+						ListFreshCommits(ctx).
+						Return(fresh, nil),
+
+					// delete cache entry because fresh commits were found so main branch commits have changed
+					cacheStore.EXPECT().
+						Delete(bucketMainBranchCommits, "").
+						Return(nil),
+
+					//
+					gitRepo.EXPECT().
+						ListFilesInCommit(ctx, "C-ID-1").
+						Return(filesC1, nil),
+
+					// file invalidation
+					invalidator.EXPECT().InvalidateFile("content/fr/file1").Return(nil),
+					invalidator.EXPECT().InvalidateFile("content/en/file2").Return(nil),
+
+					//
+					gitRepo.EXPECT().
+						ListFilesInCommit(ctx, "C-ID-2").
+						Return(filesC2, nil),
+
+					// file invalidation
+					invalidator.EXPECT().InvalidateFile("dir/file3").Return(nil),
+					invalidator.EXPECT().InvalidateFile("content/en/dir/file4").Return(nil),
 				)
-
-				gitRepo.EXPECT().ListFilesInCommit(ctx, "C-ID-1").Return([]string{"content/fr/file1", "content/en/file2"}, nil)
-				gitRepo.EXPECT().ListFilesInCommit(ctx, "C-ID-2").Return([]string{"dir/file3", "content/en/dir/file4"}, nil)
-
-				cacheStore.EXPECT().Delete(bucketMainBranchCommits, "").
-					Return(nil)
-
-				invalidator.EXPECT().InvalidateFile("content/fr/file1").Return(nil)
-				invalidator.EXPECT().InvalidateFile("content/en/file2").Return(nil)
-				invalidator.EXPECT().InvalidateFile("dir/file3").Return(nil)
-				invalidator.EXPECT().InvalidateFile("content/en/dir/file4").Return(nil)
 			},
 		},
 		{
@@ -244,128 +263,107 @@ func TestGitHist_PullRefresh(t *testing.T) {
 				cacheStore *mocks.MockCacheStore,
 				invalidator *mocks.MockInvalidator,
 			) {
-				// to simplify testing, no caching
-				cacheStore.EXPECT().
-					Read(gomock.Any(), gomock.Any(), gomock.Any()).
-					AnyTimes().
-					DoAndReturn(storetests.MockReadNotFound())
+				mainBranch := []git.CommitInfo{
+					{CommitID: "C-ID-13", DateTime: "DT-13", Comment: "Comment-13"},
+					{CommitID: "C-ID-103", DateTime: "DT-103", Comment: "Comment-103"},
+					{CommitID: "C-ID-0", DateTime: "DT-0", Comment: "Comment-0"},
+				}
 
-				cacheStore.EXPECT().
-					Write(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).
-					AnyTimes()
+				fresh := []git.CommitInfo{
+					{CommitID: "C-ID-2", DateTime: "DT-2", Comment: "Comment-2"},
+					{CommitID: "C-ID-1", DateTime: "DT-1", Comment: "Comment-1"},
+					{CommitID: "C-ID-10", DateTime: "DT-10", Comment: "Comment-10"},
+					{CommitID: "C-ID-102", DateTime: "DT-102", Comment: "Comment-102"},
+				}
 
-				gitRepo.EXPECT().ListFreshCommits(ctx).Return(
-					[]git.CommitInfo{
-						{
-							CommitID: "C-ID-1",
-							DateTime: "DT-1",
-							Comment:  "Comment-1",
-						},
-						{
-							CommitID: "C-ID-2",
-							DateTime: "DT-2",
-							Comment:  "Comment-2",
-						},
-					}, nil,
+				gomock.InOrder(
+					// GetLastMainBranchCommit
+					// first Read -> not found -> ListMainBranchCommits -> Write
+					cacheStore.EXPECT().
+						Read(bucketMainBranchCommits, "", gomock.Any()).
+						DoAndReturn(storetests.MockReadNotFound()),
+
+					gitRepo.EXPECT().
+						ListMainBranchCommits(ctx).
+						Return(mainBranch, nil),
+
+					cacheStore.EXPECT().
+						Write(bucketMainBranchCommits, "", gomock.Any()).
+						Return(nil),
+
+					// fresh commits
+					gitRepo.EXPECT().
+						ListFreshCommits(ctx).
+						Return(fresh, nil),
+
+					// delete cache entry because fresh commits were found so main branch commits have changed
+					cacheStore.EXPECT().
+						Delete(bucketMainBranchCommits, "").
+						Return(nil),
+
+					//
+					gitRepo.EXPECT().
+						ListFilesInCommit(ctx, "C-ID-102").
+						Return([]string{"dir/file4"}, nil),
+
+					// file invalidation
+					invalidator.EXPECT().InvalidateFile("dir/file4").Return(nil),
+
+					//
+					gitRepo.EXPECT().
+						ListFilesInCommit(ctx, "C-ID-10").
+						Return([]string{"dir/file4"}, nil),
+
+					// file invalidation - skipped, already done
+
+					//
+					gitRepo.EXPECT().
+						ListFilesInCommit(ctx, "C-ID-1").
+						Return([]string{}, nil),
+
+					gitRepo.EXPECT().
+						ListCommitParents(ctx, "C-ID-1").
+						Return([]string{"C-ID-10", "C-ID-11"}, nil),
+
+					gitRepo.EXPECT().
+						ListAncestorCommits(ctx, "C-ID-11").
+						Return([]git.CommitInfo{
+							{CommitID: "C-ID-11-2", DateTime: "DT-11-2", Comment: "Comment-11-2"},
+							{CommitID: "C-ID-11-1", DateTime: "DT-11-1", Comment: "Comment-1-11"},
+							{CommitID: "C-ID-102", DateTime: "DT-102", Comment: "Comment-102"}, // on main
+						}, nil),
+
+					gitRepo.EXPECT().
+						ListFilesBetweenCommits(ctx, "C-ID-102", "C-ID-11").
+						Return([]string{"dir/file1", "dir/file2"}, nil),
+
+					// file invalidation
+					invalidator.EXPECT().InvalidateFile("dir/file1").Return(nil),
+					invalidator.EXPECT().InvalidateFile("dir/file2").Return(nil),
+
+					//
+					gitRepo.EXPECT().
+						ListFilesInCommit(ctx, "C-ID-2").
+						Return([]string{}, nil),
+
+					gitRepo.EXPECT().
+						ListCommitParents(ctx, "C-ID-2").
+						Return([]string{"C-ID-12", "C-ID-13"}, nil),
+
+					gitRepo.EXPECT().
+						ListAncestorCommits(ctx, "C-ID-12").
+						Return([]git.CommitInfo{
+							{CommitID: "C-ID-12-1", DateTime: "DT-12-1", Comment: "Comment-12-1"},
+							{CommitID: "C-ID-103", DateTime: "DT-103", Comment: "Comment-103"}, // on main
+						}, nil),
+
+					gitRepo.EXPECT().
+						ListFilesBetweenCommits(ctx, "C-ID-103", "C-ID-12").
+						Return([]string{"dir/file3"}, nil),
+
+					// file invalidation
+					invalidator.EXPECT().InvalidateFile("dir/file3").Return(nil),
 				)
-
-				gitRepo.EXPECT().ListFilesInCommit(ctx, "C-ID-1").Return([]string{}, nil)
-				gitRepo.EXPECT().ListFilesInCommit(ctx, "C-ID-2").Return([]string{}, nil)
-
-				gitRepo.EXPECT().ListCommitParents(ctx, "C-ID-1").
-					Return([]string{
-						"C-ID-10", // main
-						"C-ID-11", // branch
-					}, nil)
-				gitRepo.EXPECT().ListCommitParents(ctx, "C-ID-2").
-					Return([]string{
-						"C-ID-12", // branch
-						"C-ID-13", // main
-					}, nil)
-
-				gitRepo.EXPECT().ListMainBranchCommits(ctx).
-					AnyTimes(). // to simplify testing, no caching
-					Return([]git.CommitInfo{
-						{
-							CommitID: "C-ID-2",
-							DateTime: "DT-2",
-							Comment:  "Comment-2",
-						},
-						{
-							CommitID: "C-ID-1",
-							DateTime: "DT-1",
-							Comment:  "Comment-1",
-						},
-						{
-							CommitID: "C-ID-10",
-							DateTime: "DT-10",
-							Comment:  "Comment-10",
-						},
-						{
-							CommitID: "C-ID-13",
-							DateTime: "DT-13",
-							Comment:  "Comment-13",
-						},
-						{
-							CommitID: "C-ID-103",
-							DateTime: "DT-103",
-							Comment:  "Comment-103",
-						},
-						{
-							CommitID: "C-ID-102",
-							DateTime: "DT-102",
-							Comment:  "Comment-102",
-						},
-						{
-							CommitID: "C-ID-101",
-							DateTime: "DT-101",
-							Comment:  "Comment-101",
-						},
-					}, nil)
-
-				gitRepo.EXPECT().ListAncestorCommits(ctx, "C-ID-11").
-					Return([]git.CommitInfo{
-						{
-							CommitID: "C-ID-11-2",
-							DateTime: "DT-11-2",
-							Comment:  "Comment-11-2",
-						},
-						{
-							CommitID: "C-ID-11-1",
-							DateTime: "DT-11-1",
-							Comment:  "Comment-1-11",
-						},
-						{
-							CommitID: "C-ID-102",
-							DateTime: "DT-102",
-							Comment:  "Comment-102",
-						},
-					}, nil)
-				gitRepo.EXPECT().ListAncestorCommits(ctx, "C-ID-12").
-					Return([]git.CommitInfo{
-						{
-							CommitID: "C-ID-12-1",
-							DateTime: "DT-12-1",
-							Comment:  "Comment-12-1",
-						},
-						{
-							CommitID: "C-ID-103",
-							DateTime: "DT-103",
-							Comment:  "Comment-103",
-						},
-					}, nil)
-
-				gitRepo.EXPECT().ListFilesBetweenCommits(ctx, "C-ID-102", "C-ID-11").
-					Return([]string{"dir/file1", "dir/file2"}, nil)
-				gitRepo.EXPECT().ListFilesBetweenCommits(ctx, "C-ID-103", "C-ID-12").
-					Return([]string{"dir/file3"}, nil)
-
-				cacheStore.EXPECT().Delete(bucketMainBranchCommits, "").
-					Return(nil)
-
-				invalidator.EXPECT().InvalidateFile("dir/file1").Return(nil)
-				invalidator.EXPECT().InvalidateFile("dir/file2").Return(nil)
-				invalidator.EXPECT().InvalidateFile("dir/file3").Return(nil)
 			},
 		},
 	} {
