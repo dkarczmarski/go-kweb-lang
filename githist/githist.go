@@ -198,7 +198,9 @@ func (gh *GitHist) PullRefresh(ctx context.Context) error {
 	}
 
 	invalidated := make(map[string]int)
-	for i, fc := range freshCommits {
+	for i := 0; i < len(freshCommits); i++ {
+		fc := freshCommits[len(freshCommits)-1-i]
+
 		log.Printf("[githist][%d/%d] process fresh commit: %s", i+1, len(freshCommits), &fc)
 
 		commitFiles, err := gh.gitRepo.ListFilesInCommit(ctx, fc.CommitID)

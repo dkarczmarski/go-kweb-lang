@@ -220,8 +220,8 @@ func TestGitHist_PullRefresh(t *testing.T) {
 				}
 
 				fresh := []git.CommitInfo{
-					{CommitID: "C-ID-1", DateTime: "DT-1", Comment: "Comment-1"},
 					{CommitID: "C-ID-2", DateTime: "DT-2", Comment: "Comment-2"},
+					{CommitID: "C-ID-1", DateTime: "DT-1", Comment: "Comment-1"},
 				}
 				filesC1 := []string{"content/fr/file1", "content/en/file2"}
 				filesC2 := []string{"dir/file3", "content/en/dir/file4"}
@@ -298,8 +298,8 @@ func TestGitHist_PullRefresh(t *testing.T) {
 				}
 
 				fresh := []git.CommitInfo{
-					{CommitID: "C-ID-1", DateTime: "DT-1", Comment: "Comment-1"},
 					{CommitID: "C-ID-2", DateTime: "DT-2", Comment: "Comment-2"},
+					{CommitID: "C-ID-1", DateTime: "DT-1", Comment: "Comment-1"},
 				}
 
 				mainBranch2 := []git.CommitInfo{
