@@ -1,10 +1,11 @@
 # what is it
 
-**go-kweb-lang** was my private tool that helped me keep the translation content for the [kubernetes/website](https://github.com/kubernetes/website) project up to date, specifically for the *language directory* `content/pl` compared to the *original* in `content/en`. when I realized that this tool effectively helped me detect files requiring updates, I thought it could be generalized to work for all languages and made the project public so that everyone contributing to the *kubernetes/website* project could benefit from it.
+**go-kweb-lang** was my private tool that helped me keep the translation content for the [kubernetes/website](https://github.com/kubernetes/website) project up to date, specifically for the *language directory* `content/pl` compared to the *original* in `content/en`. this tool helped me effectively detect files requiring updates, so I generalized it to work for all languages and made the project public so that everyone contributing to the *kubernetes/website* project could benefit from it.
 
 **go-kweb-lang** is a tool written in pure *go*, designed to assist teams creating and maintaining translations for the *kubernetes/website* project. this tool provides a live dashboard showing which *language files* need to be updated and exactly what updates have occurred in the original content since the last version of the *language file*. an *update* is defined as one or more commits made after the last modification date of the *language file*. this tool also provides convenient *update* links to the GitHub repository pages, allowing you to easily view detailed information about the changes in commits and related pull requests.
 
-**go-kweb-lang** helps best when you keep your translation files structure aligned with the *original* file structure. I keep the original formatting, comments, and everything else to ensure synchronization by line numbers between the *original* and *translation* files. thanks to this, when you see update commit, you only need the diff view to know exactly where to make the update. for example: PR [42502](https://github.com/kubernetes/website/pull/42502/files) for the *original* file and synchronization PR [50332](https://github.com/kubernetes/website/pull/50332/files) for the *translation*. 
+**go-kweb-lang** helps best when you keep your translation files structure aligned with the *original* file structure. I keep the original formatting, comments, and everything else to ensure synchronization by line numbers between the *original* and *translation* files. thanks to this, when you see update commit, you only need the diff view to know exactly where to make the update. for example: PR [42502](https://github.com/kubernetes/website/pull/42502/files) for the *original* file and synchronization PR [50332](https://github.com/kubernetes/website/pull/50332/files) for the *translation*.
+this tool detects updates by analyzing the change history of files primarily based on dates. it does NOT analyze file content. therefore, you should avoid partial synchronization updates and always commit fully up-to-date files.
 
 the running tool is available at: https://go-kweb-lang.smallforge.dev, and its data is refreshed every 1 minute.
 
@@ -218,7 +219,7 @@ go build -o go-kweb-lang ./cmd
 - the environment variable `GITHUB_TOKEN_FILE` or the argument `-github-token-file` specifies the file containing the GitHub personal access token. the default value is `.github-token.txt` and that file does not have to exist.
 - the environment variable `LANG_CODES` or the argument `-lang-codes` specifies the language code for which the dashboard should be generated; multiple values can be provided, separated by commas.
 - the environment variable `WEB_HTTP_ADDR` or the argument `-web-http-addr` specifies the TCP address for the server to listen on. the default value is `:8080`.
-- the argument `-run-once` specifies that the data should be refreshed only once at application startup.
+- the argument `-run-once` specifies that the data should be refreshed only once at application startup before the web server starts.
 - the argument `-run-interval` specifies the number of minutes between each data refresh.
 - the argument `-no-web` disables the web server.
 - the argument `-skip-git` disables checking the git repository.
@@ -226,10 +227,12 @@ go build -o go-kweb-lang ./cmd
 
 ### usage examples
 
-run only for the `pl` language and calculate dashboard data once at startup:
+by default, the web server starts on port 8080. 
+
+the easiest way is to run only for your language (for example `pl`), calculate dashboard data once at startup, and skip PR checking when you don't provide a GitHub API token:
 
 ```
-go-kweb-lang -lang-codes=pl -run-once
+go-kweb-lang -lang-codes=pl -run-once -skip-pr
 ```
 
 run for the `pl` and `de` languages, refresh data every 1 minute, and use a token from the `.github-token.txt` file to communicate with the GitHub API:
@@ -238,8 +241,6 @@ run for the `pl` and `de` languages, refresh data every 1 minute, and use a toke
 go-kweb-lang -lang-codes=de,pl -run-interval=1 -github-token-file=.github-token.txt
 ```
 
-run for the `pl` and `de` languages, refresh the data every 1 minute, and skip PR checking (when you don't provide a GitHub API token):
+# contribution
 
-```
-go-kweb-lang -lang-codes=de,pl -run-interval=1 -skip-pr
-```
+this is an alpha version. you can open an issue to request changes or new features. you can also open a pull request.
