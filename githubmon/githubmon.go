@@ -174,24 +174,15 @@ func (mon *Monitor) RetryCheck(
 	retryDelay time.Duration,
 	onUpdateTask OnUpdateTask,
 ) error {
-	type retryableError interface {
-		IsRetryable() bool
-	}
-
 	for {
 		err := mon.Check(ctx, onUpdateTask)
 		if err != nil {
-			var retErr retryableError
-
-			isRetryable := errors.As(err, &retErr) && retErr.IsRetryable()
-			if !isRetryable {
-				return fmt.Errorf("failed to check GitHub for updates: %w", err)
-			}
+			delay := nextRetryDelay(err, retryDelay)
 
 			log.Printf("[githubmon] failed to check for GitHub updates: %v", err)
-			log.Printf("[githubmon] retrying in %s...", retryDelay)
+			log.Printf("[githubmon] retrying in %s...", delay)
 
-			timer := time.NewTimer(retryDelay)
+			timer := time.NewTimer(delay)
 			select {
 			case <-ctx.Done():
 				if !timer.Stop() {
@@ -206,6 +197,20 @@ func (mon *Monitor) RetryCheck(
 
 		return nil
 	}
+}
+
+func nextRetryDelay(err error, baseDelay time.Duration) time.Duration {
+	type retryableError interface {
+		IsRetryable() bool
+	}
+
+	var retErr retryableError
+	if errors.As(err, &retErr) && retErr.IsRetryable() {
+		return baseDelay
+	}
+
+	// fallback delay for non-retryable errors
+	return 5 * time.Minute
 }
 
 func (mon *Monitor) Check(
