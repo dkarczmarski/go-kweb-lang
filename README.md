@@ -1,4 +1,6 @@
-# what is it
+# go-kweb-lang
+
+[![Build & Test (Go)](https://github.com/dkarczmarski/go-kweb-lang/actions/workflows/build.yml/badge.svg)](https://github.com/dkarczmarski/go-kweb-lang/actions/workflows/build.yml)
 
 **go-kweb-lang** was my private tool that helped me keep the translation content for the [kubernetes/website](https://github.com/kubernetes/website) project up to date, specifically for the *language directory* `content/pl` compared to the *original* in `content/en`. this tool helped me effectively detect files requiring updates, so I generalized it to work for all languages and made the project public so that everyone contributing to the *kubernetes/website* project could benefit from it.
 
@@ -244,3 +246,7 @@ go-kweb-lang -lang-codes=de,pl -run-interval=1 -github-token-file=.github-token.
 # contribution
 
 this is an alpha version. you can open an issue to request changes or new features. you can also open a pull request.
+
+# license
+
+distributed under the MIT license.
