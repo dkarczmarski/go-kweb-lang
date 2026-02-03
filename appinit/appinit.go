@@ -262,16 +262,33 @@ func ShowParams(withPrint bool) func(*Config) error {
 	}
 }
 
-func parseLangCodes(s string) []string {
-	if len(strings.TrimSpace(s)) == 0 {
+func parseLangCodes(langCodesStr string) []string {
+	langCodesStr = strings.TrimSpace(langCodesStr)
+	if langCodesStr == "" {
 		return nil
 	}
 
-	subs := strings.Split(s, ",")
+	seen := map[string]struct{}{}
+	subs := strings.Split(langCodesStr, ",")
 	allowedLangCodes := make([]string, 0, len(subs))
 
 	for _, sub := range subs {
-		allowedLangCodes = append(allowedLangCodes, strings.TrimSpace(sub))
+		sub = strings.TrimSpace(sub)
+		if sub == "" {
+			continue
+		}
+
+		if _, ok := seen[sub]; ok {
+			continue
+		}
+
+		seen[sub] = struct{}{}
+
+		allowedLangCodes = append(allowedLangCodes, sub)
+	}
+
+	if len(allowedLangCodes) == 0 {
+		return nil
 	}
 
 	return allowedLangCodes
