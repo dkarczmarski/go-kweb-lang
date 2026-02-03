@@ -54,6 +54,11 @@ type Config struct {
 
 var ErrBadConfiguration = errors.New("bad configuration")
 
+const (
+	githubTokenFileLineLimit = 3
+	githubThrottleDelay      = 3 * time.Second
+)
+
 func Init(opts ...func(config *Config) error) (*Config, error) {
 	var config Config
 
@@ -219,37 +224,43 @@ func parseLangCodes(s string) []string {
 
 func ReadGitHubTokenFile(skipFileNotExist, skipEmptyFile bool) func(*Config) error {
 	return func(config *Config) error {
-		if len(config.GitHubTokenFile) > 0 {
-			b, err := os.ReadFile(config.GitHubTokenFile)
-			if err != nil {
-				if skipFileNotExist && os.IsNotExist(err) {
-					log.Printf("github token file does not exist")
-
-					return nil
-				}
-
-				return fmt.Errorf("error while reading github token file %v: %w",
-					config.GitHubTokenFile, err)
-			}
-
-			lines := strings.SplitN(string(b), "\n", 3)
-
-			token := strings.TrimSpace(lines[0])
-			if skipEmptyFile && len(token) == 0 {
-				log.Printf("github token file is empty")
-			} else {
-				config.GitHubToken = token
-			}
-
-			if len(lines) > 1 {
-				userAgent := strings.TrimSpace(lines[1])
-				if len(userAgent) != 0 {
-					config.GitHubUserAgent = userAgent
-				}
-			}
+		if len(config.GitHubTokenFile) == 0 {
+			return nil
 		}
 
+		tokenData, err := os.ReadFile(config.GitHubTokenFile)
+		if err != nil {
+			if skipFileNotExist && os.IsNotExist(err) {
+				log.Printf("github token file does not exist")
+
+				return nil
+			}
+
+			return fmt.Errorf("error while reading github token file %v: %w",
+				config.GitHubTokenFile, err)
+		}
+
+		parseGitHubTokenData(config, tokenData, skipEmptyFile)
+
 		return nil
+	}
+}
+
+func parseGitHubTokenData(config *Config, tokenData []byte, skipEmptyFile bool) {
+	lines := strings.SplitN(string(tokenData), "\n", githubTokenFileLineLimit)
+
+	token := strings.TrimSpace(lines[0])
+	if skipEmptyFile && len(token) == 0 {
+		log.Printf("github token file is empty")
+	} else {
+		config.GitHubToken = token
+	}
+
+	if len(lines) > 1 {
+		userAgent := strings.TrimSpace(lines[1])
+		if len(userAgent) != 0 {
+			config.GitHubUserAgent = userAgent
+		}
 	}
 }
 
@@ -377,7 +388,7 @@ func NewGitHub() func(*Config) error {
 			// magic number,
 			// with authorization github allows at most 30 calls per minute, so
 			// for safety we use a 3-second delay between requests
-			github.WithThrottle(3*time.Second),
+			github.WithThrottle(githubThrottleDelay),
 		)
 
 		return nil
@@ -491,8 +502,8 @@ func NewRefreshTask() func(*Config) error {
 
 func NewGitHubMonitor() func(*Config) error {
 	return func(config *Config) error {
-		gh := config.GitHub
-		if gh == nil {
+		gitHubClient := config.GitHub
+		if gitHubClient == nil {
 			return fmt.Errorf("param GitHub is not set: %w", ErrBadConfiguration)
 		}
 
@@ -507,7 +518,7 @@ func NewGitHubMonitor() func(*Config) error {
 		}
 
 		config.GitHubMonitor = githubmon.NewMonitor(
-			gh,
+			gitHubClient,
 			langCodesProvider,
 			githubmon.NewMonitorFileStorage(cacheStore),
 			config.SkipGitChecking,
