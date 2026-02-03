@@ -168,7 +168,7 @@ func ParseFlagParams(
 		}
 
 		if *flagSkipGit {
-			config.SkipPRChecking = *flagSkipGit
+			config.SkipGitChecking = *flagSkipGit
 		}
 
 		if *flagSkipPR {
