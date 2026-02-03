@@ -239,7 +239,7 @@ func applyFlagIntPositive(flag *int, target *int) {
 func ShowParams(withPrint bool) func(*Config) error {
 	return func(config *Config) error {
 		if withPrint {
-			log.Printf("LANG_CODES: %s", config.LangCodes)
+			log.Printf("LANG_CODES: %s", strings.Join(config.LangCodes, ","))
 			log.Printf("REPO_DIR: %s", config.RepoDir)
 			log.Printf("CACHE_DIR: %s", config.CacheDir)
 			log.Printf("RUN_ONCE: %v", config.RunOnce)
