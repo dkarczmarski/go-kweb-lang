@@ -489,7 +489,7 @@ func NewRefreshRepoTask() func(*Config) error {
 	return func(config *Config) error {
 		gitRepoHist := config.GitRepoHist
 		if gitRepoHist == nil {
-			return fmt.Errorf("param GitHist is not set: %w", ErrBadConfiguration)
+			return fmt.Errorf("param GitRepoHist is not set: %w", ErrBadConfiguration)
 		}
 
 		config.RefreshRepoTask = tasks.NewRefreshRepoTask(gitRepoHist)
