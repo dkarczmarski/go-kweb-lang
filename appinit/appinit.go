@@ -244,7 +244,13 @@ func ShowParams(withPrint bool) func(*Config) error {
 			log.Printf("CACHE_DIR: %s", config.CacheDir)
 			log.Printf("RUN_ONCE: %v", config.RunOnce)
 			log.Printf("RUN_INTERVAL: %v", config.RunInterval)
-			log.Printf("GITHUB_TOKEN: %s", config.GitHubToken)
+
+			if config.GitHubToken != "" {
+				log.Printf("GITHUB_TOKEN: (set, len=%d)", len(config.GitHubToken))
+			} else {
+				log.Printf("GITHUB_TOKEN: (empty)")
+			}
+
 			log.Printf("GITHUB_TOKEN_FILE: %s", config.GitHubTokenFile)
 			log.Printf("SKIP_GIT: %v", config.SkipGitChecking)
 			log.Printf("SKIP_PR: %v", config.SkipPRChecking)
