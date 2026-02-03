@@ -162,31 +162,293 @@ func TestParseEnvParams(t *testing.T) {
 				}
 			}
 
-			assertEqual(t, "RepoDir", cfg.RepoDir, tt.want.RepoDir)
-			assertEqual(t, "CacheDir", cfg.CacheDir, tt.want.CacheDir)
-			assertSliceEqual(t, "LangCodes", cfg.LangCodes, tt.want.LangCodes)
-			assertEqual(t, "RunOnce", cfg.RunOnce, tt.want.RunOnce)
-			assertEqual(t, "RunInterval", cfg.RunInterval, tt.want.RunInterval)
-			assertEqual(t, "GitHubToken", cfg.GitHubToken, tt.want.GitHubToken)
-			assertEqual(t, "GitHubTokenFile", cfg.GitHubTokenFile, tt.want.GitHubTokenFile)
-			assertEqual(t, "NoWeb", cfg.NoWeb, tt.want.NoWeb)
-			assertEqual(t, "WebHTTPAddr", cfg.WebHTTPAddr, tt.want.WebHTTPAddr)
+			assertField(t, "RepoDir", cfg.RepoDir, tt.want.RepoDir)
+			assertField(t, "CacheDir", cfg.CacheDir, tt.want.CacheDir)
+			assertSlice(t, "LangCodes", cfg.LangCodes, tt.want.LangCodes)
+			assertField(t, "RunOnce", cfg.RunOnce, tt.want.RunOnce)
+			assertField(t, "RunInterval", cfg.RunInterval, tt.want.RunInterval)
+			assertField(t, "GitHubToken", cfg.GitHubToken, tt.want.GitHubToken)
+			assertField(t, "GitHubTokenFile", cfg.GitHubTokenFile, tt.want.GitHubTokenFile)
+			assertField(t, "NoWeb", cfg.NoWeb, tt.want.NoWeb)
+			assertField(t, "WebHTTPAddr", cfg.WebHTTPAddr, tt.want.WebHTTPAddr)
 		})
 	}
 }
 
-func assertEqual[T comparable](t *testing.T, field string, got, want T) {
-	t.Helper()
+func TestParseFlagParams(t *testing.T) {
+	t.Parallel()
 
-	if got != want {
-		t.Fatalf("%s: got %#v, want %#v", field, got, want)
+	tests := []struct {
+		name string
+
+		// flags
+		flagRepoDir         string
+		flagCacheDir        string
+		flagLangCodes       string
+		flagOnce            bool
+		flagInterval        int
+		flagGitHubToken     string
+		flagGitHubTokenFile string
+		flagSkipGit         bool
+		flagSkipPR          bool
+		flagNoWeb           bool
+		flagWebHTTPAddr     string
+
+		// initial config (to test "do not override" behavior)
+		initial appinit.Config
+
+		// expected config after applying ParseFlagParams
+		want appinit.Config
+	}{
+		{
+			name: "does not override when flags are empty/false/zero",
+			initial: appinit.Config{
+				RepoDir:         "repo0",
+				CacheDir:        "cache0",
+				LangCodes:       []string{"en"},
+				RunOnce:         true,
+				RunInterval:     10,
+				GitHubToken:     "tok0",
+				GitHubTokenFile: "file0",
+				SkipGitChecking: true,
+				SkipPRChecking:  true,
+				NoWeb:           true,
+				WebHTTPAddr:     ":9999",
+			},
+			// all zero values for flags => should keep initial
+			want: appinit.Config{
+				RepoDir:         "repo0",
+				CacheDir:        "cache0",
+				LangCodes:       []string{"en"},
+				RunOnce:         true,
+				RunInterval:     10,
+				GitHubToken:     "tok0",
+				GitHubTokenFile: "file0",
+				SkipGitChecking: true,
+				SkipPRChecking:  true,
+				NoWeb:           true,
+				WebHTTPAddr:     ":9999",
+			},
+		},
+		{
+			name:         "overrides repo and cache dirs when provided",
+			flagRepoDir:  "repo1",
+			flagCacheDir: "cache1",
+			initial: appinit.Config{
+				RepoDir:  "repo0",
+				CacheDir: "cache0",
+			},
+			want: appinit.Config{
+				RepoDir:  "repo1",
+				CacheDir: "cache1",
+			},
+		},
+		{
+			name:          "parses LANG_CODES when provided",
+			flagLangCodes: "pl, en, de ",
+			initial: appinit.Config{
+				LangCodes: []string{"xx"},
+			},
+			want: appinit.Config{
+				LangCodes: []string{"pl", "en", "de"},
+			},
+		},
+		{
+			name:     "RUN_ONCE can only be overridden to true",
+			flagOnce: true,
+			initial: appinit.Config{
+				RunOnce: false,
+			},
+			want: appinit.Config{
+				RunOnce: true,
+			},
+		},
+		{
+			name:     "RUN_ONCE false flag does not override true initial value",
+			flagOnce: false,
+			initial: appinit.Config{
+				RunOnce: true,
+			},
+			want: appinit.Config{
+				RunOnce: true,
+			},
+		},
+		{
+			name:         "RUN_INTERVAL overrides only when > 0",
+			flagInterval: 15,
+			initial: appinit.Config{
+				RunInterval: 3,
+			},
+			want: appinit.Config{
+				RunInterval: 15,
+			},
+		},
+		{
+			name:         "RUN_INTERVAL does not override when 0",
+			flagInterval: 0,
+			initial: appinit.Config{
+				RunInterval: 7,
+			},
+			want: appinit.Config{
+				RunInterval: 7,
+			},
+		},
+		{
+			name:                "overrides github token and token file when provided",
+			flagGitHubToken:     "tok1",
+			flagGitHubTokenFile: "file1",
+			initial: appinit.Config{
+				GitHubToken:     "tok0",
+				GitHubTokenFile: "file0",
+			},
+			want: appinit.Config{
+				GitHubToken:     "tok1",
+				GitHubTokenFile: "file1",
+			},
+		},
+		{
+			name:        "SKIP_GIT sets SkipGitChecking",
+			flagSkipGit: true,
+			initial: appinit.Config{
+				SkipGitChecking: false,
+				SkipPRChecking:  false,
+			},
+			want: appinit.Config{
+				SkipGitChecking: true,
+				SkipPRChecking:  false,
+			},
+		},
+		{
+			name:       "SKIP_PR sets SkipPRChecking",
+			flagSkipPR: true,
+			initial: appinit.Config{
+				SkipGitChecking: false,
+				SkipPRChecking:  false,
+			},
+			want: appinit.Config{
+				SkipGitChecking: false,
+				SkipPRChecking:  true,
+			},
+		},
+		{
+			name:      "NO_WEB sets NoWeb",
+			flagNoWeb: true,
+			initial: appinit.Config{
+				NoWeb: false,
+			},
+			want: appinit.Config{
+				NoWeb: true,
+			},
+		},
+		{
+			name:            "WEB_HTTP_ADDR overrides when provided",
+			flagWebHTTPAddr: ":8081",
+			initial: appinit.Config{
+				WebHTTPAddr: ":8080",
+			},
+			want: appinit.Config{
+				WebHTTPAddr: ":8081",
+			},
+		},
+		{
+			name:            "mixed overrides apply together",
+			flagRepoDir:     "repoX",
+			flagOnce:        true,
+			flagInterval:    20,
+			flagSkipGit:     true,
+			flagSkipPR:      true,
+			flagNoWeb:       true,
+			flagWebHTTPAddr: ":1234",
+			flagLangCodes:   "en,pl",
+			initial: appinit.Config{
+				RepoDir:         "repo0",
+				CacheDir:        "cache0",
+				LangCodes:       []string{"xx"},
+				RunOnce:         false,
+				RunInterval:     5,
+				SkipGitChecking: false,
+				SkipPRChecking:  false,
+				NoWeb:           false,
+				WebHTTPAddr:     ":8080",
+			},
+			want: appinit.Config{
+				RepoDir:         "repoX",
+				CacheDir:        "cache0", // unchanged
+				LangCodes:       []string{"en", "pl"},
+				RunOnce:         true,
+				RunInterval:     20,
+				SkipGitChecking: true,
+				SkipPRChecking:  true,
+				NoWeb:           true,
+				WebHTTPAddr:     ":1234",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := tt.initial // copy
+
+			// create pointer flags expected by ParseFlagParams
+			repoDir := tt.flagRepoDir
+			cacheDir := tt.flagCacheDir
+			langCodes := tt.flagLangCodes
+			once := tt.flagOnce
+			interval := tt.flagInterval
+			ghToken := tt.flagGitHubToken
+			ghTokenFile := tt.flagGitHubTokenFile
+			skipGit := tt.flagSkipGit
+			skipPR := tt.flagSkipPR
+			noWeb := tt.flagNoWeb
+			webHTTPAddr := tt.flagWebHTTPAddr
+
+			opt := appinit.ParseFlagParams(
+				&repoDir,
+				&cacheDir,
+				&langCodes,
+				&once,
+				&interval,
+				&ghToken,
+				&ghTokenFile,
+				&skipGit,
+				&skipPR,
+				&noWeb,
+				&webHTTPAddr,
+			)
+
+			if err := opt(&cfg); err != nil {
+				t.Fatalf("ParseFlagParams returned error: %v", err)
+			}
+
+			assertField(t, "RepoDir", cfg.RepoDir, tt.want.RepoDir)
+			assertField(t, "CacheDir", cfg.CacheDir, tt.want.CacheDir)
+			assertSlice(t, "LangCodes", cfg.LangCodes, tt.want.LangCodes)
+			assertField(t, "RunOnce", cfg.RunOnce, tt.want.RunOnce)
+			assertField(t, "RunInterval", cfg.RunInterval, tt.want.RunInterval)
+			assertField(t, "GitHubToken", cfg.GitHubToken, tt.want.GitHubToken)
+			assertField(t, "GitHubTokenFile", cfg.GitHubTokenFile, tt.want.GitHubTokenFile)
+			assertField(t, "SkipGitChecking", cfg.SkipGitChecking, tt.want.SkipGitChecking)
+			assertField(t, "SkipPRChecking", cfg.SkipPRChecking, tt.want.SkipPRChecking)
+			assertField(t, "NoWeb", cfg.NoWeb, tt.want.NoWeb)
+			assertField(t, "WebHTTPAddr", cfg.WebHTTPAddr, tt.want.WebHTTPAddr)
+		})
 	}
 }
 
-func assertSliceEqual(t *testing.T, field string, got, want []string) {
+func assertField[T comparable](t *testing.T, name string, got, want T) {
+	t.Helper()
+
+	if got != want {
+		t.Fatalf("%s: got %#v, want %#v", name, got, want)
+	}
+}
+
+func assertSlice(t *testing.T, name string, got, want []string) {
 	t.Helper()
 
 	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("%s: got %#v, want %#v", field, got, want)
+		t.Fatalf("%s: got %#v, want %#v", name, got, want)
 	}
 }

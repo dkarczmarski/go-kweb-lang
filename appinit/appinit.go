@@ -178,53 +178,61 @@ func ParseFlagParams(
 	flagWebHTTPAddr *string,
 ) func(*Config) error {
 	return func(config *Config) error {
-		if len(*flagLangCodes) > 0 {
-			config.LangCodes = parseLangCodes(*flagLangCodes)
-		}
-
-		if len(*flagRepoDir) > 0 {
-			config.RepoDir = *flagRepoDir
-		}
-
-		if len(*flagCacheDir) > 0 {
-			config.CacheDir = *flagCacheDir
-		}
-
-		// it can only be overridden to true
-		if *flagOnce {
-			config.RunOnce = *flagOnce
-		}
-
-		// it can only be overridden with a non-zero value
-		if *flagInterval > 0 {
-			config.RunInterval = *flagInterval
-		}
-
-		if len(*flagGitHubToken) > 0 {
-			config.GitHubToken = *flagGitHubToken
-		}
-
-		if len(*flagGitHubTokenFile) > 0 {
-			config.GitHubTokenFile = *flagGitHubTokenFile
-		}
-
-		if *flagSkipGit {
-			config.SkipGitChecking = *flagSkipGit
-		}
-
-		if *flagSkipPR {
-			config.SkipPRChecking = *flagSkipPR
-		}
-
-		if *flagNoWeb {
-			config.NoWeb = *flagNoWeb
-		}
-
-		if len(*flagWebHTTPAddr) > 0 {
-			config.WebHTTPAddr = *flagWebHTTPAddr
-		}
+		applyFlagLangCodes(flagLangCodes, &config.LangCodes)
+		applyFlagString(flagRepoDir, &config.RepoDir)
+		applyFlagString(flagCacheDir, &config.CacheDir)
+		applyFlagBoolTrue(flagOnce, &config.RunOnce)
+		applyFlagIntPositive(flagInterval, &config.RunInterval)
+		applyFlagString(flagGitHubToken, &config.GitHubToken)
+		applyFlagString(flagGitHubTokenFile, &config.GitHubTokenFile)
+		applyFlagBoolTrue(flagSkipGit, &config.SkipGitChecking)
+		applyFlagBoolTrue(flagSkipPR, &config.SkipPRChecking)
+		applyFlagBoolTrue(flagNoWeb, &config.NoWeb)
+		applyFlagString(flagWebHTTPAddr, &config.WebHTTPAddr)
 
 		return nil
+	}
+}
+
+func applyFlagString(flag *string, target *string) {
+	if flag == nil {
+		return
+	}
+
+	if v := strings.TrimSpace(*flag); v != "" {
+		*target = v
+	}
+}
+
+func applyFlagLangCodes(flag *string, target *[]string) {
+	if flag == nil {
+		return
+	}
+
+	if strings.TrimSpace(*flag) != "" {
+		*target = parseLangCodes(*flag)
+	}
+}
+
+// only allows overriding the value to true.
+func applyFlagBoolTrue(flag *bool, target *bool) {
+	if flag == nil {
+		return
+	}
+
+	if *flag {
+		*target = true
+	}
+}
+
+// only overrides when the value is positive.
+func applyFlagIntPositive(flag *int, target *int) {
+	if flag == nil {
+		return
+	}
+
+	if *flag > 0 {
+		*target = *flag
 	}
 }
 
