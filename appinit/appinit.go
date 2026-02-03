@@ -53,6 +53,7 @@ type Config struct {
 }
 
 var ErrBadConfiguration = errors.New("bad configuration")
+var ErrInvalidEnvVars = errors.New("invalid environment variables")
 
 const (
 	githubTokenFileLineLimit = 3
@@ -82,45 +83,85 @@ func SetDefaultParams() func(*Config) error {
 	}
 }
 
-func getEnvValue(key string, consumer func(value string)) {
-	value, ok := os.LookupEnv(key)
-	if ok {
-		consumer(value)
-	}
-}
-
 func ParseEnvParams() func(*Config) error {
 	return func(config *Config) error {
-		getEnvValue("REPO_DIR", func(value string) {
-			config.RepoDir = value
-		})
-		getEnvValue("CACHE_DIR", func(value string) {
-			config.CacheDir = value
-		})
-		getEnvValue("LANG_CODES", func(value string) {
-			config.LangCodes = parseLangCodes(value)
-		})
-		getEnvValue("RUN_ONCE", func(value string) {
-			config.RunOnce, _ = strconv.ParseBool(value)
-		})
-		getEnvValue("RUN_INTERVAL", func(value string) {
-			config.RunInterval, _ = strconv.Atoi(value)
-		})
-		getEnvValue("GITHUB_TOKEN", func(value string) {
-			config.GitHubToken = value
-		})
-		getEnvValue("GITHUB_TOKEN_FILE", func(value string) {
-			config.GitHubTokenFile = value
-		})
-		getEnvValue("NO_WEB", func(value string) {
-			config.NoWeb, _ = strconv.ParseBool(value)
-		})
-		getEnvValue("WEB_HTTP_ADDR", func(value string) {
-			config.WebHTTPAddr = value
-		})
+		var errs []string
+
+		if v, ok := env("REPO_DIR"); ok {
+			config.RepoDir = v
+		}
+
+		if v, ok := env("CACHE_DIR"); ok {
+			config.CacheDir = v
+		}
+
+		if v, ok := env("LANG_CODES"); ok {
+			config.LangCodes = parseLangCodes(v)
+		}
+
+		errs = parseEnvBool("RUN_ONCE", &config.RunOnce, errs)
+		errs = parseEnvInt("RUN_INTERVAL", &config.RunInterval, errs)
+
+		if v, ok := env("GITHUB_TOKEN"); ok {
+			config.GitHubToken = v
+		}
+
+		if v, ok := env("GITHUB_TOKEN_FILE"); ok {
+			config.GitHubTokenFile = v
+		}
+
+		errs = parseEnvBool("NO_WEB", &config.NoWeb, errs)
+
+		if v, ok := env("WEB_HTTP_ADDR"); ok {
+			config.WebHTTPAddr = v
+		}
+
+		if len(errs) > 0 {
+			return fmt.Errorf(
+				"%w:\n - %s",
+				ErrInvalidEnvVars,
+				strings.Join(errs, "\n - "),
+			)
+		}
 
 		return nil
 	}
+}
+
+func env(key string) (string, bool) {
+	return os.LookupEnv(key)
+}
+
+func parseEnvBool(key string, target *bool, errs []string) []string {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return errs
+	}
+
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return append(errs, fmt.Sprintf("%s must be boolean, got %q", key, value))
+	}
+
+	*target = parsed
+
+	return errs
+}
+
+func parseEnvInt(key string, target *int, errs []string) []string {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return errs
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed < 0 {
+		return append(errs, fmt.Sprintf("%s must be non-negative int, got %q", key, value))
+	}
+
+	*target = parsed
+
+	return errs
 }
 
 func ParseFlagParams(
