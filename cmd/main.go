@@ -17,6 +17,7 @@ import (
 	"go-kweb-lang/git"
 )
 
+//nolint:gochecknoglobals
 var (
 	flagRepoDir         = flag.String("repo-dir", "", "kubernetes website repository directory path")
 	flagCacheDir        = flag.String("cache-dir", "", "cache directory path")
@@ -31,15 +32,22 @@ var (
 	flagWebHTTPAddr     = flag.String("web-http-addr", "", "TCP address for the server to listen on")
 )
 
+const (
+	defaultDirPerm      = 0o755
+	defaultRetryDelay   = 15 * time.Second
+	shutdownGracePeriod = 10 * time.Second
+)
+
 func createRepoIfNotExists(ctx context.Context, repoDirPath string, gitRepo *git.Git) error {
 	exists, err := fileExists(filepath.Join(repoDirPath, ".git"))
 	if err != nil {
 		return fmt.Errorf("error while checking if a git repository exists: %w", err)
 	}
+
 	if !exists {
 		log.Println("repository does not exist yet. creating a new one...")
 
-		if err := os.MkdirAll(repoDirPath, 0o755); err != nil {
+		if err := os.MkdirAll(repoDirPath, defaultDirPerm); err != nil {
 			return fmt.Errorf("error while creating directory %s: %w", repoDirPath, err)
 		}
 
@@ -58,6 +66,7 @@ func fileExists(path string) (bool, error) {
 	if os.IsNotExist(err) {
 		return false, nil
 	}
+
 	if err != nil {
 		return false, fmt.Errorf("error while checking whether file exists: %w", err)
 	}
@@ -79,12 +88,14 @@ func runCheckAndRefresh(ctx context.Context, cfg *appinit.Config) error {
 
 	if cfg.RunOnce {
 		// synchronous
-		retryDelay := time.Second * 15 // magic number
-
-		if err := gitHubMonitor.RetryCheck(ctx, retryDelay, cfg.RefreshTask); err != nil {
-			return err
+		if err := gitHubMonitor.RetryCheck(ctx, defaultRetryDelay, cfg.RefreshTask); err != nil {
+			return fmt.Errorf("github monitor retry check failed: %w", err)
 		}
-	} else if cfg.RunInterval > 0 {
+
+		return nil
+	}
+
+	if cfg.RunInterval > 0 {
 		// asynchronous
 		go func() {
 			intervalDelay := time.Minute * time.Duration(cfg.RunInterval)
@@ -108,12 +119,17 @@ func runWebServer(ctx context.Context, cfg *appinit.Config) error {
 		go func() {
 			<-ctx.Done()
 			log.Println("server is shutting down")
-			ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*10)
-			defer cancelCtx()
-			_ = server.Shutdown(ctx)
+
+			shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownGracePeriod)
+			defer cancel()
+
+			if err := server.Shutdown(shutdownCtx); err != nil {
+				log.Printf("failed to shutdown http server: %v", err)
+			}
 		}()
 
 		log.Println("starting web server")
+
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("failed to run http server: %w", err)
 		}
