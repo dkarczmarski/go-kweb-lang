@@ -87,6 +87,7 @@ func removeStrings(input []string, toRemove []string) []string {
 	}
 
 	var result []string
+
 	for _, val := range input {
 		if !removeMap[val] {
 			result = append(result, val)
@@ -176,6 +177,7 @@ func (gs *GitSeek) checkFile(ctx context.Context, langRelPath string, langCode s
 	if err != nil {
 		return fileInfo, fmt.Errorf("error while checking if the file %s exists: %w", enFilePath, err)
 	}
+
 	if !exists {
 		if len(enCommitsAfter) > 0 {
 			fileInfo.FileStatus = StatusEnFileNoLongerExists
@@ -239,6 +241,7 @@ func (gs *GitSeek) invalidateRelPath(langCode, relPath string) error {
 	log.Printf("[gitseek] init gitseek cache invalidation for (%s)%s", langCode, relPath)
 
 	var dirsToInvalidate []string
+
 	if langCode == "en" {
 		langDirs, err := gs.cacheStore.ListBuckets("lang")
 		if err != nil {

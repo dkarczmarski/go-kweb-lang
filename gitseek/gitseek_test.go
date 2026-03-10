@@ -1,7 +1,6 @@
 package gitseek_test
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -9,22 +8,25 @@ import (
 	"github.com/dkarczmarski/go-kweb-lang/gitseek"
 	"github.com/dkarczmarski/go-kweb-lang/gitseek/internal/mocks"
 	"github.com/dkarczmarski/go-kweb-lang/testing/storetests"
-
 	"go.uber.org/mock/gomock"
 )
 
 //nolint:dupl
 func TestGitSeek_CheckFiles(t *testing.T) {
-	ctx := context.Background()
+	t.Parallel()
 
 	for _, tc := range []struct {
 		name     string
-		initMock func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist)
+		initMock func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist)
 		expected []gitseek.FileInfo
 	}{
 		{
 			name: "lang commit is on the main branch and EN file not exists",
-			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
+			initMock: func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
+				t.Helper()
+
+				ctx := t.Context()
+
 				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
 					git.CommitInfo{
 						CommitID: "CID1",
@@ -53,7 +55,11 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 		},
 		{
 			name: "lang commit is not on the main branch and EN file not exists",
-			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
+			initMock: func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
+				t.Helper()
+
+				ctx := t.Context()
+
 				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
 					git.CommitInfo{
 						CommitID: "CID1",
@@ -99,7 +105,11 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 		},
 		{
 			name: "EN file was deleted",
-			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
+			initMock: func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
+				t.Helper()
+
+				ctx := t.Context()
+
 				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
 					git.CommitInfo{
 						CommitID: "CID1",
@@ -161,7 +171,11 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 		},
 		{
 			name: "EN file found with no updates",
-			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
+			initMock: func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
+				t.Helper()
+
+				ctx := t.Context()
+
 				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
 					git.CommitInfo{
 						CommitID: "CID1",
@@ -207,7 +221,11 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 		},
 		{
 			name: "EN file found with updates",
-			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
+			initMock: func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
+				t.Helper()
+
+				ctx := t.Context()
+
 				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
 					git.CommitInfo{
 						CommitID: "CID1",
@@ -277,7 +295,11 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 		},
 		{
 			name: "EN file found with updates and EN commit made direct to the main branch",
-			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
+			initMock: func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
+				t.Helper()
+
+				ctx := t.Context()
+
 				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
 					git.CommitInfo{
 						CommitID: "CID1",
@@ -339,6 +361,10 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := t.Context()
+
 			ctrl := gomock.NewController(t)
 			gitRepo := mocks.NewMockGitRepo(ctrl)
 			gitRepoHist := mocks.NewMockGitRepoHist(ctrl)
@@ -351,7 +377,7 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 			cacheStore.EXPECT().
 				Write(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
-			tc.initMock(gitRepo, gitRepoHist)
+			tc.initMock(t, gitRepo, gitRepoHist)
 
 			gitSeek := gitseek.New(gitRepo, gitRepoHist, cacheStore)
 
@@ -368,6 +394,8 @@ func TestGitSeek_CheckFiles(t *testing.T) {
 }
 
 func TestGitSeek_InvalidateFile(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		name     string
 		file     string
@@ -376,20 +404,20 @@ func TestGitSeek_InvalidateFile(t *testing.T) {
 		{
 			name: "invalidate file outside the 'content' dir",
 			file: "dir/file1",
-			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist, cacheStore *mocks.MockCacheStore) {
+			initMock: func(_ *mocks.MockGitRepo, _ *mocks.MockGitRepoHist, _ *mocks.MockCacheStore) {
 			},
 		},
 		{
 			name: "invalidate lang file",
 			file: "content/pl/file1",
-			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist, cacheStore *mocks.MockCacheStore) {
+			initMock: func(_ *mocks.MockGitRepo, _ *mocks.MockGitRepoHist, cacheStore *mocks.MockCacheStore) {
 				cacheStore.EXPECT().Delete("lang/pl/git-file-info", "file1").Return(nil)
 			},
 		},
 		{
 			name: "invalidate EN file",
 			file: "content/en/file1",
-			initMock: func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist, cacheStore *mocks.MockCacheStore) {
+			initMock: func(_ *mocks.MockGitRepo, _ *mocks.MockGitRepoHist, cacheStore *mocks.MockCacheStore) {
 				cacheStore.EXPECT().ListBuckets("lang").Return([]string{"pl", "fr"}, nil)
 
 				cacheStore.EXPECT().Delete("lang/en/git-file-info", "file1").Return(nil)
@@ -399,6 +427,8 @@ func TestGitSeek_InvalidateFile(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			ctrl := gomock.NewController(t)
 			gitRepo := mocks.NewMockGitRepo(ctrl)
 			gitRepoHist := mocks.NewMockGitRepoHist(ctrl)
