@@ -11,9 +11,9 @@ package mocks
 
 import (
 	context "context"
-	git "github.com/dkarczmarski/go-kweb-lang/git"
 	reflect "reflect"
 
+	git "github.com/dkarczmarski/go-kweb-lang/git"
 	gomock "go.uber.org/mock/gomock"
 )
 
