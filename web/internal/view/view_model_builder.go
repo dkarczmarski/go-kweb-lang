@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"go-kweb-lang/dashboard"
+	"github.com/dkarczmarski/go-kweb-lang/dashboard"
 
-	"go-kweb-lang/web/internal/reqhelper"
+	"github.com/dkarczmarski/go-kweb-lang/web/internal/reqhelper"
 
-	"go-kweb-lang/git"
+	"github.com/dkarczmarski/go-kweb-lang/git"
 )
 
 type LangCodesProvider interface {

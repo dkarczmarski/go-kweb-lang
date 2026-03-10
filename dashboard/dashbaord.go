@@ -1,7 +1,7 @@
 package dashboard
 
 import (
-	"go-kweb-lang/gitseek"
+	"github.com/dkarczmarski/go-kweb-lang/gitseek"
 )
 
 type Dashboard struct {

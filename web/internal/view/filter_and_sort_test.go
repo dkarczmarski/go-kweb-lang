@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"go-kweb-lang/git"
-	"go-kweb-lang/web/internal/view"
+	"github.com/dkarczmarski/go-kweb-lang/git"
+	"github.com/dkarczmarski/go-kweb-lang/web/internal/view"
 )
 
 func TestFilterAndSort(t *testing.T) {

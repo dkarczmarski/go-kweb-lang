@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"go-kweb-lang/store"
+	"github.com/dkarczmarski/go-kweb-lang/store"
 )
 
 func TestFileStore_Delete(t *testing.T) {

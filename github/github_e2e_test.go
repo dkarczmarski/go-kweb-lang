@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"go-kweb-lang/github"
+	"github.com/dkarczmarski/go-kweb-lang/github"
 )
 
 func TestGitHub_GetCommitFiles_E2E(t *testing.T) {

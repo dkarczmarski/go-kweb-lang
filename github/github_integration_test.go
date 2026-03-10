@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"go-kweb-lang/github"
+	"github.com/dkarczmarski/go-kweb-lang/github"
 )
 
 //go:embed testdata/TestGitHub_GetCommitFiles.txt

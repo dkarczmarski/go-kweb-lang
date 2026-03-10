@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"go-kweb-lang/githist"
+	"github.com/dkarczmarski/go-kweb-lang/githist"
 )
 
 type RefreshRepoTask struct {

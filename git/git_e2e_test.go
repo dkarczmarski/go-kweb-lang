@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"go-kweb-lang/git"
+	"github.com/dkarczmarski/go-kweb-lang/git"
 )
 
 func TestGit_ListFilesInCommit_E2E(t *testing.T) {

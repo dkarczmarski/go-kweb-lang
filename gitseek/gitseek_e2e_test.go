@@ -9,10 +9,10 @@ import (
 	"reflect"
 	"testing"
 
-	"go-kweb-lang/git"
-	"go-kweb-lang/githist"
-	"go-kweb-lang/gitseek"
-	"go-kweb-lang/store"
+	"github.com/dkarczmarski/go-kweb-lang/git"
+	"github.com/dkarczmarski/go-kweb-lang/githist"
+	"github.com/dkarczmarski/go-kweb-lang/gitseek"
+	"github.com/dkarczmarski/go-kweb-lang/store"
 )
 
 func TestGitSeek_CheckFiles_E2E_issue1(t *testing.T) {

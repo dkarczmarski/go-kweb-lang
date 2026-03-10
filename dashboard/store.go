@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"go-kweb-lang/proxycache"
+	"github.com/dkarczmarski/go-kweb-lang/proxycache"
 )
 
 // CacheStore is an interface used to decouple this package from the concrete store.FileStore implementation.

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"go-kweb-lang/github"
-	"go-kweb-lang/githubmon"
-	"go-kweb-lang/githubmon/internal/mocks"
+	"github.com/dkarczmarski/go-kweb-lang/github"
+	"github.com/dkarczmarski/go-kweb-lang/githubmon"
+	"github.com/dkarczmarski/go-kweb-lang/githubmon/internal/mocks"
 
 	"go.uber.org/mock/gomock"
 )

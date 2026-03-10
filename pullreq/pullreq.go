@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
-	"go-kweb-lang/github"
-	"go-kweb-lang/proxycache"
+	"github.com/dkarczmarski/go-kweb-lang/github"
+	"github.com/dkarczmarski/go-kweb-lang/proxycache"
 )
 
 type FilePRFinderConfig struct {

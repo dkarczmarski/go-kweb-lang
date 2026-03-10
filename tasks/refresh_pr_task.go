@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"go-kweb-lang/langcnt"
-	"go-kweb-lang/pullreq"
+	"github.com/dkarczmarski/go-kweb-lang/langcnt"
+	"github.com/dkarczmarski/go-kweb-lang/pullreq"
 )
 
 type RefreshPRTask struct {

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"go-kweb-lang/dashboard"
+	"github.com/dkarczmarski/go-kweb-lang/dashboard"
 )
 
 type Server struct {

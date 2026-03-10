@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"go-kweb-lang/git/internal"
+	"github.com/dkarczmarski/go-kweb-lang/git/internal"
 )
 
 // CommitInfo represents commit details.

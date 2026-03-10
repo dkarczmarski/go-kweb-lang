@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"testing"
 
-	"go-kweb-lang/git"
-	"go-kweb-lang/githist"
-	"go-kweb-lang/store"
+	"github.com/dkarczmarski/go-kweb-lang/git"
+	"github.com/dkarczmarski/go-kweb-lang/githist"
+	"github.com/dkarczmarski/go-kweb-lang/store"
 )
 
 func TestGitHist_MergeCommitFiles_E2E(t *testing.T) {

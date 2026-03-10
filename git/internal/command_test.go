@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"go-kweb-lang/git/internal"
+	"github.com/dkarczmarski/go-kweb-lang/git/internal"
 )
 
 func TestStdCommandRunner_Exec(t *testing.T) {

@@ -7,12 +7,12 @@ import (
 	"log"
 	"net/http"
 
-	"go-kweb-lang/dashboard"
+	"github.com/dkarczmarski/go-kweb-lang/dashboard"
 
-	"go-kweb-lang/web/internal/weberror"
+	"github.com/dkarczmarski/go-kweb-lang/web/internal/weberror"
 
-	"go-kweb-lang/web/internal/reqhelper"
-	"go-kweb-lang/web/internal/view"
+	"github.com/dkarczmarski/go-kweb-lang/web/internal/reqhelper"
+	"github.com/dkarczmarski/go-kweb-lang/web/internal/view"
 )
 
 //go:embed lang_codes.html

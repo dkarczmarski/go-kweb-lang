@@ -9,18 +9,18 @@ import (
 	"strings"
 	"time"
 
-	"go-kweb-lang/dashboard"
-	"go-kweb-lang/web"
+	"github.com/dkarczmarski/go-kweb-lang/dashboard"
+	"github.com/dkarczmarski/go-kweb-lang/web"
 
-	"go-kweb-lang/git"
-	"go-kweb-lang/githist"
-	"go-kweb-lang/github"
-	"go-kweb-lang/githubmon"
-	"go-kweb-lang/gitseek"
-	"go-kweb-lang/langcnt"
-	"go-kweb-lang/pullreq"
-	"go-kweb-lang/store"
-	"go-kweb-lang/tasks"
+	"github.com/dkarczmarski/go-kweb-lang/git"
+	"github.com/dkarczmarski/go-kweb-lang/githist"
+	"github.com/dkarczmarski/go-kweb-lang/github"
+	"github.com/dkarczmarski/go-kweb-lang/githubmon"
+	"github.com/dkarczmarski/go-kweb-lang/gitseek"
+	"github.com/dkarczmarski/go-kweb-lang/langcnt"
+	"github.com/dkarczmarski/go-kweb-lang/pullreq"
+	"github.com/dkarczmarski/go-kweb-lang/store"
+	"github.com/dkarczmarski/go-kweb-lang/tasks"
 )
 
 type Config struct {

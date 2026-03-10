@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"go-kweb-lang/github"
-	"go-kweb-lang/pullreq"
-	"go-kweb-lang/store"
+	"github.com/dkarczmarski/go-kweb-lang/github"
+	"github.com/dkarczmarski/go-kweb-lang/pullreq"
+	"github.com/dkarczmarski/go-kweb-lang/store"
 )
 
 func TestFilePRFinder_Update_E2E(t *testing.T) {

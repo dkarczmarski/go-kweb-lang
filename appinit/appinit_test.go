@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"go-kweb-lang/appinit"
+	"github.com/dkarczmarski/go-kweb-lang/appinit"
 )
 
 func TestParseEnvParams(t *testing.T) {

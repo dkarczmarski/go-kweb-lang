@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"go-kweb-lang/appinit"
-	"go-kweb-lang/git"
+	"github.com/dkarczmarski/go-kweb-lang/appinit"
+	"github.com/dkarczmarski/go-kweb-lang/git"
 )
 
 //nolint:gochecknoglobals

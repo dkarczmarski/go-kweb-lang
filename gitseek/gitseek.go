@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go-kweb-lang/git"
-	"go-kweb-lang/proxycache"
+	"github.com/dkarczmarski/go-kweb-lang/git"
+	"github.com/dkarczmarski/go-kweb-lang/proxycache"
 )
 
 const (

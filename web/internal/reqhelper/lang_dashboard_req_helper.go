@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"go-kweb-lang/web/internal/weberror"
+	"github.com/dkarczmarski/go-kweb-lang/web/internal/weberror"
 )
 
 type RequestModel struct {

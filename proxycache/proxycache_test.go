@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"go-kweb-lang/proxycache"
-	"go-kweb-lang/proxycache/internal/mocks"
-	"go-kweb-lang/testing/storetests"
+	"github.com/dkarczmarski/go-kweb-lang/proxycache"
+	"github.com/dkarczmarski/go-kweb-lang/proxycache/internal/mocks"
+	"github.com/dkarczmarski/go-kweb-lang/testing/storetests"
 
 	"go.uber.org/mock/gomock"
 )

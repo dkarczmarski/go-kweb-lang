@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"testing"
 
-	"go-kweb-lang/git"
-	"go-kweb-lang/githist"
-	"go-kweb-lang/githist/internal/mocks"
-	"go-kweb-lang/testing/storetests"
+	"github.com/dkarczmarski/go-kweb-lang/git"
+	"github.com/dkarczmarski/go-kweb-lang/githist"
+	"github.com/dkarczmarski/go-kweb-lang/githist/internal/mocks"
+	"github.com/dkarczmarski/go-kweb-lang/testing/storetests"
 
 	"go.uber.org/mock/gomock"
 )

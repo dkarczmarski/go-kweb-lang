@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go-kweb-lang/gitseek"
+	"github.com/dkarczmarski/go-kweb-lang/gitseek"
 )
 
 const (

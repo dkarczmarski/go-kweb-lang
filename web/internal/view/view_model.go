@@ -1,8 +1,8 @@
 package view
 
 import (
-	"go-kweb-lang/git"
-	"go-kweb-lang/gitseek"
+	"github.com/dkarczmarski/go-kweb-lang/git"
+	"github.com/dkarczmarski/go-kweb-lang/gitseek"
 )
 
 type LangCodesViewModel struct {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"go-kweb-lang/gitseek"
-	"go-kweb-lang/langcnt"
-	"go-kweb-lang/pullreq"
+	"github.com/dkarczmarski/go-kweb-lang/gitseek"
+	"github.com/dkarczmarski/go-kweb-lang/langcnt"
+	"github.com/dkarczmarski/go-kweb-lang/pullreq"
 )
 
 type RefreshTask struct {

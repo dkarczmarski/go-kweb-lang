@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"go-kweb-lang/github/internal/throttle"
+	"github.com/dkarczmarski/go-kweb-lang/github/internal/throttle"
 )
 
 type Config struct {

@@ -3,7 +3,7 @@ package tasks
 import (
 	"context"
 
-	"go-kweb-lang/dashboard"
+	"github.com/dkarczmarski/go-kweb-lang/dashboard"
 )
 
 type RefreshTask struct {
