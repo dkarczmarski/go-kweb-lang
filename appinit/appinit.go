@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/dkarczmarski/go-kweb-lang/dashboard"
-	"github.com/dkarczmarski/go-kweb-lang/web"
-
 	"github.com/dkarczmarski/go-kweb-lang/git"
 	"github.com/dkarczmarski/go-kweb-lang/githist"
 	"github.com/dkarczmarski/go-kweb-lang/github"
@@ -21,6 +19,7 @@ import (
 	"github.com/dkarczmarski/go-kweb-lang/pullreq"
 	"github.com/dkarczmarski/go-kweb-lang/store"
 	"github.com/dkarczmarski/go-kweb-lang/tasks"
+	"github.com/dkarczmarski/go-kweb-lang/web"
 )
 
 type Config struct {
@@ -52,8 +51,10 @@ type Config struct {
 	Server               *web.Server
 }
 
-var ErrBadConfiguration = errors.New("bad configuration")
-var ErrInvalidEnvVars = errors.New("invalid environment variables")
+var (
+	ErrBadConfiguration = errors.New("bad configuration")
+	ErrInvalidEnvVars   = errors.New("invalid environment variables")
+)
 
 const (
 	githubTokenFileLineLimit = 3
@@ -455,9 +456,6 @@ func NewGitHub() func(*Config) error {
 		config.GitHub = github.NewGitHub(
 			github.WithDefaults(),
 			github.WithAuthorization(config.GitHubToken, config.GitHubUserAgent),
-			// todo: adjust this value when no authorization token is used
-			//
-			// magic number,
 			// with authorization github allows at most 30 calls per minute, so
 			// for safety we use a 3-second delay between requests
 			github.WithThrottle(githubThrottleDelay),

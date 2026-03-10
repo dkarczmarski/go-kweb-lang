@@ -156,10 +156,8 @@ func TestParseEnvParams(t *testing.T) {
 				if !errors.Is(err, appinit.ErrInvalidEnvVars) {
 					t.Fatalf("expected errors.Is(err, ErrInvalidEnvVars)=true, got false; err=%v", err)
 				}
-			} else {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
+			} else if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 
 			assertField(t, "RepoDir", cfg.RepoDir, tt.want.RepoDir)
