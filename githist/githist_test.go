@@ -55,13 +55,13 @@ func TestGitHist_FindForkCommit(t *testing.T) {
 
 			ctrl := gomock.NewController(t)
 			gitRepo := mocks.NewMockGitRepo(ctrl)
-			cacheStore := mocks.NewMockCacheStore(ctrl)
+			cache := mocks.NewMockCacheStorage(ctrl)
 
-			cacheStore.EXPECT().
+			cache.EXPECT().
 				Read(bucketMainBranchCommits, "", gomock.Any()).
 				DoAndReturn(storetests.MockReadNotFound())
 
-			cacheStore.EXPECT().
+			cache.EXPECT().
 				Write(gomock.Any(), gomock.Any(), gomock.Any()).
 				Return(nil)
 
@@ -69,7 +69,7 @@ func TestGitHist_FindForkCommit(t *testing.T) {
 				tc.initMock(gitRepo, tc.commitID)
 			}
 
-			gc := githist.New(gitRepo, cacheStore)
+			gc := githist.New(gitRepo, cache)
 
 			mergeCommit, err := gc.FindForkCommit(ctx, tc.commitID)
 			if err != nil {
@@ -123,22 +123,22 @@ func TestGitHist_FindMergeCommit(t *testing.T) {
 
 			ctrl := gomock.NewController(t)
 			gitRepo := mocks.NewMockGitRepo(ctrl)
-			cacheStore := mocks.NewMockCacheStore(ctrl)
+			cache := mocks.NewMockCacheStorage(ctrl)
 
-			cacheStore.EXPECT().
+			cache.EXPECT().
 				Read(bucketMainBranchCommits, "", gomock.Any()).
 				DoAndReturn(storetests.MockReadReturn[[]git.CommitInfo](
 					false, nil, nil),
 				)
 
-			cacheStore.EXPECT().
+			cache.EXPECT().
 				Write(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 			if tc.initMock != nil {
 				tc.initMock(gitRepo, tc.commitID)
 			}
 
-			gc := githist.New(gitRepo, cacheStore)
+			gc := githist.New(gitRepo, cache)
 
 			mergeCommit, err := gc.FindMergeCommit(ctx, tc.commitID)
 			if err != nil {
@@ -161,7 +161,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 		initMock      func(
 			ctx context.Context,
 			gitRepo *mocks.MockGitRepo,
-			cacheStore *mocks.MockCacheStore,
+			cache *mocks.MockCacheStorage,
 		)
 	}{
 		{
@@ -170,7 +170,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 			initMock: func(
 				ctx context.Context,
 				gitRepo *mocks.MockGitRepo,
-				cacheStore *mocks.MockCacheStore,
+				cache *mocks.MockCacheStorage,
 			) {
 				gitRepo.EXPECT().ListMainBranchCommits(ctx).
 					Return([]git.CommitInfo{
@@ -178,12 +178,12 @@ func TestGitHist_PullRefresh(t *testing.T) {
 					}, nil).
 					Times(1)
 
-				cacheStore.EXPECT().
+				cache.EXPECT().
 					Read(bucketMainBranchCommits, "", gomock.Any()).
 					DoAndReturn(storetests.MockReadNotFound()).
 					Times(1)
 
-				cacheStore.EXPECT().
+				cache.EXPECT().
 					Write(bucketMainBranchCommits, "", gomock.Any()).
 					Return(nil).
 					Times(1)
@@ -197,7 +197,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 			initMock: func(
 				ctx context.Context,
 				gitRepo *mocks.MockGitRepo,
-				cacheStore *mocks.MockCacheStore,
+				cache *mocks.MockCacheStorage,
 			) {
 				mainBranch := []git.CommitInfo{
 					{CommitID: "C-ID-0", DateTime: "DT-0", Comment: "Comment-0"},
@@ -213,7 +213,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 				gomock.InOrder(
 					// GetLastMainBranchCommit
 					// first Read -> not found -> ListMainBranchCommits -> Write
-					cacheStore.EXPECT().
+					cache.EXPECT().
 						Read(bucketMainBranchCommits, "", gomock.Any()).
 						DoAndReturn(storetests.MockReadNotFound()),
 
@@ -221,7 +221,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 						ListMainBranchCommits(ctx).
 						Return(mainBranch, nil),
 
-					cacheStore.EXPECT().
+					cache.EXPECT().
 						Write(bucketMainBranchCommits, "", gomock.Any()).
 						Return(nil),
 
@@ -231,7 +231,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 						Return(fresh, nil),
 
 					// delete cache entry because fresh commits were found so main branch commits have changed
-					cacheStore.EXPECT().
+					cache.EXPECT().
 						Delete(bucketMainBranchCommits, "").
 						Return(nil),
 
@@ -253,7 +253,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 			initMock: func(
 				ctx context.Context,
 				gitRepo *mocks.MockGitRepo,
-				cacheStore *mocks.MockCacheStore,
+				cache *mocks.MockCacheStorage,
 			) {
 				mainBranch := []git.CommitInfo{
 					{CommitID: "C-ID-13", DateTime: "DT-13", Comment: "Comment-13"},
@@ -271,7 +271,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 				gomock.InOrder(
 					// GetLastMainBranchCommit
 					// first Read -> not found -> ListMainBranchCommits -> Write
-					cacheStore.EXPECT().
+					cache.EXPECT().
 						Read(bucketMainBranchCommits, "", gomock.Any()).
 						DoAndReturn(storetests.MockReadNotFound()),
 
@@ -279,7 +279,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 						ListMainBranchCommits(ctx).
 						Return(mainBranch, nil),
 
-					cacheStore.EXPECT().
+					cache.EXPECT().
 						Write(bucketMainBranchCommits, "", gomock.Any()).
 						Return(nil),
 
@@ -289,7 +289,7 @@ func TestGitHist_PullRefresh(t *testing.T) {
 						Return(fresh, nil),
 
 					// delete cache entry because fresh commits were found so main branch commits have changed
-					cacheStore.EXPECT().
+					cache.EXPECT().
 						Delete(bucketMainBranchCommits, "").
 						Return(nil),
 
@@ -350,14 +350,14 @@ func TestGitHist_PullRefresh(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			gitRepo := mocks.NewMockGitRepo(ctrl)
-			cacheStore := mocks.NewMockCacheStore(ctrl)
+			cache := mocks.NewMockCacheStorage(ctrl)
 
 			gitRepo.EXPECT().Fetch(ctx).Return(nil)
 			gitRepo.EXPECT().Pull(ctx).Return(nil)
 
-			tc.initMock(ctx, gitRepo, cacheStore)
+			tc.initMock(ctx, gitRepo, cache)
 
-			gitRepoHist := githist.New(gitRepo, cacheStore)
+			gitRepoHist := githist.New(gitRepo, cache)
 
 			files, err := gitRepoHist.PullRefresh(ctx)
 			if err != nil {
@@ -415,12 +415,12 @@ func TestGitHist_GetLastMainBranchCommit(t *testing.T) {
 
 			ctrl := gomock.NewController(t)
 			gitRepo := mocks.NewMockGitRepo(ctrl)
-			cacheStore := mocks.NewMockCacheStore(ctrl)
-			gitRepoHist := githist.New(gitRepo, cacheStore)
+			cache := mocks.NewMockCacheStorage(ctrl)
+			gitRepoHist := githist.New(gitRepo, cache)
 
-			cacheStore.EXPECT().Read(gomock.Any(), gomock.Any(), gomock.Any()).
+			cache.EXPECT().Read(gomock.Any(), gomock.Any(), gomock.Any()).
 				DoAndReturn(storetests.MockReadNotFound())
-			cacheStore.EXPECT().Write(gomock.Any(), gomock.Any(), gomock.Any()).
+			cache.EXPECT().Write(gomock.Any(), gomock.Any(), gomock.Any()).
 				Return(nil)
 
 			gitRepo.EXPECT().ListMainBranchCommits(ctx).

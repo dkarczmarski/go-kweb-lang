@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/dkarczmarski/go-kweb-lang/git"
-	"github.com/dkarczmarski/go-kweb-lang/proxycache"
 )
 
 const (
@@ -30,8 +29,8 @@ type GitRepo interface {
 	ListFilesBetweenCommits(ctx context.Context, forkCommitID, branchLastCommitID string) ([]string, error)
 }
 
-// CacheStore is an interface used to decouple this package from the concrete store implementation.
-type CacheStore interface {
+// CacheStorage is an interface used to decouple this package from the concrete store implementation.
+type CacheStorage interface {
 	Read(bucket, key string, buff any) (bool, error)
 	Write(bucket, key string, data any) error
 	Delete(bucket, key string) error
@@ -43,17 +42,17 @@ type Invalidator interface {
 }
 
 type GitHist struct {
-	gitRepo    GitRepo
-	cacheStore CacheStore
+	gitRepo GitRepo
+	cache   CacheStorage
 }
 
 func New(
 	gitRepo GitRepo,
-	cacheStore CacheStore,
+	cache CacheStorage,
 ) *GitHist {
 	return &GitHist{
-		gitRepo:    gitRepo,
-		cacheStore: cacheStore,
+		gitRepo: gitRepo,
+		cache:   cache,
 	}
 }
 
@@ -86,16 +85,30 @@ func (gh *GitHist) FindMergeCommit(ctx context.Context, commitID string) (*git.C
 }
 
 func (gh *GitHist) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
-	return proxycache.Get(
-		ctx,
-		gh.cacheStore,
-		bucketMainBranchCommits,
-		"",
-		nil,
-		func(ctx context.Context) ([]git.CommitInfo, error) {
-			return gh.gitRepo.ListMainBranchCommits(ctx)
-		},
-	)
+	bucket := bucketMainBranchCommits
+	key := ""
+
+	var cached []git.CommitInfo
+
+	exists, err := gh.cache.Read(bucket, key, &cached)
+	if err != nil {
+		return nil, fmt.Errorf("read main branch commits from cache: %w", err)
+	}
+
+	if exists {
+		return cached, nil
+	}
+
+	mainBranchCommits, err := gh.gitRepo.ListMainBranchCommits(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := gh.cache.Write(bucket, key, mainBranchCommits); err != nil {
+		return nil, fmt.Errorf("write main branch commits to cache: %w", err)
+	}
+
+	return mainBranchCommits, nil
 }
 
 // findCommitFunc invokes listFunc with the given commitID and returns
@@ -216,7 +229,7 @@ func (gh *GitHist) PullRefresh(ctx context.Context) ([]string, error) {
 }
 
 func (gh *GitHist) invalidateMainBranchCommits() error {
-	return gh.cacheStore.Delete(bucketMainBranchCommits, "")
+	return gh.cache.Delete(bucketMainBranchCommits, "")
 }
 
 // IsMainBranchCommit checks whether the given commit ID is part of the main branch.

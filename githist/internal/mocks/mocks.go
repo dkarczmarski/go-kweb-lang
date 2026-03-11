@@ -390,32 +390,32 @@ func (c *MockGitRepoPullCall) DoAndReturn(f func(context.Context) error) *MockGi
 	return c
 }
 
-// MockCacheStore is a mock of CacheStore interface.
-type MockCacheStore struct {
+// MockCacheStorage is a mock of CacheStorage interface.
+type MockCacheStorage struct {
 	ctrl     *gomock.Controller
-	recorder *MockCacheStoreMockRecorder
+	recorder *MockCacheStorageMockRecorder
 	isgomock struct{}
 }
 
-// MockCacheStoreMockRecorder is the mock recorder for MockCacheStore.
-type MockCacheStoreMockRecorder struct {
-	mock *MockCacheStore
+// MockCacheStorageMockRecorder is the mock recorder for MockCacheStorage.
+type MockCacheStorageMockRecorder struct {
+	mock *MockCacheStorage
 }
 
-// NewMockCacheStore creates a new mock instance.
-func NewMockCacheStore(ctrl *gomock.Controller) *MockCacheStore {
-	mock := &MockCacheStore{ctrl: ctrl}
-	mock.recorder = &MockCacheStoreMockRecorder{mock}
+// NewMockCacheStorage creates a new mock instance.
+func NewMockCacheStorage(ctrl *gomock.Controller) *MockCacheStorage {
+	mock := &MockCacheStorage{ctrl: ctrl}
+	mock.recorder = &MockCacheStorageMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockCacheStore) EXPECT() *MockCacheStoreMockRecorder {
+func (m *MockCacheStorage) EXPECT() *MockCacheStorageMockRecorder {
 	return m.recorder
 }
 
 // Delete mocks base method.
-func (m *MockCacheStore) Delete(bucket, key string) error {
+func (m *MockCacheStorage) Delete(bucket, key string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", bucket, key)
 	ret0, _ := ret[0].(error)
@@ -423,37 +423,37 @@ func (m *MockCacheStore) Delete(bucket, key string) error {
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockCacheStoreMockRecorder) Delete(bucket, key any) *MockCacheStoreDeleteCall {
+func (mr *MockCacheStorageMockRecorder) Delete(bucket, key any) *MockCacheStorageDeleteCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockCacheStore)(nil).Delete), bucket, key)
-	return &MockCacheStoreDeleteCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockCacheStorage)(nil).Delete), bucket, key)
+	return &MockCacheStorageDeleteCall{Call: call}
 }
 
-// MockCacheStoreDeleteCall wrap *gomock.Call
-type MockCacheStoreDeleteCall struct {
+// MockCacheStorageDeleteCall wrap *gomock.Call
+type MockCacheStorageDeleteCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockCacheStoreDeleteCall) Return(arg0 error) *MockCacheStoreDeleteCall {
+func (c *MockCacheStorageDeleteCall) Return(arg0 error) *MockCacheStorageDeleteCall {
 	c.Call = c.Call.Return(arg0)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockCacheStoreDeleteCall) Do(f func(string, string) error) *MockCacheStoreDeleteCall {
+func (c *MockCacheStorageDeleteCall) Do(f func(string, string) error) *MockCacheStorageDeleteCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockCacheStoreDeleteCall) DoAndReturn(f func(string, string) error) *MockCacheStoreDeleteCall {
+func (c *MockCacheStorageDeleteCall) DoAndReturn(f func(string, string) error) *MockCacheStorageDeleteCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // Read mocks base method.
-func (m *MockCacheStore) Read(bucket, key string, buff any) (bool, error) {
+func (m *MockCacheStorage) Read(bucket, key string, buff any) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Read", bucket, key, buff)
 	ret0, _ := ret[0].(bool)
@@ -462,37 +462,37 @@ func (m *MockCacheStore) Read(bucket, key string, buff any) (bool, error) {
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockCacheStoreMockRecorder) Read(bucket, key, buff any) *MockCacheStoreReadCall {
+func (mr *MockCacheStorageMockRecorder) Read(bucket, key, buff any) *MockCacheStorageReadCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockCacheStore)(nil).Read), bucket, key, buff)
-	return &MockCacheStoreReadCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockCacheStorage)(nil).Read), bucket, key, buff)
+	return &MockCacheStorageReadCall{Call: call}
 }
 
-// MockCacheStoreReadCall wrap *gomock.Call
-type MockCacheStoreReadCall struct {
+// MockCacheStorageReadCall wrap *gomock.Call
+type MockCacheStorageReadCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockCacheStoreReadCall) Return(arg0 bool, arg1 error) *MockCacheStoreReadCall {
+func (c *MockCacheStorageReadCall) Return(arg0 bool, arg1 error) *MockCacheStorageReadCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockCacheStoreReadCall) Do(f func(string, string, any) (bool, error)) *MockCacheStoreReadCall {
+func (c *MockCacheStorageReadCall) Do(f func(string, string, any) (bool, error)) *MockCacheStorageReadCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockCacheStoreReadCall) DoAndReturn(f func(string, string, any) (bool, error)) *MockCacheStoreReadCall {
+func (c *MockCacheStorageReadCall) DoAndReturn(f func(string, string, any) (bool, error)) *MockCacheStorageReadCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // Write mocks base method.
-func (m *MockCacheStore) Write(bucket, key string, data any) error {
+func (m *MockCacheStorage) Write(bucket, key string, data any) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Write", bucket, key, data)
 	ret0, _ := ret[0].(error)
@@ -500,31 +500,31 @@ func (m *MockCacheStore) Write(bucket, key string, data any) error {
 }
 
 // Write indicates an expected call of Write.
-func (mr *MockCacheStoreMockRecorder) Write(bucket, key, data any) *MockCacheStoreWriteCall {
+func (mr *MockCacheStorageMockRecorder) Write(bucket, key, data any) *MockCacheStorageWriteCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockCacheStore)(nil).Write), bucket, key, data)
-	return &MockCacheStoreWriteCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockCacheStorage)(nil).Write), bucket, key, data)
+	return &MockCacheStorageWriteCall{Call: call}
 }
 
-// MockCacheStoreWriteCall wrap *gomock.Call
-type MockCacheStoreWriteCall struct {
+// MockCacheStorageWriteCall wrap *gomock.Call
+type MockCacheStorageWriteCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockCacheStoreWriteCall) Return(arg0 error) *MockCacheStoreWriteCall {
+func (c *MockCacheStorageWriteCall) Return(arg0 error) *MockCacheStorageWriteCall {
 	c.Call = c.Call.Return(arg0)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockCacheStoreWriteCall) Do(f func(string, string, any) error) *MockCacheStoreWriteCall {
+func (c *MockCacheStorageWriteCall) Do(f func(string, string, any) error) *MockCacheStorageWriteCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockCacheStoreWriteCall) DoAndReturn(f func(string, string, any) error) *MockCacheStoreWriteCall {
+func (c *MockCacheStorageWriteCall) DoAndReturn(f func(string, string, any) error) *MockCacheStorageWriteCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
