@@ -407,17 +407,7 @@ func NewGitRepoHist() func(*Config) error {
 			return fmt.Errorf("param CacheStore is not set: %w", ErrBadConfiguration)
 		}
 
-		filePaths := config.FilePaths
-		if filePaths == nil {
-			return fmt.Errorf("param FilePaths is not set: %w", ErrBadConfiguration)
-		}
-
-		langCodesProvider := config.LangCodesProvider
-		if langCodesProvider == nil {
-			return fmt.Errorf("param LangCodesProvider is not set: %w", ErrBadConfiguration)
-		}
-
-		config.GitRepoHist = githist.New(gitRepo, cacheStore, filePaths, langCodesProvider)
+		config.GitRepoHist = githist.New(gitRepo, cacheStore)
 
 		return nil
 	}
@@ -469,24 +459,6 @@ func NewGitSeek() func(*Config) error {
 	}
 }
 
-func RegisterGitSeekInvalidator() func(*Config) error {
-	return func(config *Config) error {
-		gitRepoHist := config.GitRepoHist
-		if gitRepoHist == nil {
-			return fmt.Errorf("param GitRepoHist is not set: %w", ErrBadConfiguration)
-		}
-
-		gitSeek := config.GitSeek
-		if gitSeek == nil {
-			return fmt.Errorf("param GitSeek is not set: %w", ErrBadConfiguration)
-		}
-
-		gitRepoHist.RegisterInvalidator(gitSeek)
-
-		return nil
-	}
-}
-
 func NewGitHub() func(*Config) error {
 	return func(config *Config) error {
 		config.GitHub = github.NewGitHub(
@@ -526,7 +498,27 @@ func NewRefreshRepoTask() func(*Config) error {
 			return fmt.Errorf("param GitRepoHist is not set: %w", ErrBadConfiguration)
 		}
 
-		config.RefreshRepoTask = tasks.NewRefreshRepoTask(gitRepoHist)
+		filePaths := config.FilePaths
+		if filePaths == nil {
+			return fmt.Errorf("param FilePaths is not set: %w", ErrBadConfiguration)
+		}
+
+		langCodesProvider := config.LangCodesProvider
+		if langCodesProvider == nil {
+			return fmt.Errorf("param LangCodesProvider is not set: %w", ErrBadConfiguration)
+		}
+
+		gitSeek := config.GitSeek
+		if gitSeek == nil {
+			return fmt.Errorf("param GitSeek is not set: %w", ErrBadConfiguration)
+		}
+
+		config.RefreshRepoTask = tasks.NewRefreshRepoTask(
+			gitRepoHist,
+			filePaths,
+			langCodesProvider,
+			gitSeek,
+		)
 
 		return nil
 	}

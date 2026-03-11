@@ -156,21 +156,21 @@ func TestGitHist_PullRefresh(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tc := range []struct {
-		name     string
-		initMock func(
+		name          string
+		expectedFiles []string
+		initMock      func(
 			ctx context.Context,
 			gitRepo *mocks.MockGitRepo,
 			cacheStore *mocks.MockCacheStore,
-			invalidator *mocks.MockInvalidator,
 		)
 	}{
 		{
-			name: "no fresh commits",
+			name:          "no fresh commits",
+			expectedFiles: []string{},
 			initMock: func(
 				ctx context.Context,
 				gitRepo *mocks.MockGitRepo,
 				cacheStore *mocks.MockCacheStore,
-				invalidator *mocks.MockInvalidator,
 			) {
 				gitRepo.EXPECT().ListMainBranchCommits(ctx).
 					Return([]git.CommitInfo{
@@ -192,12 +192,12 @@ func TestGitHist_PullRefresh(t *testing.T) {
 			},
 		},
 		{
-			name: "fresh commits on the main branch",
+			name:          "fresh commits on the main branch",
+			expectedFiles: []string{"content/fr/file1", "content/en/file2", "dir/file3", "content/en/dir/file4"},
 			initMock: func(
 				ctx context.Context,
 				gitRepo *mocks.MockGitRepo,
 				cacheStore *mocks.MockCacheStore,
-				invalidator *mocks.MockInvalidator,
 			) {
 				mainBranch := []git.CommitInfo{
 					{CommitID: "C-ID-0", DateTime: "DT-0", Comment: "Comment-0"},
@@ -240,28 +240,20 @@ func TestGitHist_PullRefresh(t *testing.T) {
 						ListFilesInCommit(ctx, "C-ID-1").
 						Return(filesC1, nil),
 
-					// file invalidation
-					invalidator.EXPECT().InvalidateFile("content/fr/file1").Return(nil),
-					invalidator.EXPECT().InvalidateFile("content/en/file2").Return(nil),
-
 					//
 					gitRepo.EXPECT().
 						ListFilesInCommit(ctx, "C-ID-2").
 						Return(filesC2, nil),
-
-					// file invalidation
-					invalidator.EXPECT().InvalidateFile("dir/file3").Return(nil),
-					invalidator.EXPECT().InvalidateFile("content/en/dir/file4").Return(nil),
 				)
 			},
 		},
 		{
-			name: "fresh merge commits",
+			name:          "fresh merge commits",
+			expectedFiles: []string{"dir/file4", "dir/file4", "dir/file1", "dir/file2", "dir/file3"},
 			initMock: func(
 				ctx context.Context,
 				gitRepo *mocks.MockGitRepo,
 				cacheStore *mocks.MockCacheStore,
-				invalidator *mocks.MockInvalidator,
 			) {
 				mainBranch := []git.CommitInfo{
 					{CommitID: "C-ID-13", DateTime: "DT-13", Comment: "Comment-13"},
@@ -306,15 +298,10 @@ func TestGitHist_PullRefresh(t *testing.T) {
 						ListFilesInCommit(ctx, "C-ID-102").
 						Return([]string{"dir/file4"}, nil),
 
-					// file invalidation
-					invalidator.EXPECT().InvalidateFile("dir/file4").Return(nil),
-
 					//
 					gitRepo.EXPECT().
 						ListFilesInCommit(ctx, "C-ID-10").
 						Return([]string{"dir/file4"}, nil),
-
-					// file invalidation - skipped, already done
 
 					//
 					gitRepo.EXPECT().
@@ -337,10 +324,6 @@ func TestGitHist_PullRefresh(t *testing.T) {
 						ListFilesBetweenCommits(ctx, "C-ID-102", "C-ID-11").
 						Return([]string{"dir/file1", "dir/file2"}, nil),
 
-					// file invalidation
-					invalidator.EXPECT().InvalidateFile("dir/file1").Return(nil),
-					invalidator.EXPECT().InvalidateFile("dir/file2").Return(nil),
-
 					//
 					gitRepo.EXPECT().
 						ListFilesInCommit(ctx, "C-ID-2").
@@ -360,9 +343,6 @@ func TestGitHist_PullRefresh(t *testing.T) {
 					gitRepo.EXPECT().
 						ListFilesBetweenCommits(ctx, "C-ID-103", "C-ID-12").
 						Return([]string{"dir/file3"}, nil),
-
-					// file invalidation
-					invalidator.EXPECT().InvalidateFile("dir/file3").Return(nil),
 				)
 			},
 		},
@@ -370,19 +350,22 @@ func TestGitHist_PullRefresh(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			gitRepo := mocks.NewMockGitRepo(ctrl)
-			invalidator := mocks.NewMockInvalidator(ctrl)
 			cacheStore := mocks.NewMockCacheStore(ctrl)
 
 			gitRepo.EXPECT().Fetch(ctx).Return(nil)
 			gitRepo.EXPECT().Pull(ctx).Return(nil)
 
-			tc.initMock(ctx, gitRepo, cacheStore, invalidator)
+			tc.initMock(ctx, gitRepo, cacheStore)
 
 			gitRepoHist := githist.New(gitRepo, cacheStore)
-			gitRepoHist.RegisterInvalidator(invalidator)
 
-			if err := gitRepoHist.PullRefresh(ctx); err != nil {
+			files, err := gitRepoHist.PullRefresh(ctx)
+			if err != nil {
 				t.Error(err)
+			}
+
+			if !reflect.DeepEqual(files, tc.expectedFiles) {
+				t.Errorf("expected files %v, got %v", tc.expectedFiles, files)
 			}
 		})
 	}

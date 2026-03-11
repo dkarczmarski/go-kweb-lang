@@ -8,11 +8,9 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/dkarczmarski/go-kweb-lang/filepairs"
 	"github.com/dkarczmarski/go-kweb-lang/git"
 	"github.com/dkarczmarski/go-kweb-lang/githist"
 	"github.com/dkarczmarski/go-kweb-lang/gitseek"
-	"github.com/dkarczmarski/go-kweb-lang/langcnt"
 	"github.com/dkarczmarski/go-kweb-lang/store"
 )
 
@@ -34,15 +32,11 @@ func newIntegrationEnv(t *testing.T, scenarioName string) integrationEnv {
 
 	repoPath := filepath.Join(tmpDir, "repo")
 	cacheDir := filepath.Join(tmpDir, "cache")
-	cache := store.NewFileStore(cacheDir)
 
 	gitRepo := git.NewRepo(repoPath)
-	filePaths := filepairs.New()
+	cache := store.NewFileStore(cacheDir)
 
-	langCodesProvider := &langcnt.LangCodesProvider{RepoDir: repoPath}
-	langCodesProvider.SetLangCodesFilter([]string{"pl"})
-
-	gitRepoHist := githist.New(gitRepo, cache, filePaths, langCodesProvider)
+	gitRepoHist := githist.New(gitRepo, cache)
 	gitSeeker := gitseek.New(gitRepo, gitRepoHist, cache)
 
 	return integrationEnv{

@@ -187,7 +187,6 @@ func main() {
 		appinit.NewFilePaths(),
 		appinit.NewPairProviders(),
 		appinit.NewGitSeek(),
-		appinit.RegisterGitSeekInvalidator(),
 		appinit.NewGitHub(),
 		appinit.NewFilePRFinder(),
 		appinit.NewDashboardStore(),

@@ -5,14 +5,11 @@ package githist
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
 
-	"github.com/dkarczmarski/go-kweb-lang/filepairs"
 	"github.com/dkarczmarski/go-kweb-lang/git"
-	"github.com/dkarczmarski/go-kweb-lang/langcnt"
 	"github.com/dkarczmarski/go-kweb-lang/proxycache"
 )
 
@@ -46,29 +43,18 @@ type Invalidator interface {
 }
 
 type GitHist struct {
-	gitRepo           GitRepo
-	cacheStore        CacheStore
-	filePaths         *filepairs.FilePaths
-	langCodesProvider *langcnt.LangCodesProvider
-	invalidator       Invalidator
+	gitRepo    GitRepo
+	cacheStore CacheStore
 }
 
 func New(
 	gitRepo GitRepo,
 	cacheStore CacheStore,
-	filePaths *filepairs.FilePaths,
-	langCodesProvider *langcnt.LangCodesProvider,
 ) *GitHist {
 	return &GitHist{
-		gitRepo:           gitRepo,
-		cacheStore:        cacheStore,
-		filePaths:         filePaths,
-		langCodesProvider: langCodesProvider,
+		gitRepo:    gitRepo,
+		cacheStore: cacheStore,
 	}
-}
-
-func (gh *GitHist) RegisterInvalidator(invalidator Invalidator) {
-	gh.invalidator = invalidator
 }
 
 // FindForkCommit returns the fork commit
@@ -164,11 +150,11 @@ func findFirstCommit(mainBranchCommits []git.CommitInfo, commits []git.CommitInf
 }
 
 // PullRefresh performs a git fetch to retrieve fresh data, detects any changes, runs git pull
-// and invalidates changed files.
-func (gh *GitHist) PullRefresh(ctx context.Context) error {
+// and returns the list of changed files.
+func (gh *GitHist) PullRefresh(ctx context.Context) ([]string, error) {
 	mainBranchCommits, err := gh.listMainBranchCommits(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to list main branch commits: %w", err)
+		return nil, fmt.Errorf("failed to list main branch commits: %w", err)
 	}
 
 	lastMainCommit := gh.getLastMainBranchCommit(mainBranchCommits)
@@ -176,17 +162,17 @@ func (gh *GitHist) PullRefresh(ctx context.Context) error {
 	log.Printf("[githist] the last main branch commit is: %v", lastMainCommit)
 
 	if err := gh.gitRepo.Fetch(ctx); err != nil {
-		return fmt.Errorf("git fetch error: %w", err)
+		return nil, fmt.Errorf("git fetch error: %w", err)
 	}
 
 	freshCommits, err := gh.gitRepo.ListFreshCommits(ctx)
 	if err != nil {
-		return fmt.Errorf("git list fresh commits error: %w", err)
+		return nil, fmt.Errorf("git list fresh commits error: %w", err)
 	}
 
 	if len(freshCommits) > 0 {
 		if err := gh.invalidateMainBranchCommits(); err != nil {
-			return fmt.Errorf("error while invalidating main branch commits: %w", err)
+			return nil, fmt.Errorf("error while invalidating main branch commits: %w", err)
 		}
 	}
 
@@ -194,7 +180,7 @@ func (gh *GitHist) PullRefresh(ctx context.Context) error {
 	freshMainBranchCommits = append(freshMainBranchCommits, freshCommits...)
 	freshMainBranchCommits = append(freshMainBranchCommits, mainBranchCommits...)
 
-	invalidated := make(map[string]int)
+	allFilesToInvalidate := make([]string, 0)
 	for i := 0; i < len(freshCommits); i++ {
 		fc := freshCommits[len(freshCommits)-1-i]
 
@@ -202,93 +188,31 @@ func (gh *GitHist) PullRefresh(ctx context.Context) error {
 
 		commitFiles, err := gh.gitRepo.ListFilesInCommit(ctx, fc.CommitID)
 		if err != nil {
-			return fmt.Errorf("list files of commit %s error: %w", fc.CommitID, err)
+			return nil, fmt.Errorf("list files of commit %s error: %w", fc.CommitID, err)
 		}
 
-		var filesToInvalidate []string
 		if len(commitFiles) == 0 {
 			// it might be a merge commit
 			mergeCommitFiles, err := gh.mergeCommitFiles(ctx, fc.CommitID, freshMainBranchCommits)
 			if err != nil {
-				return fmt.Errorf("failed to list files of the merge commit %s: %w", fc.CommitID, err)
+				return nil, fmt.Errorf("failed to list files of the merge commit %s: %w", fc.CommitID, err)
 			}
 
-			filesToInvalidate = mergeCommitFiles
+			allFilesToInvalidate = append(allFilesToInvalidate, mergeCommitFiles...)
 
 			log.Printf("[githist][%d/%d] files in the merge commit: %s", i+1, len(freshCommits), mergeCommitFiles)
 		} else {
-			filesToInvalidate = commitFiles
+			allFilesToInvalidate = append(allFilesToInvalidate, commitFiles...)
 
 			log.Printf("[githist][%d/%d] files in the commit: %s", i+1, len(freshCommits), commitFiles)
-		}
-
-		for _, file := range filesToInvalidate {
-			if invalidatedAt, isInvalidated := invalidated[file]; !isInvalidated {
-				log.Printf("[githist][%d/%d] invalidate file %s", i+1, len(freshCommits), file)
-
-				if err := gh.invalidateChangedPath(file); err != nil {
-					return fmt.Errorf("invalidate changed path %s error: %w", file, err)
-				}
-
-				invalidated[file] = i
-			} else {
-				log.Printf(
-					"[githist][%d/%d] invalidate file %s - (skip) already done at %d",
-					i+1,
-					len(freshCommits),
-					file,
-					invalidatedAt,
-				)
-			}
 		}
 	}
 
 	if err := gh.gitRepo.Pull(ctx); err != nil {
-		return fmt.Errorf("git pull error: %w", err)
+		return nil, fmt.Errorf("git pull error: %w", err)
 	}
 
-	return nil
-}
-
-func (gh *GitHist) invalidateChangedPath(changedPath string) error {
-	if gh.invalidator == nil {
-		return nil
-	}
-
-	pathInfo, err := gh.filePaths.CheckPath(changedPath)
-	if err != nil {
-		if errors.Is(err, filepairs.ErrPairMatcherNotFound) {
-			return nil
-		}
-
-		return fmt.Errorf("check changed path %s: %w", changedPath, err)
-	}
-
-	if pathInfo.IsEnPath() {
-		langCodes, err := gh.langCodesProvider.LangCodes()
-		if err != nil {
-			return fmt.Errorf("get language codes: %w", err)
-		}
-
-		for _, langCode := range langCodes {
-			langPath, err := pathInfo.LangPath(langCode)
-			if err != nil {
-				return fmt.Errorf("build language path for %s: %w", langCode, err)
-			}
-
-			if err := gh.invalidator.InvalidateFile(langCode, langPath); err != nil {
-				return fmt.Errorf("invalidate gitseek cache for (%s)%s: %w", langCode, langPath, err)
-			}
-		}
-
-		return nil
-	}
-
-	if err := gh.invalidator.InvalidateFile(pathInfo.LangCode, changedPath); err != nil {
-		return fmt.Errorf("invalidate gitseek cache for (%s)%s: %w", pathInfo.LangCode, changedPath, err)
-	}
-
-	return nil
+	return allFilesToInvalidate, nil
 }
 
 func (gh *GitHist) invalidateMainBranchCommits() error {

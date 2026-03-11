@@ -554,17 +554,17 @@ func (m *MockInvalidator) EXPECT() *MockInvalidatorMockRecorder {
 }
 
 // InvalidateFile mocks base method.
-func (m *MockInvalidator) InvalidateFile(path string) error {
+func (m *MockInvalidator) InvalidateFile(langCode, path string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InvalidateFile", path)
+	ret := m.ctrl.Call(m, "InvalidateFile", langCode, path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // InvalidateFile indicates an expected call of InvalidateFile.
-func (mr *MockInvalidatorMockRecorder) InvalidateFile(path any) *MockInvalidatorInvalidateFileCall {
+func (mr *MockInvalidatorMockRecorder) InvalidateFile(langCode, path any) *MockInvalidatorInvalidateFileCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvalidateFile", reflect.TypeOf((*MockInvalidator)(nil).InvalidateFile), path)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvalidateFile", reflect.TypeOf((*MockInvalidator)(nil).InvalidateFile), langCode, path)
 	return &MockInvalidatorInvalidateFileCall{Call: call}
 }
 
@@ -580,13 +580,13 @@ func (c *MockInvalidatorInvalidateFileCall) Return(arg0 error) *MockInvalidatorI
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockInvalidatorInvalidateFileCall) Do(f func(string) error) *MockInvalidatorInvalidateFileCall {
+func (c *MockInvalidatorInvalidateFileCall) Do(f func(string, string) error) *MockInvalidatorInvalidateFileCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockInvalidatorInvalidateFileCall) DoAndReturn(f func(string) error) *MockInvalidatorInvalidateFileCall {
+func (c *MockInvalidatorInvalidateFileCall) DoAndReturn(f func(string, string) error) *MockInvalidatorInvalidateFileCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
