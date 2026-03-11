@@ -3,7 +3,9 @@ package dashboard
 import (
 	"context"
 	"fmt"
+	"log"
 
+	"github.com/dkarczmarski/go-kweb-lang/filepairs"
 	"github.com/dkarczmarski/go-kweb-lang/gitseek"
 	"github.com/dkarczmarski/go-kweb-lang/langcnt"
 	"github.com/dkarczmarski/go-kweb-lang/pullreq"
@@ -11,6 +13,7 @@ import (
 
 type RefreshTask struct {
 	langCodesProvider *langcnt.LangCodesProvider
+	pairProviders     *filepairs.PairProviders
 	gitSeeker         *gitseek.GitSeek
 	filePRFinder      *pullreq.FilePRFinder
 	store             *Store
@@ -18,12 +21,14 @@ type RefreshTask struct {
 
 func NewRefreshTask(
 	langCodesProvider *langcnt.LangCodesProvider,
+	pairProviders *filepairs.PairProviders,
 	gitSeeker *gitseek.GitSeek,
 	filePRFinder *pullreq.FilePRFinder,
 	store *Store,
 ) *RefreshTask {
 	return &RefreshTask{
 		langCodesProvider: langCodesProvider,
+		pairProviders:     pairProviders,
 		gitSeeker:         gitSeeker,
 		filePRFinder:      filePRFinder,
 		store:             store,
@@ -60,9 +65,22 @@ func (t *RefreshTask) Run(ctx context.Context) error {
 }
 
 func (t *RefreshTask) buildDashboard(ctx context.Context, langCode string) (*Dashboard, error) {
-	seekerFileInfos, err := t.gitSeeker.CheckLang(ctx, langCode)
+	pairs, err := t.pairProviders.ListPairs(langCode)
 	if err != nil {
-		return nil, fmt.Errorf("error while checking the content directory for the language code %s: %w", langCode, err)
+		return nil, fmt.Errorf("error while listing file pairs for lang code %s: %w", langCode, err)
+	}
+
+	seekerFileInfos := make([]gitseek.FileInfo, 0, len(pairs))
+	for i, pair := range pairs {
+		log.Printf("[gitseek][%s][%d/%d] checking for updates for %v", langCode, i+1, len(pairs), pair.LangPath)
+		fileInfo, err := t.gitSeeker.CheckLang(ctx, langCode, gitseek.Pair{
+			EnPath:   pair.EnPath,
+			LangPath: pair.LangPath,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("error while checking file pair %s for the language code %s: %w", pair.LangPath, langCode, err)
+		}
+		seekerFileInfos = append(seekerFileInfos, fileInfo)
 	}
 
 	prIndex, err := t.filePRFinder.LangIndex(langCode)

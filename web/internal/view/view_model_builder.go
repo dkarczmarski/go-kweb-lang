@@ -41,14 +41,14 @@ func BuildLangDashboardFilesModel(langCode string, fileInfos []dashboard.Item) L
 	for _, fileInfo := range fileInfos {
 		var fileModel FileModel
 
-		if len(fileInfo.FileStatus) == 0 && len(fileInfo.ENUpdates) == 0 && len(fileInfo.PRs) == 0 {
+		if len(fileInfo.FileStatus) == 0 && len(fileInfo.EnUpdates) == 0 && len(fileInfo.PRs) == 0 {
 			continue
 		}
 
-		fileModel.LangRelPath = toLangFileLinkModel(langCode, fileInfo.LangRelPath)
+		fileModel.LangRelPath = toLangFileLinkModel(langCode, fileInfo.LangPath)
 		fileModel.LangFilenameLink = LinkModel{
 			Text: "#",
-			URL:  fmt.Sprintf("/lang/%s?filename=%s", langCode, fileInfo.LangRelPath),
+			URL:  fmt.Sprintf("/lang/%s?filename=%s", langCode, fileInfo.LangPath),
 		}
 		fileModel.LangLastCommit = convertCommitToUtc(fileInfo.LangLastCommit)
 		fileModel.LangMergeCommit = convertCommitToUtcPtr(fileInfo.LangMergeCommit)
@@ -56,7 +56,7 @@ func BuildLangDashboardFilesModel(langCode string, fileInfos []dashboard.Item) L
 		fileModel.Status = fileInfo.FileStatus
 
 		var enUpdates []ENUpdate
-		for _, enUpdate := range fileInfo.ENUpdates {
+		for _, enUpdate := range fileInfo.EnUpdates {
 			enUpdateModel := ENUpdate{
 				Commit: toCommitLinkModel(enUpdate.Commit),
 			}

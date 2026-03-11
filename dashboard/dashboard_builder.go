@@ -19,7 +19,7 @@ func buildDashboard(
 ) *Dashboard {
 	items := make([]Item, 0, len(seekerFileInfos))
 	for _, seekerFileInfo := range seekerFileInfos {
-		file := filepath.Join("content", langCode, seekerFileInfo.LangRelPath)
+		file := filepath.Join("content", langCode, seekerFileInfo.LangPath)
 		prs := prIndex[file]
 
 		item := Item{
@@ -37,8 +37,8 @@ func buildDashboard(
 		if !containsItem(items, fileRelPath) {
 			items = append(items, Item{
 				FileInfo: gitseek.FileInfo{
-					LangRelPath: fileRelPath,
-					FileStatus:  StatusWaitingForReview,
+					LangPath:   fileRelPath,
+					FileStatus: StatusWaitingForReview,
 				},
 				PRs: prs,
 			})
@@ -53,7 +53,7 @@ func buildDashboard(
 
 func containsItem(items []Item, fileRelPath string) bool {
 	for _, item := range items {
-		if item.LangRelPath == fileRelPath {
+		if item.LangPath == fileRelPath {
 			return true
 		}
 	}

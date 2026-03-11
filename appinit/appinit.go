@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dkarczmarski/go-kweb-lang/dashboard"
+	"github.com/dkarczmarski/go-kweb-lang/filepairs"
 	"github.com/dkarczmarski/go-kweb-lang/git"
 	"github.com/dkarczmarski/go-kweb-lang/githist"
 	"github.com/dkarczmarski/go-kweb-lang/github"
@@ -36,6 +37,8 @@ type Config struct {
 	CacheStore           *store.FileStore
 	DashboardStore       *dashboard.Store
 	GitRepoHist          *githist.GitHist
+	FilePaths            *filepairs.FilePaths
+	PairProviders        *filepairs.PairProviders
 	GitSeek              *gitseek.GitSeek
 	GitHub               *github.GitHub
 	FilePRFinder         *pullreq.FilePRFinder
@@ -337,7 +340,7 @@ func parseGitHubTokenData(config *Config, tokenData []byte, skipEmptyFile bool) 
 	}
 }
 
-func NewLangCodesProvider() func(config *Config) error {
+func NewLangCodesProvider() func(*Config) error {
 	return func(config *Config) error {
 		repoDirPath := config.RepoDir
 		if len(repoDirPath) == 0 {
@@ -404,7 +407,40 @@ func NewGitRepoHist() func(*Config) error {
 			return fmt.Errorf("param CacheStore is not set: %w", ErrBadConfiguration)
 		}
 
-		config.GitRepoHist = githist.New(gitRepo, cacheStore)
+		filePaths := config.FilePaths
+		if filePaths == nil {
+			return fmt.Errorf("param FilePaths is not set: %w", ErrBadConfiguration)
+		}
+
+		langCodesProvider := config.LangCodesProvider
+		if langCodesProvider == nil {
+			return fmt.Errorf("param LangCodesProvider is not set: %w", ErrBadConfiguration)
+		}
+
+		config.GitRepoHist = githist.New(gitRepo, cacheStore, filePaths, langCodesProvider)
+
+		return nil
+	}
+}
+
+func NewFilePaths() func(*Config) error {
+	return func(config *Config) error {
+		config.FilePaths = filepairs.New()
+
+		return nil
+	}
+}
+
+func NewPairProviders() func(*Config) error {
+	return func(config *Config) error {
+		gitRepo := config.GitRepo
+		if gitRepo == nil {
+			return fmt.Errorf("param GitRepo is not set: %w", ErrBadConfiguration)
+		}
+
+		config.PairProviders = filepairs.NewPairProviders(
+			filepairs.NewContentPairProvider(gitRepo),
+		)
 
 		return nil
 	}
@@ -440,12 +476,12 @@ func RegisterGitSeekInvalidator() func(*Config) error {
 			return fmt.Errorf("param GitRepoHist is not set: %w", ErrBadConfiguration)
 		}
 
-		gitSeeker := config.GitSeek
-		if gitSeeker == nil {
+		gitSeek := config.GitSeek
+		if gitSeek == nil {
 			return fmt.Errorf("param GitSeek is not set: %w", ErrBadConfiguration)
 		}
 
-		gitRepoHist.RegisterInvalidator(gitSeeker)
+		gitRepoHist.RegisterInvalidator(gitSeek)
 
 		return nil
 	}
@@ -503,6 +539,11 @@ func NewRefreshDashboardTask() func(*Config) error {
 			return fmt.Errorf("param LangCodesProvider is not set: %w", ErrBadConfiguration)
 		}
 
+		pairProviders := config.PairProviders
+		if pairProviders == nil {
+			return fmt.Errorf("param PairProviders is not set: %w", ErrBadConfiguration)
+		}
+
 		gitSeeker := config.GitSeek
 		if gitSeeker == nil {
 			return fmt.Errorf("param GitSeek is not set: %w", ErrBadConfiguration)
@@ -520,6 +561,7 @@ func NewRefreshDashboardTask() func(*Config) error {
 
 		config.RefreshDashboardTask = dashboard.NewRefreshTask(
 			langCodesProvider,
+			pairProviders,
 			gitSeeker,
 			filePRFinder,
 			dashboardStore,

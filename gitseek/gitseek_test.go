@@ -1,446 +1,982 @@
+//nolint:nilnil,goconst,dupl
 package gitseek_test
 
 import (
+	"context"
+	"errors"
 	"reflect"
 	"testing"
 
 	"github.com/dkarczmarski/go-kweb-lang/git"
 	"github.com/dkarczmarski/go-kweb-lang/gitseek"
-	"github.com/dkarczmarski/go-kweb-lang/gitseek/internal/mocks"
-	"github.com/dkarczmarski/go-kweb-lang/testing/storetests"
-	"go.uber.org/mock/gomock"
 )
 
-//nolint:dupl
-func TestGitSeek_CheckFiles(t *testing.T) {
+type fakeGitRepo struct {
+	findFileLastCommitFunc   func(ctx context.Context, path string) (git.CommitInfo, error)
+	findFileCommitsAfterFunc func(ctx context.Context, path string, commitIDFrom string) ([]git.CommitInfo, error)
+	fileExistsFunc           func(path string) (bool, error)
+
+	findFileLastCommitCalls   []string
+	findFileCommitsAfterCalls []findFileCommitsAfterCall
+	fileExistsCalls           []string
+}
+
+type findFileCommitsAfterCall struct {
+	Path         string
+	CommitIDFrom string
+}
+
+func (f *fakeGitRepo) FindFileLastCommit(ctx context.Context, path string) (git.CommitInfo, error) {
+	f.findFileLastCommitCalls = append(f.findFileLastCommitCalls, path)
+
+	if f.findFileLastCommitFunc == nil {
+		return git.CommitInfo{}, errors.New("unexpected call to FindFileLastCommit")
+	}
+
+	return f.findFileLastCommitFunc(ctx, path)
+}
+
+func (f *fakeGitRepo) FindFileCommitsAfter(
+	ctx context.Context,
+	path string,
+	commitIDFrom string,
+) ([]git.CommitInfo, error) {
+	f.findFileCommitsAfterCalls = append(f.findFileCommitsAfterCalls, findFileCommitsAfterCall{
+		Path:         path,
+		CommitIDFrom: commitIDFrom,
+	})
+
+	if f.findFileCommitsAfterFunc == nil {
+		return nil, errors.New("unexpected call to FindFileCommitsAfter")
+	}
+
+	return f.findFileCommitsAfterFunc(ctx, path, commitIDFrom)
+}
+
+func (f *fakeGitRepo) FileExists(path string) (bool, error) {
+	f.fileExistsCalls = append(f.fileExistsCalls, path)
+
+	if f.fileExistsFunc == nil {
+		return false, errors.New("unexpected call to FileExists")
+	}
+
+	return f.fileExistsFunc(path)
+}
+
+type fakeGitRepoHist struct {
+	findForkCommitFunc  func(ctx context.Context, commitID string) (*git.CommitInfo, error)
+	findMergeCommitFunc func(ctx context.Context, commitID string) (*git.CommitInfo, error)
+
+	findForkCommitCalls  []string
+	findMergeCommitCalls []string
+}
+
+func (f *fakeGitRepoHist) FindForkCommit(ctx context.Context, commitID string) (*git.CommitInfo, error) {
+	f.findForkCommitCalls = append(f.findForkCommitCalls, commitID)
+
+	if f.findForkCommitFunc == nil {
+		return nil, errors.New("unexpected call to FindForkCommit")
+	}
+
+	return f.findForkCommitFunc(ctx, commitID)
+}
+
+func (f *fakeGitRepoHist) FindMergeCommit(ctx context.Context, commitID string) (*git.CommitInfo, error) {
+	f.findMergeCommitCalls = append(f.findMergeCommitCalls, commitID)
+
+	if f.findMergeCommitFunc == nil {
+		return nil, errors.New("unexpected call to FindMergeCommit")
+	}
+
+	return f.findMergeCommitFunc(ctx, commitID)
+}
+
+type fakeCacheStorage struct {
+	readFunc   func(bucket, key string, buff any) (bool, error)
+	writeFunc  func(bucket, key string, data any) error
+	deleteFunc func(bucket, key string) error
+
+	readCalls   []cacheReadCall
+	writeCalls  []cacheWriteCall
+	deleteCalls []cacheKey
+}
+
+type cacheKey struct {
+	Bucket string
+	Key    string
+}
+
+type cacheReadCall struct {
+	Bucket string
+	Key    string
+	Buff   any
+}
+
+type cacheWriteCall struct {
+	Bucket string
+	Key    string
+	Data   any
+}
+
+func (f *fakeCacheStorage) Read(bucket, key string, buff any) (bool, error) {
+	f.readCalls = append(f.readCalls, cacheReadCall{
+		Bucket: bucket,
+		Key:    key,
+		Buff:   buff,
+	})
+
+	if f.readFunc == nil {
+		return false, errors.New("unexpected call to Read")
+	}
+
+	return f.readFunc(bucket, key, buff)
+}
+
+func (f *fakeCacheStorage) Write(bucket, key string, data any) error {
+	f.writeCalls = append(f.writeCalls, cacheWriteCall{
+		Bucket: bucket,
+		Key:    key,
+		Data:   data,
+	})
+
+	if f.writeFunc == nil {
+		return errors.New("unexpected call to Write")
+	}
+
+	return f.writeFunc(bucket, key, data)
+}
+
+func (f *fakeCacheStorage) Delete(bucket, key string) error {
+	f.deleteCalls = append(f.deleteCalls, cacheKey{Bucket: bucket, Key: key})
+
+	if f.deleteFunc == nil {
+		return errors.New("unexpected call to Delete")
+	}
+
+	return f.deleteFunc(bucket, key)
+}
+
+func TestFileInfoCacheBucket(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		name     string
-		initMock func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist)
-		expected []gitseek.FileInfo
-	}{
-		{
-			name: "lang commit is on the main branch and EN file not exists",
-			initMock: func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
-				t.Helper()
+	got := gitseek.FileInfoCacheBucket("pl")
+	want := "lang/pl/git-file-info"
 
-				ctx := t.Context()
-
-				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
-					git.CommitInfo{
-						CommitID: "CID1",
-						DateTime: "DT1",
-						Comment:  "Comment1",
-					}, nil)
-				gitRepoHist.EXPECT().FindMergeCommit(ctx, "CID1").Return(nil, nil)
-				gitRepoHist.EXPECT().FindForkCommit(ctx, "CID1").Return(nil, nil)
-				gitRepo.EXPECT().FileExists("content/en/path1").Return(false, nil)
-				gitRepo.EXPECT().FindFileCommitsAfter(ctx, "content/en/path1", "CID1").
-					Return([]git.CommitInfo{}, nil)
-			},
-			expected: []gitseek.FileInfo{
-				{
-					LangRelPath: "path1",
-					LangLastCommit: git.CommitInfo{
-						CommitID: "CID1",
-						DateTime: "DT1",
-						Comment:  "Comment1",
-					},
-					LangForkCommit: nil,
-					FileStatus:     gitseek.StatusEnFileDoesNotExist,
-					ENUpdates:      nil,
-				},
-			},
-		},
-		{
-			name: "lang commit is not on the main branch and EN file not exists",
-			initMock: func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
-				t.Helper()
-
-				ctx := t.Context()
-
-				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
-					git.CommitInfo{
-						CommitID: "CID1",
-						DateTime: "DT1",
-						Comment:  "Comment1",
-					}, nil)
-				gitRepoHist.EXPECT().FindMergeCommit(ctx, "CID1").Return(&git.CommitInfo{
-					CommitID: "CID2",
-					DateTime: "DT2",
-					Comment:  "Comment1",
-				}, nil)
-				gitRepoHist.EXPECT().FindForkCommit(ctx, "CID1").Return(&git.CommitInfo{
-					CommitID: "CID0",
-					DateTime: "DT0",
-					Comment:  "Comment1",
-				}, nil)
-				gitRepo.EXPECT().FileExists("content/en/path1").Return(false, nil)
-				gitRepo.EXPECT().FindFileCommitsAfter(ctx, "content/en/path1", "CID0").
-					Return([]git.CommitInfo{}, nil)
-			},
-			expected: []gitseek.FileInfo{
-				{
-					LangRelPath: "path1",
-					LangLastCommit: git.CommitInfo{
-						CommitID: "CID1",
-						DateTime: "DT1",
-						Comment:  "Comment1",
-					},
-					LangMergeCommit: &git.CommitInfo{
-						CommitID: "CID2",
-						DateTime: "DT2",
-						Comment:  "Comment1",
-					},
-					LangForkCommit: &git.CommitInfo{
-						CommitID: "CID0",
-						DateTime: "DT0",
-						Comment:  "Comment1",
-					},
-					FileStatus: gitseek.StatusEnFileDoesNotExist,
-					ENUpdates:  nil,
-				},
-			},
-		},
-		{
-			name: "EN file was deleted",
-			initMock: func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
-				t.Helper()
-
-				ctx := t.Context()
-
-				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
-					git.CommitInfo{
-						CommitID: "CID1",
-						DateTime: "DT1",
-						Comment:  "Comment1",
-					}, nil)
-				gitRepoHist.EXPECT().FindMergeCommit(ctx, "CID1").Return(&git.CommitInfo{
-					CommitID: "CID2",
-					DateTime: "DT2",
-					Comment:  "Comment1",
-				}, nil)
-				gitRepoHist.EXPECT().FindForkCommit(ctx, "CID1").Return(&git.CommitInfo{
-					CommitID: "CID0",
-					DateTime: "DT0",
-					Comment:  "Comment1",
-				}, nil)
-				gitRepo.EXPECT().FileExists("content/en/path1").Return(false, nil)
-				gitRepo.EXPECT().FindFileCommitsAfter(ctx, "content/en/path1", "CID0").
-					Return([]git.CommitInfo{
-						{
-							CommitID: "CID2",
-							DateTime: "DT2",
-							Comment:  "Comment2",
-						},
-					}, nil)
-				gitRepoHist.EXPECT().FindMergeCommit(ctx, "CID2").Return(nil, nil)
-			},
-			expected: []gitseek.FileInfo{
-				{
-					LangRelPath: "path1",
-					LangLastCommit: git.CommitInfo{
-						CommitID: "CID1",
-						DateTime: "DT1",
-						Comment:  "Comment1",
-					},
-					LangMergeCommit: &git.CommitInfo{
-						CommitID: "CID2",
-						DateTime: "DT2",
-						Comment:  "Comment1",
-					},
-					LangForkCommit: &git.CommitInfo{
-						CommitID: "CID0",
-						DateTime: "DT0",
-						Comment:  "Comment1",
-					},
-					FileStatus: gitseek.StatusEnFileNoLongerExists,
-					ENUpdates: []gitseek.ENUpdate{
-						{
-							Commit: git.CommitInfo{
-								CommitID: "CID2",
-								DateTime: "DT2",
-								Comment:  "Comment2",
-							},
-							MergePoint: nil,
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "EN file found with no updates",
-			initMock: func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
-				t.Helper()
-
-				ctx := t.Context()
-
-				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
-					git.CommitInfo{
-						CommitID: "CID1",
-						DateTime: "DT1",
-						Comment:  "Comment1",
-					}, nil)
-				gitRepoHist.EXPECT().FindMergeCommit(ctx, "CID1").Return(&git.CommitInfo{
-					CommitID: "CID2",
-					DateTime: "DT2",
-					Comment:  "Comment1",
-				}, nil)
-				gitRepoHist.EXPECT().FindForkCommit(ctx, "CID1").Return(&git.CommitInfo{
-					CommitID: "CID0",
-					DateTime: "DT0",
-					Comment:  "Comment1",
-				}, nil)
-				gitRepo.EXPECT().FileExists("content/en/path1").Return(true, nil)
-				gitRepo.EXPECT().FindFileCommitsAfter(ctx, "content/en/path1", "CID0").
-					Return([]git.CommitInfo{}, nil)
-			},
-			expected: []gitseek.FileInfo{
-				{
-					LangRelPath: "path1",
-					LangLastCommit: git.CommitInfo{
-						CommitID: "CID1",
-						DateTime: "DT1",
-						Comment:  "Comment1",
-					},
-					LangMergeCommit: &git.CommitInfo{
-						CommitID: "CID2",
-						DateTime: "DT2",
-						Comment:  "Comment1",
-					},
-					LangForkCommit: &git.CommitInfo{
-						CommitID: "CID0",
-						DateTime: "DT0",
-						Comment:  "Comment1",
-					},
-					FileStatus: "",
-					ENUpdates:  nil,
-				},
-			},
-		},
-		{
-			name: "EN file found with updates",
-			initMock: func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
-				t.Helper()
-
-				ctx := t.Context()
-
-				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
-					git.CommitInfo{
-						CommitID: "CID1",
-						DateTime: "DT1",
-						Comment:  "Comment1",
-					}, nil)
-				gitRepoHist.EXPECT().FindMergeCommit(ctx, "CID1").Return(&git.CommitInfo{
-					CommitID: "CID2",
-					DateTime: "DT2",
-					Comment:  "Comment1",
-				}, nil)
-				gitRepoHist.EXPECT().FindForkCommit(ctx, "CID1").Return(&git.CommitInfo{
-					CommitID: "CID0",
-					DateTime: "DT0",
-					Comment:  "Comment1",
-				}, nil)
-				gitRepo.EXPECT().FileExists("content/en/path1").Return(true, nil)
-				gitRepo.EXPECT().FindFileCommitsAfter(ctx, "content/en/path1", "CID0").
-					Return([]git.CommitInfo{
-						{
-							CommitID: "CID2",
-							DateTime: "DT2",
-							Comment:  "Comment2",
-						},
-					}, nil)
-				gitRepoHist.EXPECT().FindMergeCommit(ctx, "CID2").Return(&git.CommitInfo{
-					CommitID: "CID4",
-					DateTime: "DT4",
-					Comment:  "Comment4",
-				}, nil)
-			},
-			expected: []gitseek.FileInfo{
-				{
-					LangRelPath: "path1",
-					LangLastCommit: git.CommitInfo{
-						CommitID: "CID1",
-						DateTime: "DT1",
-						Comment:  "Comment1",
-					},
-					LangMergeCommit: &git.CommitInfo{
-						CommitID: "CID2",
-						DateTime: "DT2",
-						Comment:  "Comment1",
-					},
-					LangForkCommit: &git.CommitInfo{
-						CommitID: "CID0",
-						DateTime: "DT0",
-						Comment:  "Comment1",
-					},
-					FileStatus: gitseek.StatusEnFileUpdated,
-					ENUpdates: []gitseek.ENUpdate{
-						{
-							Commit: git.CommitInfo{
-								CommitID: "CID2",
-								DateTime: "DT2",
-								Comment:  "Comment2",
-							},
-							MergePoint: &git.CommitInfo{
-								CommitID: "CID4",
-								DateTime: "DT4",
-								Comment:  "Comment4",
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "EN file found with updates and EN commit made direct to the main branch",
-			initMock: func(t *testing.T, gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist) {
-				t.Helper()
-
-				ctx := t.Context()
-
-				gitRepo.EXPECT().FindFileLastCommit(ctx, "content/pl/path1").Return(
-					git.CommitInfo{
-						CommitID: "CID1",
-						DateTime: "DT1",
-						Comment:  "Comment1",
-					}, nil)
-				gitRepoHist.EXPECT().FindMergeCommit(ctx, "CID1").Return(&git.CommitInfo{
-					CommitID: "CID2",
-					DateTime: "DT2",
-					Comment:  "Comment1",
-				}, nil)
-				gitRepoHist.EXPECT().FindForkCommit(ctx, "CID1").Return(&git.CommitInfo{
-					CommitID: "CID0",
-					DateTime: "DT0",
-					Comment:  "Comment1",
-				}, nil)
-				gitRepo.EXPECT().FileExists("content/en/path1").Return(true, nil)
-				gitRepo.EXPECT().FindFileCommitsAfter(ctx, "content/en/path1", "CID0").
-					Return([]git.CommitInfo{
-						{
-							CommitID: "CID2",
-							DateTime: "DT2",
-							Comment:  "Comment2",
-						},
-					}, nil)
-				gitRepoHist.EXPECT().FindMergeCommit(ctx, "CID2").Return(nil, nil)
-			},
-			expected: []gitseek.FileInfo{
-				{
-					LangRelPath: "path1",
-					LangLastCommit: git.CommitInfo{
-						CommitID: "CID1",
-						DateTime: "DT1",
-						Comment:  "Comment1",
-					},
-					LangMergeCommit: &git.CommitInfo{
-						CommitID: "CID2",
-						DateTime: "DT2",
-						Comment:  "Comment1",
-					},
-					LangForkCommit: &git.CommitInfo{
-						CommitID: "CID0",
-						DateTime: "DT0",
-						Comment:  "Comment1",
-					},
-					FileStatus: gitseek.StatusEnFileUpdated,
-					ENUpdates: []gitseek.ENUpdate{
-						{
-							Commit: git.CommitInfo{
-								CommitID: "CID2",
-								DateTime: "DT2",
-								Comment:  "Comment2",
-							},
-							MergePoint: nil,
-						},
-					},
-				},
-			},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctx := t.Context()
-
-			ctrl := gomock.NewController(t)
-			gitRepo := mocks.NewMockGitRepo(ctrl)
-			gitRepoHist := mocks.NewMockGitRepoHist(ctrl)
-			cacheStore := mocks.NewMockCacheStore(ctrl)
-
-			cacheStore.EXPECT().
-				Read(gomock.Any(), gomock.Any(), gomock.Any()).
-				DoAndReturn(storetests.MockReadNotFound())
-
-			cacheStore.EXPECT().
-				Write(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-
-			tc.initMock(t, gitRepo, gitRepoHist)
-
-			gitSeek := gitseek.New(gitRepo, gitRepoHist, cacheStore)
-
-			fileInfos, err := gitSeek.CheckFiles(ctx, []string{"path1"}, "pl")
-			if err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
-
-			if !reflect.DeepEqual(tc.expected, fileInfos) {
-				t.Errorf("unexpected result\nexpected: %+v\nactual  : %+v", tc.expected, fileInfos)
-			}
-		})
+	if got != want {
+		t.Fatalf("unexpected bucket: got %q, want %q", got, want)
 	}
 }
 
-func TestGitSeek_InvalidateFile(t *testing.T) {
+func TestGitSeek_CheckLang_ReturnsCachedValue(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		name     string
-		file     string
-		initMock func(gitRepo *mocks.MockGitRepo, gitRepoHist *mocks.MockGitRepoHist, cacheStore *mocks.MockCacheStore)
-	}{
-		{
-			name: "invalidate file outside the 'content' dir",
-			file: "dir/file1",
-			initMock: func(_ *mocks.MockGitRepo, _ *mocks.MockGitRepoHist, _ *mocks.MockCacheStore) {
+	expected := gitseek.FileInfo{
+		LangPath:   "content/pl/foo.md",
+		FileStatus: gitseek.StatusEnFileUpdated,
+		EnUpdates: []gitseek.EnUpdate{
+			{
+				Commit: git.CommitInfo{CommitID: "en-1"},
 			},
 		},
-		{
-			name: "invalidate lang file",
-			file: "content/pl/file1",
-			initMock: func(_ *mocks.MockGitRepo, _ *mocks.MockGitRepoHist, cacheStore *mocks.MockCacheStore) {
-				cacheStore.EXPECT().Delete("lang/pl/git-file-info", "file1").Return(nil)
-			},
-		},
-		{
-			name: "invalidate EN file",
-			file: "content/en/file1",
-			initMock: func(_ *mocks.MockGitRepo, _ *mocks.MockGitRepoHist, cacheStore *mocks.MockCacheStore) {
-				cacheStore.EXPECT().ListBuckets("lang").Return([]string{"pl", "fr"}, nil)
-
-				cacheStore.EXPECT().Delete("lang/en/git-file-info", "file1").Return(nil)
-				cacheStore.EXPECT().Delete("lang/pl/git-file-info", "file1").Return(nil)
-				cacheStore.EXPECT().Delete("lang/fr/git-file-info", "file1").Return(nil)
-			},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctrl := gomock.NewController(t)
-			gitRepo := mocks.NewMockGitRepo(ctrl)
-			gitRepoHist := mocks.NewMockGitRepoHist(ctrl)
-			cacheStore := mocks.NewMockCacheStore(ctrl)
-
-			tc.initMock(gitRepo, gitRepoHist, cacheStore)
-
-			gitSeek := gitseek.New(gitRepo, gitRepoHist, cacheStore)
-
-			if err := gitSeek.InvalidateFile(tc.file); err != nil {
-				t.Fatal(err)
-			}
-		})
 	}
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, buff any) (bool, error) {
+			ptr, ok := buff.(*gitseek.FileInfo)
+			if !ok {
+				t.Fatalf("unexpected buff type: %T", buff)
+			}
+			*ptr = expected
+
+			return true, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			t.Fatalf("Write should not be called on cache hit")
+
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{}
+	hist := &fakeGitRepoHist{}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	got, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+	if err != nil {
+		t.Fatalf("CheckLang returned error: %v", err)
+	}
+
+	if !reflect.DeepEqual(got, expected) {
+		t.Fatalf("unexpected result:\n got: %#v\nwant: %#v", got, expected)
+	}
+
+	if len(repo.findFileLastCommitCalls) != 0 {
+		t.Fatalf("git repo should not be called on cache hit")
+	}
+
+	if len(hist.findForkCommitCalls) != 0 || len(hist.findMergeCommitCalls) != 0 {
+		t.Fatalf("git repo hist should not be called on cache hit")
+	}
+
+	if len(cache.readCalls) != 1 {
+		t.Fatalf("expected one cache read, got %d", len(cache.readCalls))
+	}
+
+	if len(cache.writeCalls) != 0 {
+		t.Fatalf("expected no cache writes, got %d", len(cache.writeCalls))
+	}
+}
+
+func TestGitSeek_CheckLang_ReturnsErrorWhenCacheReadFails(t *testing.T) {
+	t.Parallel()
+
+	expectedErr := errors.New("cache read failed")
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, expectedErr
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			t.Fatalf("Write should not be called when cache read fails")
+
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	gs := gitseek.New(&fakeGitRepo{}, &fakeGitRepoHist{}, cache)
+
+	_, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestGitSeek_CheckLang_ComputesAndWritesCacheOnMiss(t *testing.T) {
+	t.Parallel()
+
+	langLastCommit := git.CommitInfo{CommitID: "lang-last"}
+	langMergeCommit := &git.CommitInfo{CommitID: "merge-lang"}
+	forkCommit := &git.CommitInfo{CommitID: "fork-1"}
+	enCommit1 := git.CommitInfo{CommitID: "en-1"}
+	enCommit2 := git.CommitInfo{CommitID: "en-2"}
+	mergeEn1 := &git.CommitInfo{CommitID: "merge-en-1"}
+	mergeEn2 := &git.CommitInfo{CommitID: "merge-en-2"}
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{
+		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
+			return langLastCommit, nil
+		},
+		findFileCommitsAfterFunc: func(_ context.Context, _ string, _ string) ([]git.CommitInfo, error) {
+			return []git.CommitInfo{enCommit1, enCommit2}, nil
+		},
+		fileExistsFunc: func(_ string) (bool, error) {
+			return true, nil
+		},
+	}
+
+	hist := &fakeGitRepoHist{
+		findForkCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return forkCommit, nil
+		},
+		findMergeCommitFunc: func(_ context.Context, commitID string) (*git.CommitInfo, error) {
+			switch commitID {
+			case "lang-last":
+				return langMergeCommit, nil
+			case "en-1":
+				return mergeEn1, nil
+			case "en-2":
+				return mergeEn2, nil
+			default:
+				t.Fatalf("unexpected commit id in FindMergeCommit: %s", commitID)
+
+				return nil, nil
+			}
+		},
+	}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	got, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+	if err != nil {
+		t.Fatalf("CheckLang returned error: %v", err)
+	}
+
+	want := gitseek.FileInfo{
+		LangPath:        "content/pl/foo.md",
+		LangLastCommit:  langLastCommit,
+		LangMergeCommit: langMergeCommit,
+		LangForkCommit:  forkCommit,
+		FileStatus:      gitseek.StatusEnFileUpdated,
+		EnUpdates: []gitseek.EnUpdate{
+			{Commit: enCommit1, MergePoint: mergeEn1},
+			{Commit: enCommit2, MergePoint: mergeEn2},
+		},
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected result:\n got: %#v\nwant: %#v", got, want)
+	}
+
+	if len(cache.writeCalls) != 1 {
+		t.Fatalf("expected one cache write, got %d", len(cache.writeCalls))
+	}
+
+	writeCall := cache.writeCalls[0]
+
+	if writeCall.Bucket != gitseek.FileInfoCacheBucket("pl") {
+		t.Fatalf("unexpected bucket written: %s", writeCall.Bucket)
+	}
+
+	if writeCall.Key != "content/pl/foo.md" {
+		t.Fatalf("unexpected key written: %s", writeCall.Key)
+	}
+
+	written, ok := writeCall.Data.(gitseek.FileInfo)
+	if !ok {
+		t.Fatalf("unexpected written data type: %T", writeCall.Data)
+	}
+
+	if !reflect.DeepEqual(written, want) {
+		t.Fatalf("unexpected cache write value:\n got: %#v\nwant: %#v", written, want)
+	}
+}
+
+func TestGitSeek_CheckLang_ReturnsErrorWhenCacheWriteFails(t *testing.T) {
+	t.Parallel()
+
+	expectedErr := errors.New("cache write failed")
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return expectedErr
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{
+		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
+			return git.CommitInfo{CommitID: "lang-last"}, nil
+		},
+		findFileCommitsAfterFunc: func(_ context.Context, _, _ string) ([]git.CommitInfo, error) {
+			return nil, nil
+		},
+		fileExistsFunc: func(_ string) (bool, error) {
+			return true, nil
+		},
+	}
+
+	hist := &fakeGitRepoHist{
+		findForkCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, nil
+		},
+		findMergeCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, nil
+		},
+	}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	_, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestGitSeek_CheckLang_UsesForkCommitAsStartPoint(t *testing.T) {
+	t.Parallel()
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{
+		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
+			return git.CommitInfo{CommitID: "lang-last"}, nil
+		},
+		findFileCommitsAfterFunc: func(_ context.Context, _ string, commitIDFrom string) ([]git.CommitInfo, error) {
+			if commitIDFrom != "fork-1" {
+				t.Fatalf("unexpected commitIDFrom: got %q, want %q", commitIDFrom, "fork-1")
+			}
+
+			return nil, nil
+		},
+		fileExistsFunc: func(_ string) (bool, error) {
+			return true, nil
+		},
+	}
+
+	hist := &fakeGitRepoHist{
+		findForkCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return &git.CommitInfo{CommitID: "fork-1"}, nil
+		},
+		findMergeCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, nil
+		},
+	}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	_, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+	if err != nil {
+		t.Fatalf("CheckLang returned error: %v", err)
+	}
+}
+
+func TestGitSeek_CheckLang_UsesLangLastCommitAsStartPointWhenForkIsNil(t *testing.T) {
+	t.Parallel()
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{
+		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
+			return git.CommitInfo{CommitID: "lang-last"}, nil
+		},
+		findFileCommitsAfterFunc: func(_ context.Context, _ string, commitIDFrom string) ([]git.CommitInfo, error) {
+			if commitIDFrom != "lang-last" {
+				t.Fatalf("unexpected commitIDFrom: got %q, want %q", commitIDFrom, "lang-last")
+			}
+
+			return nil, nil
+		},
+		fileExistsFunc: func(_ string) (bool, error) {
+			return true, nil
+		},
+	}
+
+	hist := &fakeGitRepoHist{
+		findForkCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, nil
+		},
+		findMergeCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, nil
+		},
+	}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	_, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+	if err != nil {
+		t.Fatalf("CheckLang returned error: %v", err)
+	}
+}
+
+func TestGitSeek_CheckLang_SetsStatusEnFileDoesNotExist(t *testing.T) {
+	t.Parallel()
+
+	got := runCheckLangForStatus(t, false, nil)
+
+	if got.FileStatus != gitseek.StatusEnFileDoesNotExist {
+		t.Fatalf("unexpected status: got %q, want %q", got.FileStatus, gitseek.StatusEnFileDoesNotExist)
+	}
+}
+
+func TestGitSeek_CheckLang_SetsStatusEnFileNoLongerExists(t *testing.T) {
+	t.Parallel()
+
+	got := runCheckLangForStatus(t, false, []git.CommitInfo{{CommitID: "en-1"}})
+
+	if got.FileStatus != gitseek.StatusEnFileNoLongerExists {
+		t.Fatalf("unexpected status: got %q, want %q", got.FileStatus, gitseek.StatusEnFileNoLongerExists)
+	}
+}
+
+func TestGitSeek_CheckLang_SetsStatusEnFileUpdated(t *testing.T) {
+	t.Parallel()
+
+	got := runCheckLangForStatus(t, true, []git.CommitInfo{{CommitID: "en-1"}})
+
+	if got.FileStatus != gitseek.StatusEnFileUpdated {
+		t.Fatalf("unexpected status: got %q, want %q", got.FileStatus, gitseek.StatusEnFileUpdated)
+	}
+}
+
+func TestGitSeek_CheckLang_LeavesStatusEmptyWhenEnFileExistsAndHasNoUpdates(t *testing.T) {
+	t.Parallel()
+
+	got := runCheckLangForStatus(t, true, nil)
+
+	if got.FileStatus != "" {
+		t.Fatalf("unexpected status: got %q, want empty", got.FileStatus)
+	}
+}
+
+func TestGitSeek_CheckLang_ReturnsErrorWhenFindFileLastCommitFails(t *testing.T) {
+	t.Parallel()
+
+	expectedErr := errors.New("find last commit failed")
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{
+		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
+			return git.CommitInfo{}, expectedErr
+		},
+	}
+	hist := &fakeGitRepoHist{}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	_, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestGitSeek_CheckLang_ReturnsErrorWhenFindMergeCommitForLangFails(t *testing.T) {
+	t.Parallel()
+
+	expectedErr := errors.New("find merge failed")
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{
+		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
+			return git.CommitInfo{CommitID: "lang-last"}, nil
+		},
+	}
+	hist := &fakeGitRepoHist{
+		findMergeCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, expectedErr
+		},
+	}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	_, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestGitSeek_CheckLang_ReturnsErrorWhenFindForkCommitFails(t *testing.T) {
+	t.Parallel()
+
+	expectedErr := errors.New("find fork failed")
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{
+		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
+			return git.CommitInfo{CommitID: "lang-last"}, nil
+		},
+	}
+	hist := &fakeGitRepoHist{
+		findMergeCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, nil
+		},
+		findForkCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, expectedErr
+		},
+	}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	_, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestGitSeek_CheckLang_ReturnsErrorWhenFindFileCommitsAfterFails(t *testing.T) {
+	t.Parallel()
+
+	expectedErr := errors.New("find commits after failed")
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{
+		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
+			return git.CommitInfo{CommitID: "lang-last"}, nil
+		},
+		findFileCommitsAfterFunc: func(_ context.Context, _, _ string) ([]git.CommitInfo, error) {
+			return nil, expectedErr
+		},
+	}
+	hist := &fakeGitRepoHist{
+		findMergeCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, nil
+		},
+		findForkCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, nil
+		},
+	}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	_, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestGitSeek_CheckLang_ReturnsErrorWhenFileExistsFails(t *testing.T) {
+	t.Parallel()
+
+	expectedErr := errors.New("file exists failed")
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{
+		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
+			return git.CommitInfo{CommitID: "lang-last"}, nil
+		},
+		findFileCommitsAfterFunc: func(_ context.Context, _, _ string) ([]git.CommitInfo, error) {
+			return nil, nil
+		},
+		fileExistsFunc: func(_ string) (bool, error) {
+			return false, expectedErr
+		},
+	}
+	hist := &fakeGitRepoHist{
+		findMergeCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, nil
+		},
+		findForkCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, nil
+		},
+	}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	_, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestGitSeek_CheckLang_ReturnsErrorWhenFindingENUpdateMergeCommitFails(t *testing.T) {
+	t.Parallel()
+
+	expectedErr := errors.New("find EN merge failed")
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{
+		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
+			return git.CommitInfo{CommitID: "lang-last"}, nil
+		},
+		findFileCommitsAfterFunc: func(_ context.Context, _, _ string) ([]git.CommitInfo, error) {
+			return []git.CommitInfo{{CommitID: "en-1"}}, nil
+		},
+		fileExistsFunc: func(_ string) (bool, error) {
+			return true, nil
+		},
+	}
+	hist := &fakeGitRepoHist{
+		findMergeCommitFunc: func(_ context.Context, commitID string) (*git.CommitInfo, error) {
+			if commitID == "lang-last" {
+				return nil, nil
+			}
+			if commitID == "en-1" {
+				return nil, expectedErr
+			}
+			t.Fatalf("unexpected commit id: %s", commitID)
+
+			return nil, nil
+		},
+		findForkCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, nil
+		},
+	}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	_, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestGitSeek_InvalidateFile_DeletesCacheEntry(t *testing.T) {
+	t.Parallel()
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	gs := gitseek.New(&fakeGitRepo{}, &fakeGitRepoHist{}, cache)
+
+	err := gs.InvalidateFile("pl", "content/pl/foo.md")
+	if err != nil {
+		t.Fatalf("InvalidateFile returned error: %v", err)
+	}
+
+	if len(cache.deleteCalls) != 1 {
+		t.Fatalf("expected one delete call, got %d", len(cache.deleteCalls))
+	}
+
+	got := cache.deleteCalls[0]
+	want := cacheKey{
+		Bucket: gitseek.FileInfoCacheBucket("pl"),
+		Key:    "content/pl/foo.md",
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected delete call:\n got: %#v\nwant: %#v", got, want)
+	}
+}
+
+func TestGitSeek_InvalidateFile_ReturnsErrorWhenDeleteFails(t *testing.T) {
+	t.Parallel()
+
+	expectedErr := errors.New("delete failed")
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return expectedErr
+		},
+	}
+
+	gs := gitseek.New(&fakeGitRepo{}, &fakeGitRepoHist{}, cache)
+
+	err := gs.InvalidateFile("pl", "content/pl/foo.md")
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func runCheckLangForStatus(t *testing.T, fileExists bool, enCommitsAfter []git.CommitInfo) gitseek.FileInfo {
+	t.Helper()
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{
+		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
+			return git.CommitInfo{CommitID: "lang-last"}, nil
+		},
+		findFileCommitsAfterFunc: func(_ context.Context, _, _ string) ([]git.CommitInfo, error) {
+			return enCommitsAfter, nil
+		},
+		fileExistsFunc: func(_ string) (bool, error) {
+			return fileExists, nil
+		},
+	}
+
+	hist := &fakeGitRepoHist{
+		findMergeCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, nil
+		},
+		findForkCommitFunc: func(_ context.Context, _ string) (*git.CommitInfo, error) {
+			return nil, nil
+		},
+	}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	got, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+	if err != nil {
+		t.Fatalf("CheckLang returned error: %v", err)
+	}
+
+	return got
 }

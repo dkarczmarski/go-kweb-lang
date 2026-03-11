@@ -5,11 +5,14 @@ package githist
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
 
+	"github.com/dkarczmarski/go-kweb-lang/filepairs"
 	"github.com/dkarczmarski/go-kweb-lang/git"
+	"github.com/dkarczmarski/go-kweb-lang/langcnt"
 	"github.com/dkarczmarski/go-kweb-lang/proxycache"
 )
 
@@ -17,48 +20,50 @@ const (
 	bucketMainBranchCommits = "git-main-branch-commits"
 )
 
-// GitRepo is an interface used to decouple this package from the concrete git implementation
+// GitRepo is an interface used to decouple this package from the concrete git implementation.
 type GitRepo interface {
 	ListMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error)
-
 	ListMergePoints(ctx context.Context, commitID string) ([]git.CommitInfo, error)
-
 	Fetch(ctx context.Context) error
-
 	ListFreshCommits(ctx context.Context) ([]git.CommitInfo, error)
-
 	Pull(ctx context.Context) error
-
 	ListFilesInCommit(ctx context.Context, commitID string) ([]string, error)
-
 	ListAncestorCommits(ctx context.Context, commitID string) ([]git.CommitInfo, error)
-
 	ListCommitParents(ctx context.Context, commitID string) ([]string, error)
-
 	ListFilesBetweenCommits(ctx context.Context, forkCommitID, branchLastCommitID string) ([]string, error)
 }
 
-// CacheStore is an interface used to decouple this package from the concrete store implementation
+// CacheStore is an interface used to decouple this package from the concrete store implementation.
 type CacheStore interface {
 	Read(bucket, key string, buff any) (bool, error)
 	Write(bucket, key string, data any) error
 	Delete(bucket, key string) error
 }
 
+// Invalidator invalidates one concrete gitseek cache entry.
 type Invalidator interface {
-	InvalidateFile(path string) error
+	InvalidateFile(langCode, path string) error
 }
 
 type GitHist struct {
-	gitRepo     GitRepo
-	cacheStore  CacheStore
-	invalidator Invalidator
+	gitRepo           GitRepo
+	cacheStore        CacheStore
+	filePaths         *filepairs.FilePaths
+	langCodesProvider *langcnt.LangCodesProvider
+	invalidator       Invalidator
 }
 
-func New(gitRepo GitRepo, cacheStore CacheStore) *GitHist {
+func New(
+	gitRepo GitRepo,
+	cacheStore CacheStore,
+	filePaths *filepairs.FilePaths,
+	langCodesProvider *langcnt.LangCodesProvider,
+) *GitHist {
 	return &GitHist{
-		gitRepo:    gitRepo,
-		cacheStore: cacheStore,
+		gitRepo:           gitRepo,
+		cacheStore:        cacheStore,
+		filePaths:         filePaths,
+		langCodesProvider: langCodesProvider,
 	}
 }
 
@@ -108,8 +113,8 @@ func (gh *GitHist) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo,
 }
 
 // findCommitFunc invokes listFunc with the given commitID and returns
-// the first item of the list returned by listFunc that exists on the main branch. If the commitID itself exists
-// on the main branch, nil is returned.
+// the first item of the list returned by listFunc that exists on the main branch.
+// If the commitID itself exists on the main branch, nil is returned.
 func findCommitFunc(
 	ctx context.Context,
 	mainBranchCommits []git.CommitInfo,
@@ -221,22 +226,66 @@ func (gh *GitHist) PullRefresh(ctx context.Context) error {
 			if invalidatedAt, isInvalidated := invalidated[file]; !isInvalidated {
 				log.Printf("[githist][%d/%d] invalidate file %s", i+1, len(freshCommits), file)
 
-				if gh.invalidator != nil {
-					if err := gh.invalidator.InvalidateFile(file); err != nil {
-						return fmt.Errorf("invalidate file %s error: %w", file, err)
-					}
+				if err := gh.invalidateChangedPath(file); err != nil {
+					return fmt.Errorf("invalidate changed path %s error: %w", file, err)
 				}
 
 				invalidated[file] = i
 			} else {
-				log.Printf("[githist][%d/%d] invalidate file %s - (skip) already done at %d",
-					i+1, len(freshCommits), file, invalidatedAt)
+				log.Printf(
+					"[githist][%d/%d] invalidate file %s - (skip) already done at %d",
+					i+1,
+					len(freshCommits),
+					file,
+					invalidatedAt,
+				)
 			}
 		}
 	}
 
 	if err := gh.gitRepo.Pull(ctx); err != nil {
 		return fmt.Errorf("git pull error: %w", err)
+	}
+
+	return nil
+}
+
+func (gh *GitHist) invalidateChangedPath(changedPath string) error {
+	if gh.invalidator == nil {
+		return nil
+	}
+
+	pathInfo, err := gh.filePaths.CheckPath(changedPath)
+	if err != nil {
+		if errors.Is(err, filepairs.ErrPairMatcherNotFound) {
+			return nil
+		}
+
+		return fmt.Errorf("check changed path %s: %w", changedPath, err)
+	}
+
+	if pathInfo.IsEnPath() {
+		langCodes, err := gh.langCodesProvider.LangCodes()
+		if err != nil {
+			return fmt.Errorf("get language codes: %w", err)
+		}
+
+		for _, langCode := range langCodes {
+			langPath, err := pathInfo.LangPath(langCode)
+			if err != nil {
+				return fmt.Errorf("build language path for %s: %w", langCode, err)
+			}
+
+			if err := gh.invalidator.InvalidateFile(langCode, langPath); err != nil {
+				return fmt.Errorf("invalidate gitseek cache for (%s)%s: %w", langCode, langPath, err)
+			}
+		}
+
+		return nil
+	}
+
+	if err := gh.invalidator.InvalidateFile(pathInfo.LangCode, changedPath); err != nil {
+		return fmt.Errorf("invalidate gitseek cache for (%s)%s: %w", pathInfo.LangCode, changedPath, err)
 	}
 
 	return nil
@@ -287,8 +336,7 @@ func (gh *GitHist) mergeCommitFiles(
 
 		forkCommit, err := gh.findForkCommit(ctx, branchParentCommitID, mainBranchCommits)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find fork commit for %s: %w",
-				branchParentCommitID, err)
+			return nil, fmt.Errorf("failed to find fork commit for %s: %w", branchParentCommitID, err)
 		}
 
 		if forkCommit == nil {
@@ -298,8 +346,12 @@ func (gh *GitHist) mergeCommitFiles(
 
 		filesBetweenCommits, err := gh.gitRepo.ListFilesBetweenCommits(ctx, forkCommit.CommitID, branchParentCommitID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to list files between commits %s and %s: %w",
-				forkCommit.CommitID, branchParentCommitID, err)
+			return nil, fmt.Errorf(
+				"failed to list files between commits %s and %s: %w",
+				forkCommit.CommitID,
+				branchParentCommitID,
+				err,
+			)
 		}
 
 		if len(filesBetweenCommits) > 0 {
