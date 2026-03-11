@@ -2,9 +2,7 @@ package git_test
 
 import (
 	"context"
-	_ "embed"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -39,12 +37,10 @@ func TestGit_Create_Integration(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			tmpDir := t.TempDir()
+			env := newIntegrationEnv(t, "initrepo")
+			repoURL := tc.repoURL(filepath.Join(env.tmpDir, "repo"))
 
-			srcRepoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
-			repoURL := tc.repoURL(srcRepoPath)
-
-			repoPath := filepath.Join(tmpDir, "test-repo")
+			repoPath := filepath.Join(env.tmpDir, "test-repo")
 			if err := os.Mkdir(repoPath, 0o755); err != nil {
 				t.Fatalf("failed to create directory %s: %v", repoPath, err)
 			}
@@ -82,14 +78,10 @@ func TestGit_Checkout_Integration(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			tmpDir := t.TempDir()
-
-			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
-
-			gitRepo := git.NewRepo(repoPath)
+			env := newIntegrationEnv(t, "initrepo")
 
 			commitID := tc.commitID
-			err := gitRepo.Checkout(ctx, commitID)
+			err := env.gitRepo.Checkout(ctx, commitID)
 
 			if !tc.checkErr(err) {
 				t.Errorf("unexpected error when doing checkout commit %s: %v", commitID, err)
@@ -150,13 +142,9 @@ func TestGit_MainBranchCommits_Integration(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			tmpDir := t.TempDir()
+			env := newIntegrationEnv(t, "initrepo")
 
-			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
-
-			gitRepo := git.NewRepo(repoPath)
-
-			commits, err := gitRepo.ListMainBranchCommits(ctx)
+			commits, err := env.gitRepo.ListMainBranchCommits(ctx)
 
 			if !tc.expectedErr(err) {
 				t.Errorf("unexptected error: %v", err)
@@ -194,13 +182,9 @@ func TestGit_FileExists_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
+			env := newIntegrationEnv(t, "initrepo")
 
-			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
-
-			gitRepo := git.NewRepo(repoPath)
-
-			exists, err := gitRepo.FileExists(tc.fileName)
+			exists, err := env.gitRepo.FileExists(tc.fileName)
 
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)
@@ -240,13 +224,9 @@ func TestGit_ListFiles_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
+			env := newIntegrationEnv(t, "initrepo")
 
-			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
-
-			gitRepo := git.NewRepo(repoPath)
-
-			files, err := gitRepo.ListFiles(tc.dirPath)
+			files, err := env.gitRepo.ListFiles(tc.dirPath)
 
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)
@@ -279,7 +259,6 @@ func TestGit_FindFileLastCommit_Integration(t *testing.T) {
 			},
 		},
 		{
-			// todo: probably it should be some "not-found" error
 			name:     "when file does not exist",
 			filePath: "fake-file",
 			expectedErr: func(err error) bool {
@@ -290,13 +269,9 @@ func TestGit_FindFileLastCommit_Integration(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			tmpDir := t.TempDir()
+			env := newIntegrationEnv(t, "initrepo")
 
-			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
-
-			gitRepo := git.NewRepo(repoPath)
-
-			commit, err := gitRepo.FindFileLastCommit(ctx, tc.filePath)
+			commit, err := env.gitRepo.FindFileLastCommit(ctx, tc.filePath)
 
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)
@@ -348,13 +323,9 @@ func TestGit_FindFileCommitsAfter_Integration(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			tmpDir := t.TempDir()
+			env := newIntegrationEnv(t, "initrepo")
 
-			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
-
-			gitRepo := git.NewRepo(repoPath)
-
-			result, err := gitRepo.FindFileCommitsAfter(ctx, tc.filePath, tc.commitIDFrom)
+			result, err := env.gitRepo.FindFileCommitsAfter(ctx, tc.filePath, tc.commitIDFrom)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -408,13 +379,9 @@ func TestGit_FindMergePoints_Integration(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			tmpDir := t.TempDir()
+			env := newIntegrationEnv(t, "initrepo")
 
-			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
-
-			gitRepo := git.NewRepo(repoPath)
-
-			result, err := gitRepo.ListMergePoints(ctx, tc.commitID)
+			result, err := env.gitRepo.ListMergePoints(ctx, tc.commitID)
 
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)
@@ -429,12 +396,10 @@ func TestGit_FindMergePoints_Integration(t *testing.T) {
 
 func TestGit_Pull_Integration_Scenario(t *testing.T) {
 	ctx := context.Background()
-	tmpDir := t.TempDir()
+	env := newIntegrationEnv(t, "initrepo")
+	repoURL := "file://" + filepath.Join(env.tmpDir, "repo")
 
-	srcRepoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
-	repoURL := "file://" + srcRepoPath
-
-	repoPath := filepath.Join(tmpDir, "test-repo")
+	repoPath := filepath.Join(env.tmpDir, "test-repo")
 	if err := os.Mkdir(repoPath, 0o755); err != nil {
 		t.Fatalf("failed while initializing test: %v", err)
 	}
@@ -445,7 +410,7 @@ func TestGit_Pull_Integration_Scenario(t *testing.T) {
 		t.Fatalf("failed while initializing test: %v", err)
 	}
 
-	_ = runInitRepoScript(t, tmpDir, "initrepo2.sh", initRepoScript2Content)
+	runScenarioScript(t, env.tmpDir, scenarioPath(t, "initrepo2"), "init.sh")
 
 	t.Run("before performing fetch the file should not exist", func(t *testing.T) {
 		exist, err := gitRepo.FileExists("file10.txt")
@@ -576,13 +541,9 @@ func TestGit_FilesInCommit_Integration(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			tmpDir := t.TempDir()
+			env := newIntegrationEnv(t, "initrepo")
 
-			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
-
-			gitRepo := git.NewRepo(repoPath)
-
-			result, err := gitRepo.ListFilesInCommit(ctx, tc.commitID)
+			result, err := env.gitRepo.ListFilesInCommit(ctx, tc.commitID)
 
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)
@@ -712,13 +673,9 @@ func TestGit_ListAncestorCommits_Integration(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			tmpDir := t.TempDir()
+			env := newIntegrationEnv(t, "initrepo")
 
-			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
-
-			gitRepo := git.NewRepo(repoPath)
-
-			result, err := gitRepo.ListAncestorCommits(ctx, tc.commitID)
+			result, err := env.gitRepo.ListAncestorCommits(ctx, tc.commitID)
 
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)
@@ -762,13 +719,9 @@ func TestGit_ListCommitParents_Integration(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			tmpDir := t.TempDir()
+			env := newIntegrationEnv(t, "initrepo")
 
-			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
-
-			gitRepo := git.NewRepo(repoPath)
-
-			result, err := gitRepo.ListCommitParents(ctx, tc.commitID)
+			result, err := env.gitRepo.ListCommitParents(ctx, tc.commitID)
 
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)
@@ -817,13 +770,9 @@ func TestGit_ListFilesBetweenCommits_Integration(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			tmpDir := t.TempDir()
+			env := newIntegrationEnv(t, "initrepo")
 
-			repoPath := runInitRepoScript(t, tmpDir, "initrepo.sh", initRepoScriptContent)
-
-			gitRepo := git.NewRepo(repoPath)
-
-			result, err := gitRepo.ListFilesBetweenCommits(ctx, tc.forkCommitID, tc.branchLastCommitID)
+			result, err := env.gitRepo.ListFilesBetweenCommits(ctx, tc.forkCommitID, tc.branchLastCommitID)
 
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)
@@ -834,37 +783,4 @@ func TestGit_ListFilesBetweenCommits_Integration(t *testing.T) {
 			}
 		})
 	}
-}
-
-//go:embed testdata/initrepo.sh
-var initRepoScriptContent []byte
-
-//go:embed testdata/initrepo2.sh
-var initRepoScript2Content []byte
-
-var initRepoScriptDebugOutput bool = true
-
-func runInitRepoScript(t *testing.T, tmpDir string, scriptName string, scriptContent []byte) string {
-	scriptPath := filepath.Join(tmpDir, scriptName)
-
-	if err := os.WriteFile(scriptPath, scriptContent, 0o755); err != nil {
-		t.Fatalf("failed to write script file: %v", err)
-	}
-
-	if err := os.Chmod(scriptPath, 0o755); err != nil {
-		t.Fatalf("failed to chmod script file: %v", err)
-	}
-
-	cmd := exec.Command("bash", scriptPath)
-	cmd.Dir = tmpDir
-	if initRepoScriptDebugOutput {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-	}
-
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("script execution failed: %v", err)
-	}
-
-	return filepath.Join(tmpDir, "repo")
 }
