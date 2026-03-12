@@ -2,19 +2,10 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
-	"fmt"
 	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"syscall"
-	"time"
 
 	"github.com/dkarczmarski/go-kweb-lang/appinit"
-	"github.com/dkarczmarski/go-kweb-lang/git"
 )
 
 //nolint:gochecknoglobals
@@ -32,176 +23,29 @@ var (
 	flagWebHTTPAddr     = flag.String("web-http-addr", "", "TCP address for the server to listen on")
 )
 
-const (
-	defaultDirPerm      = 0o755
-	defaultRetryDelay   = 15 * time.Second
-	shutdownGracePeriod = 10 * time.Second
-)
-
-func createRepoIfNotExists(ctx context.Context, repoDirPath string, gitRepo *git.Git) error {
-	exists, err := fileExists(filepath.Join(repoDirPath, ".git"))
-	if err != nil {
-		return fmt.Errorf("error while checking if a git repository exists: %w", err)
-	}
-
-	if !exists {
-		log.Println("repository does not exist yet. creating a new one...")
-
-		if err := os.MkdirAll(repoDirPath, defaultDirPerm); err != nil {
-			return fmt.Errorf("error while creating directory %s: %w", repoDirPath, err)
-		}
-
-		if err := gitRepo.Create(ctx, "https://github.com/kubernetes/website"); err != nil {
-			return fmt.Errorf("error while creating kubernetes repository: %w", err)
-		}
-
-		log.Println("repository was created")
-	}
-
-	return nil
-}
-
-func fileExists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-
-	if err != nil {
-		return false, fmt.Errorf("error while checking whether file exists: %w", err)
-	}
-
-	return true, nil
-}
-
-func runCheckAndRefresh(ctx context.Context, cfg *appinit.Config) error {
-	skipGitChecking := cfg.SkipGitChecking
-	// skipPRChecking := cfg.SkipPRChecking
-
-	if !skipGitChecking {
-		if err := createRepoIfNotExists(ctx, cfg.RepoDir, cfg.GitRepo); err != nil {
-			return err
-		}
-	}
-
-	gitHubMonitor := cfg.GitHubMonitor
-
-	if cfg.RunOnce {
-		// synchronous
-		if err := gitHubMonitor.RetryCheck(ctx, defaultRetryDelay, cfg.RefreshTask); err != nil {
-			return fmt.Errorf("github monitor retry check failed: %w", err)
-		}
-
-		return nil
-	}
-
-	if cfg.RunInterval > 0 {
-		// asynchronous
-		go func() {
-			intervalDelay := time.Minute * time.Duration(cfg.RunInterval)
-
-			if err := gitHubMonitor.IntervalCheck(ctx, intervalDelay, cfg.RefreshTask); err != nil {
-				if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-					log.Fatal(err)
-				}
-
-				log.Printf("context cancelled or deadline exceeded: %v", err)
-			}
-		}()
-	}
-
-	return nil
-}
-
-func runWebServer(ctx context.Context, cfg *appinit.Config) error {
-	server := cfg.Server
-	if server != nil {
-		go func() {
-			<-ctx.Done()
-			log.Println("server is shutting down")
-
-			shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownGracePeriod)
-			defer cancel()
-
-			if err := server.Shutdown(shutdownCtx); err != nil {
-				log.Printf("failed to shutdown http server: %v", err)
-			}
-		}()
-
-		log.Println("starting web server")
-
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			return fmt.Errorf("failed to run http server: %w", err)
-		}
-	} else {
-		<-ctx.Done()
-		log.Println("application stopped")
-	}
-
-	return nil
-}
-
-func Run(ctx context.Context, cfg *appinit.Config) error {
-	ctx, _ = signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
-
-	if err := runCheckAndRefresh(ctx, cfg); err != nil {
-		return err
-	}
-
-	if err := runWebServer(ctx, cfg); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func main() {
 	flag.Parse()
 
-	cfg, err := appinit.Init(
-		// read params
-		appinit.SetDefaultParams(),
-		appinit.ParseEnvParams(),
-		appinit.ParseFlagParams(
-			flagRepoDir,
-			flagCacheDir,
-			flagLangCodes,
-			flagRunOnce,
-			flagRunInterval,
-			flagGitHubToken,
-			flagGitHubTokenFile,
-			flagSkipGit,
-			flagSkipPR,
-			flagNoWeb,
-			flagWebHTTPAddr,
-		),
-		appinit.ShowParams(true),
-		appinit.ReadGitHubTokenFile(true, true),
+	ctx := context.Background()
 
-		// create components
-		appinit.NewLangCodesProvider(),
-		appinit.NewRepo(),
-		appinit.NewCacheStore(),
-		appinit.NewFilePaths(),
-		appinit.NewGitRepoHist(),
-		appinit.NewFilePaths(),
-		appinit.NewPairProviders(),
-		appinit.NewGitSeek(),
-		appinit.NewGitHub(),
-		appinit.NewFilePRFinder(),
-		appinit.NewDashboardStore(),
-		appinit.NewRefreshRepoTask(),
-		appinit.NewRefreshDashboardTask(),
-		appinit.NewRefreshPRTask(),
-		appinit.NewRefreshTask(),
-		appinit.NewGitHubMonitor(),
-		appinit.NewServer(),
+	app, err := appinit.NewApp(
+		flagRepoDir,
+		flagCacheDir,
+		flagLangCodes,
+		flagRunOnce,
+		flagRunInterval,
+		flagGitHubToken,
+		flagGitHubTokenFile,
+		flagSkipGit,
+		flagSkipPR,
+		flagNoWeb,
+		flagWebHTTPAddr,
 	)
 	if err != nil {
-		log.Fatal(fmt.Errorf("error while application configuration initialization: %w", err))
+		log.Fatal(err)
 	}
 
-	if err := Run(context.Background(), cfg); err != nil {
+	if err := appinit.Run(ctx, app); err != nil {
 		log.Fatal(err)
 	}
 }
