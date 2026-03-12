@@ -196,6 +196,31 @@ func (gh *GitHist) PullRefresh(ctx context.Context) ([]string, error) {
 	freshMainBranchCommits = append(freshMainBranchCommits, freshCommits...)
 	freshMainBranchCommits = append(freshMainBranchCommits, mainBranchCommits...)
 
+	changedFiles, err := gh.processFreshCommits(ctx, freshCommits, freshMainBranchCommits)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := gh.gitRepo.Pull(ctx); err != nil {
+		return nil, fmt.Errorf("git pull error: %w", err)
+	}
+
+	return changedFiles, nil
+}
+
+func (gh *GitHist) InvalidateMainBranchCommits() error {
+	if err := gh.cache.Delete(bucketMainBranchCommits, ""); err != nil {
+		return fmt.Errorf("delete main branch commits cache: %w", err)
+	}
+
+	return nil
+}
+
+func (gh *GitHist) processFreshCommits(
+	ctx context.Context,
+	freshCommits []git.CommitInfo,
+	freshMainBranchCommits []git.CommitInfo,
+) ([]string, error) {
 	changedFiles := make([]string, 0)
 
 	for idx := range freshCommits {
@@ -248,19 +273,7 @@ func (gh *GitHist) PullRefresh(ctx context.Context) ([]string, error) {
 		}
 	}
 
-	if err := gh.gitRepo.Pull(ctx); err != nil {
-		return nil, fmt.Errorf("git pull error: %w", err)
-	}
-
 	return changedFiles, nil
-}
-
-func (gh *GitHist) InvalidateMainBranchCommits() error {
-	if err := gh.cache.Delete(bucketMainBranchCommits, ""); err != nil {
-		return fmt.Errorf("delete main branch commits cache: %w", err)
-	}
-
-	return nil
 }
 
 // IsMainBranchCommit checks whether the given commit ID is part of the main branch.
