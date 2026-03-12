@@ -1,7 +1,7 @@
+//nolint:paralleltest
 package git_test
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -36,7 +36,7 @@ func TestGit_Create_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			env := newIntegrationEnv(t, "initrepo")
 			repoURL := tc.repoURL(filepath.Join(env.tmpDir, "repo"))
 
@@ -77,7 +77,7 @@ func TestGit_Checkout_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			env := newIntegrationEnv(t, "initrepo")
 
 			commitID := tc.commitID
@@ -141,7 +141,7 @@ func TestGit_MainBranchCommits_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			env := newIntegrationEnv(t, "initrepo")
 
 			commits, err := env.gitRepo.ListMainBranchCommits(ctx)
@@ -268,7 +268,7 @@ func TestGit_FindFileLastCommit_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			env := newIntegrationEnv(t, "initrepo")
 
 			commit, err := env.gitRepo.FindFileLastCommit(ctx, tc.filePath)
@@ -322,7 +322,7 @@ func TestGit_FindFileCommitsAfter_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			env := newIntegrationEnv(t, "initrepo")
 
 			result, err := env.gitRepo.FindFileCommitsAfter(ctx, tc.filePath, tc.commitIDFrom)
@@ -378,7 +378,7 @@ func TestGit_FindMergePoints_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			env := newIntegrationEnv(t, "initrepo")
 
 			result, err := env.gitRepo.ListMergePoints(ctx, tc.commitID)
@@ -395,7 +395,7 @@ func TestGit_FindMergePoints_Integration(t *testing.T) {
 }
 
 func TestGit_Pull_Integration_Scenario(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	env := newIntegrationEnv(t, "initrepo")
 	repoURL := "file://" + filepath.Join(env.tmpDir, "repo")
 
@@ -417,6 +417,7 @@ func TestGit_Pull_Integration_Scenario(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if exist {
 			t.Fatal("file should not exist")
 		}
@@ -427,6 +428,7 @@ func TestGit_Pull_Integration_Scenario(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if len(freshCommits) > 0 {
 			t.Fatal("fresh commit list should be empty")
 		}
@@ -443,6 +445,7 @@ func TestGit_Pull_Integration_Scenario(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if len(freshCommits) == 0 {
 			t.Fatal("fresh commit list should not be empty")
 		}
@@ -470,6 +473,7 @@ func TestGit_Pull_Integration_Scenario(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if exist {
 			t.Fatal("file should not exist")
 		}
@@ -486,6 +490,7 @@ func TestGit_Pull_Integration_Scenario(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if len(freshCommits) > 0 {
 			t.Fatal("fresh commit list should be empty")
 		}
@@ -496,6 +501,7 @@ func TestGit_Pull_Integration_Scenario(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if !exist {
 			t.Fatal("file should exist")
 		}
@@ -540,7 +546,7 @@ func TestGit_FilesInCommit_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			env := newIntegrationEnv(t, "initrepo")
 
 			result, err := env.gitRepo.ListFilesInCommit(ctx, tc.commitID)
@@ -672,7 +678,7 @@ func TestGit_ListAncestorCommits_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			env := newIntegrationEnv(t, "initrepo")
 
 			result, err := env.gitRepo.ListAncestorCommits(ctx, tc.commitID)
@@ -718,7 +724,7 @@ func TestGit_ListCommitParents_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			env := newIntegrationEnv(t, "initrepo")
 
 			result, err := env.gitRepo.ListCommitParents(ctx, tc.commitID)
@@ -769,7 +775,7 @@ func TestGit_ListFilesBetweenCommits_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			env := newIntegrationEnv(t, "initrepo")
 
 			result, err := env.gitRepo.ListFilesBetweenCommits(ctx, tc.forkCommitID, tc.branchLastCommitID)
