@@ -3,15 +3,22 @@ package git
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/dkarczmarski/go-kweb-lang/git/internal"
+	"github.com/dkarczmarski/go-kweb-lang/git/internal/process"
 )
+
+var ErrInvalidCommitInfoLine = errors.New("invalid commit info line syntax")
+
+const commitInfoSegmentCount = 3
+
+//nolint:gochecknoglobals
+var emptyCommitInfo CommitInfo
 
 // CommitInfo represents commit details.
 type CommitInfo struct {
@@ -24,13 +31,23 @@ type CommitInfo struct {
 }
 
 type NewRepoConfig struct {
-	Runner CommandRunner
+	Runner Runner
+}
+
+type Runner interface {
+	Exec(ctx context.Context, workingDir string, cmd string, args ...string) (string, error)
+}
+
+type Git struct {
+	path   string
+	runner Runner
 }
 
 func NewRepo(path string, opts ...func(config *NewRepoConfig)) *Git {
 	config := NewRepoConfig{
-		Runner: &internal.StdCommandRunner{},
+		Runner: &process.StdCommandRunner{},
 	}
+
 	for _, opt := range opts {
 		opt(&config)
 	}
@@ -39,15 +56,6 @@ func NewRepo(path string, opts ...func(config *NewRepoConfig)) *Git {
 		path:   path,
 		runner: config.Runner,
 	}
-}
-
-type CommandRunner interface {
-	Exec(ctx context.Context, workingDir string, cmd string, args ...string) (string, error)
-}
-
-type Git struct {
-	path   string
-	runner CommandRunner
 }
 
 // Create performs a git clone using the given url.
@@ -85,9 +93,11 @@ func (g *Git) ListMainBranchCommits(ctx context.Context) ([]CommitInfo, error) {
 // FileExists checks whether the file exists in a repository.
 func (g *Git) FileExists(path string) (bool, error) {
 	_, err := os.Stat(g.path + "/" + path)
+
 	if os.IsNotExist(err) {
 		return false, nil
 	}
+
 	if err != nil {
 		return false, fmt.Errorf("failed to stat file: %w", err)
 	}
@@ -100,10 +110,12 @@ func (g *Git) ListFiles(path string) ([]string, error) {
 	var files []string
 
 	fullPath := filepath.Join(g.path, path)
+
 	err := filepath.WalkDir(fullPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+
 		if !d.IsDir() {
 			relPath, err := filepath.Rel(fullPath, path)
 			if err != nil {
@@ -242,6 +254,7 @@ func (g *Git) ListFilesBetweenCommits(ctx context.Context, forkCommitID, branchL
 	))
 }
 
+//nolint:unparam
 func (g *Git) exec(ctx context.Context, workingDir string, cmd string, args ...string) (string, error) {
 	out, err := g.runner.Exec(ctx, workingDir, cmd, args...)
 	if err != nil {
@@ -259,7 +272,7 @@ func execToErr(_ string, err error) error {
 
 func execToCommitInfo(out string, err error) (CommitInfo, error) {
 	if err != nil {
-		return CommitInfo{}, err
+		return emptyCommitInfo, err
 	}
 
 	return lineToCommitInfo(out)
@@ -282,6 +295,7 @@ func execToCommitInfoSlice(out string, err error) ([]CommitInfo, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		commits = append(commits, commit)
 	}
 
@@ -322,17 +336,23 @@ func outputToLines(out string) []string {
 
 func lineToCommitInfo(line string) (CommitInfo, error) {
 	if len(strings.TrimSpace(line)) == 0 {
-		return CommitInfo{}, nil
+		return emptyCommitInfo, nil
 	}
 
-	segs := strings.SplitN(line, " ", 3)
-	if len(segs) != 3 {
-		log.Fatalf("line syntax error: %s", line)
+	segs := strings.SplitN(line, " ", commitInfoSegmentCount)
+	if len(segs) != commitInfoSegmentCount {
+		return emptyCommitInfo, fmt.Errorf(
+			"%w: expected %d segments, got %d: %q",
+			ErrInvalidCommitInfoLine,
+			commitInfoSegmentCount,
+			len(segs),
+			line,
+		)
 	}
 
 	normalizedDateTimeStr, err := normalizeDateTimeStr(segs[1])
 	if err != nil {
-		return CommitInfo{}, fmt.Errorf("failed to normalize date time: %w", err)
+		return emptyCommitInfo, fmt.Errorf("failed to normalize date time: %w", err)
 	}
 
 	return CommitInfo{

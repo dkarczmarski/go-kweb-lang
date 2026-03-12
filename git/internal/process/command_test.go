@@ -1,15 +1,16 @@
-package internal_test
+package process_test
 
 import (
-	"context"
 	"strings"
 	"testing"
 
-	"github.com/dkarczmarski/go-kweb-lang/git/internal"
+	"github.com/dkarczmarski/go-kweb-lang/git/internal/process"
 )
 
 func TestStdCommandRunner_Exec(t *testing.T) {
-	runner := &internal.StdCommandRunner{}
+	t.Parallel()
+
+	runner := &process.StdCommandRunner{}
 
 	for _, tc := range []struct {
 		name           string
@@ -66,10 +67,12 @@ func TestStdCommandRunner_Exec(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := runner.Exec(context.Background(), tc.workingDir, tc.command, tc.args...)
+			out, err := runner.Exec(t.Context(), tc.workingDir, tc.command, tc.args...)
+
 			if !tc.expectedErr(err) {
 				t.Errorf("unexpected error: %v", err)
 			}
+
 			if !tc.expectedOutput(out) {
 				t.Errorf("unexpected output: %v", out)
 			}

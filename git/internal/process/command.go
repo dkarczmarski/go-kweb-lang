@@ -1,4 +1,4 @@
-package internal
+package process
 
 import (
 	"bytes"
@@ -9,9 +9,16 @@ import (
 
 type StdCommandRunner struct{}
 
-func (cr *StdCommandRunner) Exec(ctx context.Context, workingDir string, command string, args ...string) (string, error) {
-	var out bytes.Buffer
-	var stderr bytes.Buffer
+func (cr *StdCommandRunner) Exec(
+	ctx context.Context,
+	workingDir string,
+	command string,
+	args ...string,
+) (string, error) {
+	var (
+		out    bytes.Buffer
+		stderr bytes.Buffer
+	)
 
 	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Dir = workingDir
