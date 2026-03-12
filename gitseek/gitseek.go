@@ -198,12 +198,7 @@ func (gs *GitSeek) checkFile(ctx context.Context, pair Pair) (FileInfo, error) {
 
 	fileInfo.LangForkCommit = forkCommit
 
-	var startPoint git.CommitInfo
-	if forkCommit != nil {
-		startPoint = *forkCommit
-	} else {
-		startPoint = langLastCommit
-	}
+	startPoint := determineStartPoint(forkCommit, langLastCommit)
 
 	enCommitsAfter, err := gs.gitRepo.FindFileCommitsAfter(ctx, enFilePath, startPoint.CommitID)
 	if err != nil {
@@ -215,20 +210,29 @@ func (gs *GitSeek) checkFile(ctx context.Context, pair Pair) (FileInfo, error) {
 		return fileInfo, fmt.Errorf("error while checking if the file %s exists: %w", enFilePath, err)
 	}
 
-	if !exists {
-		if len(enCommitsAfter) > 0 {
-			fileInfo.FileStatus = StatusEnFileNoLongerExists
-		} else {
-			fileInfo.FileStatus = StatusEnFileDoesNotExist
-		}
-	} else if len(enCommitsAfter) > 0 {
-		fileInfo.FileStatus = StatusEnFileUpdated
+	fileInfo.FileStatus = determineFileStatus(exists, enCommitsAfter)
+
+	enUpdates, err := gs.getEnUpdates(ctx, enCommitsAfter)
+	if err != nil {
+		return fileInfo, err
 	}
+
+	fileInfo.EnUpdates = enUpdates
+
+	return fileInfo, nil
+}
+
+func (gs *GitSeek) getEnUpdates(ctx context.Context, enCommitsAfter []git.CommitInfo) ([]EnUpdate, error) {
+	if len(enCommitsAfter) == 0 {
+		return nil, nil
+	}
+
+	enUpdates := make([]EnUpdate, 0, len(enCommitsAfter))
 
 	for _, enCommitAfter := range enCommitsAfter {
 		mergePoint, err := gs.gitRepoHist.FindMergeCommit(ctx, enCommitAfter.CommitID)
 		if err != nil {
-			return fileInfo, fmt.Errorf("find merge commit for EN update %s: %w", enCommitAfter.CommitID, err)
+			return nil, fmt.Errorf("find merge commit for EN update %s: %w", enCommitAfter.CommitID, err)
 		}
 
 		enUpdate := EnUpdate{
@@ -236,8 +240,32 @@ func (gs *GitSeek) checkFile(ctx context.Context, pair Pair) (FileInfo, error) {
 			MergePoint: mergePoint,
 		}
 
-		fileInfo.EnUpdates = append(fileInfo.EnUpdates, enUpdate)
+		enUpdates = append(enUpdates, enUpdate)
 	}
 
-	return fileInfo, nil
+	return enUpdates, nil
+}
+
+func determineStartPoint(forkCommit *git.CommitInfo, langLastCommit git.CommitInfo) git.CommitInfo {
+	if forkCommit != nil {
+		return *forkCommit
+	}
+
+	return langLastCommit
+}
+
+func determineFileStatus(exists bool, enCommitsAfter []git.CommitInfo) string {
+	if !exists {
+		if len(enCommitsAfter) > 0 {
+			return StatusEnFileNoLongerExists
+		}
+
+		return StatusEnFileDoesNotExist
+	}
+
+	if len(enCommitsAfter) > 0 {
+		return StatusEnFileUpdated
+	}
+
+	return ""
 }
