@@ -12,9 +12,7 @@ import (
 	"github.com/dkarczmarski/go-kweb-lang/git"
 )
 
-const (
-	bucketMainBranchCommits = "git-main-branch-commits"
-)
+const bucketMainBranchCommits = "git-main-branch-commits"
 
 // GitRepo is an interface used to decouple this package from the concrete git implementation.
 type GitRepo interface {
@@ -26,7 +24,10 @@ type GitRepo interface {
 	ListFilesInCommit(ctx context.Context, commitID string) ([]string, error)
 	ListAncestorCommits(ctx context.Context, commitID string) ([]git.CommitInfo, error)
 	ListCommitParents(ctx context.Context, commitID string) ([]string, error)
-	ListFilesBetweenCommits(ctx context.Context, forkCommitID, branchLastCommitID string) ([]string, error)
+	ListFilesBetweenCommits(
+		ctx context.Context,
+		forkCommitID, branchLastCommitID string,
+	) ([]string, error)
 }
 
 // CacheStorage is an interface used to decouple this package from the concrete store implementation.
@@ -46,10 +47,7 @@ type GitHist struct {
 	cache   CacheStorage
 }
 
-func New(
-	gitRepo GitRepo,
-	cache CacheStorage,
-) *GitHist {
+func New(gitRepo GitRepo, cache CacheStorage) *GitHist {
 	return &GitHist{
 		gitRepo: gitRepo,
 		cache:   cache,
@@ -68,7 +66,11 @@ func (gh *GitHist) FindForkCommit(ctx context.Context, commitID string) (*git.Co
 	return gh.findForkCommit(ctx, commitID, mainBranchCommits)
 }
 
-func (gh *GitHist) findForkCommit(ctx context.Context, commitID string, mainBranchCommits []git.CommitInfo) (*git.CommitInfo, error) {
+func (gh *GitHist) findForkCommit(
+	ctx context.Context,
+	commitID string,
+	mainBranchCommits []git.CommitInfo,
+) (*git.CommitInfo, error) {
 	return findCommitFunc(ctx, mainBranchCommits, commitID, gh.gitRepo.ListAncestorCommits)
 }
 
@@ -101,7 +103,7 @@ func (gh *GitHist) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo,
 
 	mainBranchCommits, err := gh.gitRepo.ListMainBranchCommits(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list main branch commits: %w", err)
 	}
 
 	if err := gh.cache.Write(bucket, key, mainBranchCommits); err != nil {
@@ -148,10 +150,11 @@ func findFirstCommit(mainBranchCommits []git.CommitInfo, commits []git.CommitInf
 		return nil
 	}
 
-	for i := 0; i < commitsLen; i++ {
+	for i := range commits {
 		commit := commits[i]
 		if containsCommit(mainBranchCommits, commit.CommitID) {
 			clonedCommitInfo := cloneCommitInfo(commit)
+
 			return &clonedCommitInfo
 		}
 	}
@@ -193,31 +196,55 @@ func (gh *GitHist) PullRefresh(ctx context.Context) ([]string, error) {
 	freshMainBranchCommits = append(freshMainBranchCommits, freshCommits...)
 	freshMainBranchCommits = append(freshMainBranchCommits, mainBranchCommits...)
 
-	allFilesToInvalidate := make([]string, 0)
-	for i := 0; i < len(freshCommits); i++ {
-		fc := freshCommits[len(freshCommits)-1-i]
+	changedFiles := make([]string, 0)
 
-		log.Printf("[githist][%d/%d] process fresh commit: %s", i+1, len(freshCommits), &fc)
+	for idx := range freshCommits {
+		freshCommit := freshCommits[len(freshCommits)-1-idx]
 
-		commitFiles, err := gh.gitRepo.ListFilesInCommit(ctx, fc.CommitID)
+		log.Printf(
+			"[githist][%d/%d] process fresh commit: %s",
+			idx+1,
+			len(freshCommits),
+			&freshCommit,
+		)
+
+		commitFiles, err := gh.gitRepo.ListFilesInCommit(ctx, freshCommit.CommitID)
 		if err != nil {
-			return nil, fmt.Errorf("list files of commit %s error: %w", fc.CommitID, err)
+			return nil, fmt.Errorf("list files of commit %s error: %w", freshCommit.CommitID, err)
 		}
 
 		if len(commitFiles) == 0 {
 			// it might be a merge commit
-			mergeCommitFiles, err := gh.mergeCommitFiles(ctx, fc.CommitID, freshMainBranchCommits)
+			mergeCommitFiles, err := gh.mergeCommitFiles(
+				ctx,
+				freshCommit.CommitID,
+				freshMainBranchCommits,
+			)
 			if err != nil {
-				return nil, fmt.Errorf("failed to list files of the merge commit %s: %w", fc.CommitID, err)
+				return nil, fmt.Errorf(
+					"failed to list files of the merge commit %s: %w",
+					freshCommit.CommitID,
+					err,
+				)
 			}
 
-			allFilesToInvalidate = append(allFilesToInvalidate, mergeCommitFiles...)
+			changedFiles = append(changedFiles, mergeCommitFiles...)
 
-			log.Printf("[githist][%d/%d] files in the merge commit: %s", i+1, len(freshCommits), mergeCommitFiles)
+			log.Printf(
+				"[githist][%d/%d] files in the merge commit: %s",
+				idx+1,
+				len(freshCommits),
+				mergeCommitFiles,
+			)
 		} else {
-			allFilesToInvalidate = append(allFilesToInvalidate, commitFiles...)
+			changedFiles = append(changedFiles, commitFiles...)
 
-			log.Printf("[githist][%d/%d] files in the commit: %s", i+1, len(freshCommits), commitFiles)
+			log.Printf(
+				"[githist][%d/%d] files in the commit: %s",
+				idx+1,
+				len(freshCommits),
+				commitFiles,
+			)
 		}
 	}
 
@@ -225,11 +252,15 @@ func (gh *GitHist) PullRefresh(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("git pull error: %w", err)
 	}
 
-	return allFilesToInvalidate, nil
+	return changedFiles, nil
 }
 
 func (gh *GitHist) invalidateMainBranchCommits() error {
-	return gh.cache.Delete(bucketMainBranchCommits, "")
+	if err := gh.cache.Delete(bucketMainBranchCommits, ""); err != nil {
+		return fmt.Errorf("delete main branch commits cache: %w", err)
+	}
+
+	return nil
 }
 
 // IsMainBranchCommit checks whether the given commit ID is part of the main branch.
@@ -268,7 +299,8 @@ func (gh *GitHist) mergeCommitFiles(
 	}
 
 	var files []string
-	for i := 0; i < len(parents); i++ {
+
+	for i := range parents {
 		branchParentCommitID := parents[i]
 
 		forkCommit, err := gh.findForkCommit(ctx, branchParentCommitID, mainBranchCommits)
@@ -281,7 +313,11 @@ func (gh *GitHist) mergeCommitFiles(
 			continue
 		}
 
-		filesBetweenCommits, err := gh.gitRepo.ListFilesBetweenCommits(ctx, forkCommit.CommitID, branchParentCommitID)
+		filesBetweenCommits, err := gh.gitRepo.ListFilesBetweenCommits(
+			ctx,
+			forkCommit.CommitID,
+			branchParentCommitID,
+		)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"failed to list files between commits %s and %s: %w",
@@ -302,7 +338,7 @@ func (gh *GitHist) mergeCommitFiles(
 func (gh *GitHist) GetLastMainBranchCommit(ctx context.Context) (git.CommitInfo, error) {
 	commits, err := gh.listMainBranchCommits(ctx)
 	if err != nil {
-		return git.CommitInfo{}, err
+		return zeroCommitInfo(), err
 	}
 
 	return gh.getLastMainBranchCommit(commits), nil
@@ -310,7 +346,7 @@ func (gh *GitHist) GetLastMainBranchCommit(ctx context.Context) (git.CommitInfo,
 
 func (gh *GitHist) getLastMainBranchCommit(mainBranchCommits []git.CommitInfo) git.CommitInfo {
 	if len(mainBranchCommits) == 0 {
-		return git.CommitInfo{}
+		return zeroCommitInfo()
 	}
 
 	return cloneCommitInfo(mainBranchCommits[0])
@@ -323,5 +359,13 @@ func cloneCommitInfo(commit git.CommitInfo) git.CommitInfo {
 		CommitID: strings.Clone(commit.CommitID),
 		DateTime: strings.Clone(commit.DateTime),
 		Comment:  strings.Clone(commit.Comment),
+	}
+}
+
+func zeroCommitInfo() git.CommitInfo {
+	return git.CommitInfo{
+		CommitID: "",
+		DateTime: "",
+		Comment:  "",
 	}
 }
