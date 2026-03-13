@@ -57,6 +57,10 @@ func TestGitSeek_InvalidateFile_ForcesRecompute_Integration(t *testing.T) {
 
 	runScenarioScript(t, env.tmpDir, env.scenarioDir, "step_add_d_en_update.sh")
 
+	if err := env.gitRepoHist.InvalidateMainBranchCommits(); err != nil {
+		t.Fatalf("InvalidateMainBranchCommits returned error: %v", err)
+	}
+
 	if err := env.gitSeeker.InvalidateFile("pl", env.pair.LangPath); err != nil {
 		t.Fatalf("InvalidateFile returned error: %v", err)
 	}

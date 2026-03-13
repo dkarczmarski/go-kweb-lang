@@ -18,6 +18,7 @@ type integrationEnv struct {
 	tmpDir      string
 	scenarioDir string
 	cache       *store.FileStore
+	gitRepoHist *githist.GitHist
 	gitSeeker   *gitseek.GitSeek
 	pair        gitseek.Pair
 }
@@ -43,6 +44,7 @@ func newIntegrationEnv(t *testing.T, scenarioName string) integrationEnv {
 		tmpDir:      tmpDir,
 		scenarioDir: scenarioDir,
 		cache:       cache,
+		gitRepoHist: gitRepoHist,
 		gitSeeker:   gitSeeker,
 		pair: gitseek.Pair{
 			EnPath:   "content/en/docs/test.md",
