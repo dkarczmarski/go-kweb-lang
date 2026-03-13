@@ -1,7 +1,9 @@
+//nolint:dupl
 package githist_test
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -11,8 +13,6 @@ import (
 	"github.com/dkarczmarski/go-kweb-lang/testing/storetests"
 	"go.uber.org/mock/gomock"
 )
-
-const bucketMainBranchCommits = "git-main-branch-commits"
 
 func TestGitHist_FindForkCommit(t *testing.T) {
 	t.Parallel()
@@ -27,10 +27,11 @@ func TestGitHist_FindForkCommit(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name     string
-		commitID string
-		expected *git.CommitInfo
-		initMock func(gitRepo *mocks.MockGitRepo, commitID string)
+		name        string
+		commitID    string
+		expected    *git.CommitInfo
+		expectedErr error
+		initMock    func(gitRepo *mocks.MockGitRepo, commitID string)
 	}{
 		{
 			name:     "fork is found",
@@ -51,6 +52,18 @@ func TestGitHist_FindForkCommit(t *testing.T) {
 					Times(1)
 			},
 		},
+		{
+			name:        "commit is already on main branch",
+			commitID:    "C-ID-20",
+			expected:    nil,
+			expectedErr: githist.ErrCommitOnMainBranch,
+			initMock: func(m *mocks.MockGitRepo, _ string) {
+				m.EXPECT().
+					ListMainBranchCommits(ctx).
+					Return(mainBranchCommits, nil).
+					Times(1)
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -60,11 +73,11 @@ func TestGitHist_FindForkCommit(t *testing.T) {
 			cache := mocks.NewMockCacheStorage(ctrl)
 
 			cache.EXPECT().
-				Read(bucketMainBranchCommits, "", gomock.Any()).
+				Read(githist.MainBranchCommitsCacheBucket(), githist.MainBranchCommitsCacheKey(), gomock.Any()).
 				DoAndReturn(storetests.MockReadNotFound())
 
 			cache.EXPECT().
-				Write(gomock.Any(), gomock.Any(), gomock.Any()).
+				Write(githist.MainBranchCommitsCacheBucket(), githist.MainBranchCommitsCacheKey(), gomock.Any()).
 				Return(nil)
 
 			if tc.initMock != nil {
@@ -73,13 +86,13 @@ func TestGitHist_FindForkCommit(t *testing.T) {
 
 			gc := githist.New(gitRepo, cache)
 
-			mergeCommit, err := gc.FindForkCommit(ctx, tc.commitID)
-			if err != nil {
-				t.Errorf("unexpected error: %v", err)
+			forkCommit, err := gc.FindForkCommit(ctx, tc.commitID)
+			if !errors.Is(err, tc.expectedErr) {
+				t.Fatalf("unexpected error\nactual  : %v\nexpected: %v", err, tc.expectedErr)
 			}
 
-			if !reflect.DeepEqual(mergeCommit, tc.expected) {
-				t.Errorf("unexpected outcome\nactual   : %+v\nexpected: %+v", mergeCommit, tc.expected)
+			if !reflect.DeepEqual(forkCommit, tc.expected) {
+				t.Errorf("unexpected outcome\nactual  : %+v\nexpected: %+v", forkCommit, tc.expected)
 			}
 		})
 	}
@@ -98,10 +111,11 @@ func TestGitHist_FindMergeCommit(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name     string
-		commitID string
-		expected *git.CommitInfo
-		initMock func(repo *mocks.MockGitRepo, commitID string)
+		name        string
+		commitID    string
+		expected    *git.CommitInfo
+		expectedErr error
+		initMock    func(repo *mocks.MockGitRepo, commitID string)
 	}{
 		{
 			name:     "merge commit is found",
@@ -122,6 +136,18 @@ func TestGitHist_FindMergeCommit(t *testing.T) {
 					Times(1)
 			},
 		},
+		{
+			name:        "commit is already on main branch",
+			commitID:    "C-ID-20",
+			expected:    nil,
+			expectedErr: githist.ErrCommitOnMainBranch,
+			initMock: func(m *mocks.MockGitRepo, _ string) {
+				m.EXPECT().
+					ListMainBranchCommits(ctx).
+					Return(mainBranchCommits, nil).
+					Times(1)
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -131,11 +157,11 @@ func TestGitHist_FindMergeCommit(t *testing.T) {
 			cache := mocks.NewMockCacheStorage(ctrl)
 
 			cache.EXPECT().
-				Read(bucketMainBranchCommits, "", gomock.Any()).
+				Read(githist.MainBranchCommitsCacheBucket(), githist.MainBranchCommitsCacheKey(), gomock.Any()).
 				DoAndReturn(storetests.MockReadReturn[[]git.CommitInfo](false, nil, nil))
 
 			cache.EXPECT().
-				Write(gomock.Any(), gomock.Any(), gomock.Any()).
+				Write(githist.MainBranchCommitsCacheBucket(), githist.MainBranchCommitsCacheKey(), gomock.Any()).
 				Return(nil)
 
 			if tc.initMock != nil {
@@ -145,12 +171,12 @@ func TestGitHist_FindMergeCommit(t *testing.T) {
 			gc := githist.New(gitRepo, cache)
 
 			mergeCommit, err := gc.FindMergeCommit(ctx, tc.commitID)
-			if err != nil {
-				t.Errorf("unexpected error: %v", err)
+			if !errors.Is(err, tc.expectedErr) {
+				t.Fatalf("unexpected error\nactual  : %v\nexpected: %v", err, tc.expectedErr)
 			}
 
 			if !reflect.DeepEqual(mergeCommit, tc.expected) {
-				t.Errorf("unexpected outcome\nactual   : %+v\nexpected: %+v", mergeCommit, tc.expected)
+				t.Errorf("unexpected outcome\nactual  : %+v\nexpected: %+v", mergeCommit, tc.expected)
 			}
 		})
 	}
@@ -177,11 +203,11 @@ func TestGitHist_PullRefresh(t *testing.T) {
 					}, nil)
 
 				cache.EXPECT().
-					Read(bucketMainBranchCommits, "", gomock.Any()).
+					Read(githist.MainBranchCommitsCacheBucket(), githist.MainBranchCommitsCacheKey(), gomock.Any()).
 					DoAndReturn(storetests.MockReadNotFound())
 
 				cache.EXPECT().
-					Write(bucketMainBranchCommits, "", gomock.Any()).
+					Write(githist.MainBranchCommitsCacheBucket(), githist.MainBranchCommitsCacheKey(), gomock.Any()).
 					Return(nil)
 
 				gitRepo.EXPECT().
@@ -255,11 +281,11 @@ func TestGitHist_GetLastMainBranchCommit(t *testing.T) {
 			gitRepoHist := githist.New(gitRepo, cache)
 
 			cache.EXPECT().
-				Read(gomock.Any(), gomock.Any(), gomock.Any()).
+				Read(githist.MainBranchCommitsCacheBucket(), githist.MainBranchCommitsCacheKey(), gomock.Any()).
 				DoAndReturn(storetests.MockReadNotFound())
 
 			cache.EXPECT().
-				Write(gomock.Any(), gomock.Any(), gomock.Any()).
+				Write(githist.MainBranchCommitsCacheBucket(), githist.MainBranchCommitsCacheKey(), gomock.Any()).
 				Return(nil)
 
 			gitRepo.EXPECT().

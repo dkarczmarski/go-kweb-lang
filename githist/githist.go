@@ -13,8 +13,6 @@ import (
 	"github.com/dkarczmarski/go-kweb-lang/git"
 )
 
-const bucketMainBranchCommits = "git-main-branch-commits"
-
 // ErrCommitPathsNotConnected means that two commit paths do not meet.
 // In other words, they do not share any common commit.
 var ErrCommitPathsNotConnected = errors.New("commit paths are not connected")
@@ -62,6 +60,23 @@ func New(gitRepo GitRepo, cache CacheStorage) *GitHist {
 	}
 }
 
+const (
+	bucketMainBranchCommits = "git-main-branch-commits"
+	keyMainBranchCommits    = ""
+)
+
+// MainBranchCommitsCacheBucket returns the cache bucket name used for storing
+// main branch commits.
+func MainBranchCommitsCacheBucket() string {
+	return bucketMainBranchCommits
+}
+
+// MainBranchCommitsCacheKey returns the cache key used for storing
+// main branch commits inside the main branch commits bucket.
+func MainBranchCommitsCacheKey() string {
+	return keyMainBranchCommits
+}
+
 // FindForkCommit returns the fork commit on the main branch for the given commitID.
 //
 // ErrCommitOnMainBranch is returned when commitID already exists on the main
@@ -97,8 +112,8 @@ func (gh *GitHist) FindMergeCommit(ctx context.Context, commitID string) (*git.C
 }
 
 func (gh *GitHist) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
-	bucket := bucketMainBranchCommits
-	key := ""
+	bucket := MainBranchCommitsCacheBucket()
+	key := MainBranchCommitsCacheKey()
 
 	var cached []git.CommitInfo
 
@@ -249,7 +264,7 @@ func (gh *GitHist) PullRefresh(ctx context.Context) ([]string, error) {
 }
 
 func (gh *GitHist) InvalidateMainBranchCommits() error {
-	if err := gh.cache.Delete(bucketMainBranchCommits, ""); err != nil {
+	if err := gh.cache.Delete(MainBranchCommitsCacheBucket(), MainBranchCommitsCacheKey()); err != nil {
 		return fmt.Errorf("delete main branch commits cache: %w", err)
 	}
 
