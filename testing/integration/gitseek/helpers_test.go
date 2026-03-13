@@ -17,7 +17,7 @@ import (
 type integrationEnv struct {
 	tmpDir      string
 	scenarioDir string
-	cache       *store.FileStore
+	cache       *store.JSONFileStore
 	gitRepoHist *githist.GitHist
 	gitSeeker   *gitseek.GitSeek
 	pair        gitseek.Pair
@@ -53,7 +53,7 @@ func newIntegrationEnv(t *testing.T, scenarioName string) integrationEnv {
 	}
 }
 
-func assertCachedFileInfo(t *testing.T, cache *store.FileStore, pair gitseek.Pair, expected gitseek.FileInfo) {
+func assertCachedFileInfo(t *testing.T, cache *store.JSONFileStore, pair gitseek.Pair, expected gitseek.FileInfo) {
 	t.Helper()
 
 	var cached gitseek.FileInfo

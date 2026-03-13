@@ -27,7 +27,7 @@ const (
 type Services struct {
 	LangCodesProvider    *langcnt.LangCodesProvider
 	GitRepo              *git.Git
-	CacheStore           *store.FileStore
+	CacheStore           *store.JSONFileStore
 	DashboardStore       *dashboard.Store
 	GitRepoHist          *githist.GitHist
 	FilePaths            *filepairs.FilePaths
