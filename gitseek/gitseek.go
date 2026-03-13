@@ -6,10 +6,12 @@ package gitseek
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 
 	"github.com/dkarczmarski/go-kweb-lang/git"
+	"github.com/dkarczmarski/go-kweb-lang/githist"
 )
 
 const (
@@ -186,14 +188,18 @@ func (gs *GitSeek) checkFile(ctx context.Context, pair Pair) (FileInfo, error) {
 
 	mergeCommit, err := gs.gitRepoHist.FindMergeCommit(ctx, langLastCommit.CommitID)
 	if err != nil {
-		return fileInfo, fmt.Errorf("find merge commit for %s: %w", langLastCommit.CommitID, err)
+		if !errors.Is(err, githist.ErrCommitOnMainBranch) {
+			return fileInfo, fmt.Errorf("find merge commit for %s: %w", langLastCommit.CommitID, err)
+		}
 	}
 
 	fileInfo.LangMergeCommit = mergeCommit
 
 	forkCommit, err := gs.gitRepoHist.FindForkCommit(ctx, langLastCommit.CommitID)
 	if err != nil {
-		return fileInfo, fmt.Errorf("find fork commit for %s: %w", langLastCommit.CommitID, err)
+		if !errors.Is(err, githist.ErrCommitOnMainBranch) {
+			return fileInfo, fmt.Errorf("find fork commit for %s: %w", langLastCommit.CommitID, err)
+		}
 	}
 
 	fileInfo.LangForkCommit = forkCommit
@@ -232,7 +238,9 @@ func (gs *GitSeek) getEnUpdates(ctx context.Context, enCommitsAfter []git.Commit
 	for _, enCommitAfter := range enCommitsAfter {
 		mergePoint, err := gs.gitRepoHist.FindMergeCommit(ctx, enCommitAfter.CommitID)
 		if err != nil {
-			return nil, fmt.Errorf("find merge commit for EN update %s: %w", enCommitAfter.CommitID, err)
+			if !errors.Is(err, githist.ErrCommitOnMainBranch) {
+				return nil, fmt.Errorf("find merge commit for EN update %s: %w", enCommitAfter.CommitID, err)
+			}
 		}
 
 		enUpdate := EnUpdate{

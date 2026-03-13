@@ -19,6 +19,9 @@ const bucketMainBranchCommits = "git-main-branch-commits"
 // In other words, they do not share any common commit.
 var ErrCommitPathsNotConnected = errors.New("commit paths are not connected")
 
+// ErrCommitOnMainBranch means that the given commit already exists on the main branch.
+var ErrCommitOnMainBranch = errors.New("commit is on main branch")
+
 // GitRepo is an interface used to decouple this package from the concrete git implementation.
 type GitRepo interface {
 	ListMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error)
@@ -59,9 +62,10 @@ func New(gitRepo GitRepo, cache CacheStorage) *GitHist {
 	}
 }
 
-// FindForkCommit returns the fork commit
-// (on the main branch) for the given commitID.
-// If the commitID itself exists on the main branch, nil is returned.
+// FindForkCommit returns the fork commit on the main branch for the given commitID.
+//
+// ErrCommitOnMainBranch is returned when commitID already exists on the main
+// branch. In that case there is no fork commit to find.
 func (gh *GitHist) FindForkCommit(ctx context.Context, commitID string) (*git.CommitInfo, error) {
 	mainBranchCommits, err := gh.listMainBranchCommits(ctx)
 	if err != nil {
@@ -79,9 +83,10 @@ func (gh *GitHist) findForkCommit(
 	return findFirstIntersectionWithMainBranch(ctx, mainBranchCommits, commitID, gh.gitRepo.ListAncestorCommits)
 }
 
-// FindMergeCommit returns the merge commit
-// with the main branch for the given commitID.
-// If the commitID itself exists on the main branch, nil is returned.
+// FindMergeCommit returns the merge commit with the main branch for the given commitID.
+//
+// ErrCommitOnMainBranch is returned when commitID already exists on the main
+// branch. In that case there is no merge commit to find.
 func (gh *GitHist) FindMergeCommit(ctx context.Context, commitID string) (*git.CommitInfo, error) {
 	mainBranchCommits, err := gh.listMainBranchCommits(ctx)
 	if err != nil {
@@ -132,7 +137,9 @@ func (gh *GitHist) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo,
 // The function returns the first commit from the generated path that also
 // exists in mainBranchCommits.
 //
-// If commitID itself already exists on the main branch, the function returns nil.
+// ErrCommitOnMainBranch is returned when commitID itself already exists on the
+// main branch.
+//
 // If pathFunc returns an error, that error is returned.
 //
 // ErrCommitPathsNotConnected is returned when the path returned by pathFunc
@@ -145,7 +152,7 @@ func findFirstIntersectionWithMainBranch(
 	pathFunc func(ctx context.Context, commitID string) ([]git.CommitInfo, error),
 ) (*git.CommitInfo, error) {
 	if containsCommit(mainBranchCommits, commitID) {
-		return nil, nil
+		return nil, ErrCommitOnMainBranch
 	}
 
 	commitPath, err := pathFunc(ctx, commitID)
@@ -183,7 +190,7 @@ func findFirstCommit(
 	commitPath []git.CommitInfo,
 ) (*git.CommitInfo, error) {
 	if len(commitPath) == 0 {
-		return nil, nil
+		return nil, ErrCommitPathsNotConnected
 	}
 
 	for i := range commitPath {
@@ -351,12 +358,11 @@ func (gh *GitHist) mergeCommitFiles(
 
 		forkCommit, err := gh.findForkCommit(ctx, branchParentCommitID, mainBranchCommits)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find fork commit for %s: %w", branchParentCommitID, err)
-		}
+			if errors.Is(err, ErrCommitOnMainBranch) {
+				continue
+			}
 
-		if forkCommit == nil {
-			// is on the main branch
-			continue
+			return nil, fmt.Errorf("failed to find fork commit for %s: %w", branchParentCommitID, err)
 		}
 
 		filesBetweenCommits, err := gh.gitRepo.ListFilesBetweenCommits(

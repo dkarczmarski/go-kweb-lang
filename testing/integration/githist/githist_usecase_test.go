@@ -2,21 +2,25 @@
 package githist_test
 
 import (
+	"errors"
 	"reflect"
 	"testing"
+
+	"github.com/dkarczmarski/go-kweb-lang/githist"
 )
 
-// TestGitHist_FindForkCommit_ReturnsNilForMainCommit_Integration verifies that
-// FindForkCommit returns nil when the given commit already belongs to the main branch.
-func TestGitHist_FindForkCommit_ReturnsNilForMainCommit_Integration(t *testing.T) {
+// TestGitHist_FindForkCommit_ReturnsErrCommitOnMainBranch_Integration verifies that
+// FindForkCommit returns ErrCommitOnMainBranch when the given commit already
+// belongs to the main branch.
+func TestGitHist_FindForkCommit_ReturnsErrCommitOnMainBranch_Integration(t *testing.T) {
 	ctx := t.Context()
 	env := newGitHistIntegrationEnv(t, "find_fork_commit_on_main")
 
 	commitID := mustGitRevParseBySubject(t, env.repoDir, "B: main second commit")
 
 	forkCommit, err := env.gitHist.FindForkCommit(ctx, commitID)
-	if err != nil {
-		t.Fatalf("FindForkCommit returned error: %v", err)
+	if !errors.Is(err, githist.ErrCommitOnMainBranch) {
+		t.Fatalf("expected ErrCommitOnMainBranch, got: %v", err)
 	}
 
 	if forkCommit != nil {
@@ -80,17 +84,18 @@ func TestGitHist_FindForkCommit_ReturnsNearestCommonMainCommit_Integration(t *te
 	}
 }
 
-// TestGitHist_FindMergeCommit_ReturnsNilForMainCommit_Integration verifies that
-// FindMergeCommit returns nil when the given commit already belongs to the main branch.
-func TestGitHist_FindMergeCommit_ReturnsNilForMainCommit_Integration(t *testing.T) {
+// TestGitHist_FindMergeCommit_ReturnsErrCommitOnMainBranch_Integration verifies that
+// FindMergeCommit returns ErrCommitOnMainBranch when the given commit already
+// belongs to the main branch.
+func TestGitHist_FindMergeCommit_ReturnsErrCommitOnMainBranch_Integration(t *testing.T) {
 	ctx := t.Context()
 	env := newGitHistIntegrationEnv(t, "find_merge_commit_on_main")
 
 	commitID := mustGitRevParseBySubject(t, env.repoDir, "B: main second commit")
 
 	mergeCommit, err := env.gitHist.FindMergeCommit(ctx, commitID)
-	if err != nil {
-		t.Fatalf("FindMergeCommit returned error: %v", err)
+	if !errors.Is(err, githist.ErrCommitOnMainBranch) {
+		t.Fatalf("expected ErrCommitOnMainBranch, got: %v", err)
 	}
 
 	if mergeCommit != nil {
