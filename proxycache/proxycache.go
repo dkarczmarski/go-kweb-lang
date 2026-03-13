@@ -6,47 +6,50 @@ package proxycache
 
 import (
 	"context"
+	"fmt"
 )
 
 type Store interface {
-	Read(bucket, key string, buff any) (bool, error)
+	Read(bucket, key string, dst any) (bool, error)
 	Write(bucket, key string, data any) error
 }
 
-// Get returns a value from local cache if it exists, or calls the block to retrieve it.
+// Get returns a cached value when present and not stale.
+// When the cached value is missing or stale, it loads a fresh value using loader,
+// stores it in cache, and returns it.
+// If isStale is nil, any existing cached value is treated as valid.
+//
+//nolint:ireturn
 func Get[T any](
 	ctx context.Context,
 	store Store,
 	bucket string,
 	key string,
-	isInvalid func(T) bool,
-	block func(context.Context) (T, error),
+	isStale func(T) bool,
+	loader func(context.Context) (T, error),
 ) (T, error) {
-	var buff T
+	var (
+		zero   T
+		cached T
+	)
 
-	exists, err := store.Read(bucket, key, &buff)
+	exists, err := store.Read(bucket, key, &cached)
 	if err != nil {
-		var zero T
-
-		return zero, err
+		return zero, fmt.Errorf("read cache %s/%s: %w", bucket, key, err)
 	}
 
-	if exists {
-		if isInvalid == nil || !isInvalid(buff) {
-			return buff, nil
-		}
+	if exists && (isStale == nil || !isStale(cached)) {
+		return cached, nil
 	}
 
-	result, err := block(ctx)
+	value, err := loader(ctx)
 	if err != nil {
-		return result, err
+		return zero, fmt.Errorf("load value for cache %s/%s: %w", bucket, key, err)
 	}
 
-	if err := store.Write(bucket, key, result); err != nil {
-		var zero T
-
-		return zero, err
+	if err := store.Write(bucket, key, value); err != nil {
+		return zero, fmt.Errorf("write cache %s/%s: %w", bucket, key, err)
 	}
 
-	return result, nil
+	return value, nil
 }

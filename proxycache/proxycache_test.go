@@ -9,7 +9,6 @@ import (
 	"github.com/dkarczmarski/go-kweb-lang/proxycache"
 	"github.com/dkarczmarski/go-kweb-lang/proxycache/internal/mocks"
 	"github.com/dkarczmarski/go-kweb-lang/testing/storetests"
-
 	"go.uber.org/mock/gomock"
 )
 
@@ -19,77 +18,80 @@ type TestData struct {
 
 var errTest = errors.New("test error")
 
+func noError(err error) bool {
+	return err == nil
+}
+
 func TestGet(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		initMock     func(storeMock *mocks.MockStore)
-		isInvalid    func(data TestData) bool
-		block        func(ctx context.Context) (TestData, error)
-		expectResult TestData
-		expectErr    func(err error) bool
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		initMock   func(storeMock *mocks.MockStore)
+		isInvalid  func(data TestData) bool
+		block      func(ctx context.Context) (TestData, error)
+		wantResult TestData
+		wantErr    func(err error) bool
 	}{
 		{
-			name: "value found in the cache",
+			name: "value found in cache",
 			initMock: func(storeMock *mocks.MockStore) {
 				storeMock.EXPECT().
 					Read("bucket", "key", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
-						TestData{"value1"},
-						nil),
-					)
+						TestData{Value: "value1"},
+						nil,
+					))
 			},
 			isInvalid: nil,
-			block: func(ctx context.Context) (TestData, error) {
-				return TestData{"value1"}, nil
+			block: func(_ context.Context) (TestData, error) {
+				return TestData{Value: "value1"}, nil
 			},
-			expectResult: TestData{"value1"},
-			expectErr: func(err error) bool {
-				return err == nil
-			},
+			wantResult: TestData{Value: "value1"},
+			wantErr:    noError,
 		},
 		{
-			name: "error while reading from the store",
+			name: "error while reading from store",
 			initMock: func(storeMock *mocks.MockStore) {
 				storeMock.EXPECT().
 					Read("bucket", "key", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
 						TestData{},
-						errTest),
-					)
+						errTest,
+					))
 			},
 			isInvalid: nil,
-			block: func(ctx context.Context) (TestData, error) {
-				return TestData{"value1"}, nil
+			block: func(_ context.Context) (TestData, error) {
+				return TestData{Value: "value1"}, nil
 			},
-			expectResult: TestData{},
-			expectErr: func(err error) bool {
+			wantResult: TestData{},
+			wantErr: func(err error) bool {
 				return errors.Is(err, errTest)
 			},
 		},
 		{
-			name: "value not found in the cache",
+			name: "value not found in cache",
 			initMock: func(storeMock *mocks.MockStore) {
 				storeMock.EXPECT().
 					Read("bucket", "key", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						false,
 						TestData{},
-						nil),
-					)
+						nil,
+					))
 
 				storeMock.EXPECT().
-					Write("bucket", "key", TestData{"value1"}).Return(nil)
+					Write("bucket", "key", TestData{Value: "value1"}).
+					Return(nil)
 			},
 			isInvalid: nil,
-			block: func(ctx context.Context) (TestData, error) {
-				return TestData{"value1"}, nil
+			block: func(_ context.Context) (TestData, error) {
+				return TestData{Value: "value1"}, nil
 			},
-			expectResult: TestData{"value1"},
-			expectErr: func(err error) bool {
-				return err == nil
-			},
+			wantResult: TestData{Value: "value1"},
+			wantErr:    noError,
 		},
 		{
 			name: "error while running block",
@@ -99,71 +101,73 @@ func TestGet(t *testing.T) {
 					DoAndReturn(storetests.MockReadReturn(
 						false,
 						TestData{},
-						nil),
-					)
+						nil,
+					))
 			},
 			isInvalid: nil,
-			block: func(ctx context.Context) (TestData, error) {
+			block: func(_ context.Context) (TestData, error) {
 				return TestData{}, errTest
 			},
-			expectResult: TestData{},
-			expectErr: func(err error) bool {
+			wantResult: TestData{},
+			wantErr: func(err error) bool {
 				return errors.Is(err, errTest)
 			},
 		},
 		{
-			name: "error while writing to the store",
+			name: "error while writing to store",
 			initMock: func(storeMock *mocks.MockStore) {
 				storeMock.EXPECT().
 					Read("bucket", "key", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						false,
-						TestData{""},
-						nil),
-					)
+						TestData{},
+						nil,
+					))
 
 				storeMock.EXPECT().
-					Write("bucket", "key", TestData{"value1"}).Return(errTest)
+					Write("bucket", "key", TestData{Value: "value1"}).
+					Return(errTest)
 			},
 			isInvalid: nil,
-			block: func(ctx context.Context) (TestData, error) {
-				return TestData{"value1"}, nil
+			block: func(_ context.Context) (TestData, error) {
+				return TestData{Value: "value1"}, nil
 			},
-			expectResult: TestData{},
-			expectErr: func(err error) bool {
+			wantResult: TestData{},
+			wantErr: func(err error) bool {
 				return errors.Is(err, errTest)
 			},
 		},
 		{
-			name: "value found in the cache but is not valid",
+			name: "cached value is invalid and gets refreshed",
 			initMock: func(storeMock *mocks.MockStore) {
 				storeMock.EXPECT().
 					Read("bucket", "key", gomock.Any()).
 					DoAndReturn(storetests.MockReadReturn(
 						true,
-						TestData{"value1"},
-						nil),
-					)
+						TestData{Value: "value1"},
+						nil,
+					))
 
 				storeMock.EXPECT().
-					Write("bucket", "key", TestData{"value2"}).Return(nil)
+					Write("bucket", "key", TestData{Value: "value2"}).
+					Return(nil)
 			},
-			isInvalid: func(data TestData) bool {
+			isInvalid: func(_ TestData) bool {
 				return true
 			},
-			block: func(ctx context.Context) (TestData, error) {
-				return TestData{"value2"}, nil
+			block: func(_ context.Context) (TestData, error) {
+				return TestData{Value: "value2"}, nil
 			},
-			expectResult: TestData{"value2"},
-			expectErr: func(err error) bool {
-				return err == nil
-			},
+			wantResult: TestData{Value: "value2"},
+			wantErr:    noError,
 		},
-	} {
+	}
+
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			ctrl := gomock.NewController(t)
 			storeMock := mocks.NewMockStore(ctrl)
@@ -179,13 +183,16 @@ func TestGet(t *testing.T) {
 				tc.block,
 			)
 
-			if !tc.expectErr(err) {
-				t.Errorf("unexpected error: %v", err)
+			if !tc.wantErr(err) {
+				t.Fatalf("unexpected error: %v", err)
 			}
 
-			if !reflect.DeepEqual(tc.expectResult, result) {
-				t.Errorf("unexpected result\nexpected: %+v\nactual:  %+v",
-					tc.expectResult, result)
+			if !reflect.DeepEqual(tc.wantResult, result) {
+				t.Fatalf(
+					"unexpected result\nwant: %+v\ngot:  %+v",
+					tc.wantResult,
+					result,
+				)
 			}
 		})
 	}

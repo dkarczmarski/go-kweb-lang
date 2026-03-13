@@ -40,18 +40,18 @@ func (m *MockStore) EXPECT() *MockStoreMockRecorder {
 }
 
 // Read mocks base method.
-func (m *MockStore) Read(bucket, key string, buff any) (bool, error) {
+func (m *MockStore) Read(bucket, key string, dst any) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Read", bucket, key, buff)
+	ret := m.ctrl.Call(m, "Read", bucket, key, dst)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Read indicates an expected call of Read.
-func (mr *MockStoreMockRecorder) Read(bucket, key, buff any) *MockStoreReadCall {
+func (mr *MockStoreMockRecorder) Read(bucket, key, dst any) *MockStoreReadCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockStore)(nil).Read), bucket, key, buff)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockStore)(nil).Read), bucket, key, dst)
 	return &MockStoreReadCall{Call: call}
 }
 
