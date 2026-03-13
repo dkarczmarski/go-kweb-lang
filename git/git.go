@@ -13,7 +13,7 @@ import (
 	"github.com/dkarczmarski/go-kweb-lang/git/internal/process"
 )
 
-var ErrInvalidCommitInfoLine = errors.New("invalid commit info line syntax")
+var ErrInvalidCommitInfoLine = errors.New("invalid commit info line")
 
 const commitInfoSegmentCount = 3
 
@@ -92,20 +92,20 @@ func (g *Git) ListMainBranchCommits(ctx context.Context) ([]CommitInfo, error) {
 
 // FileExists checks whether the file exists in a repository.
 func (g *Git) FileExists(path string) (bool, error) {
-	_, err := os.Stat(g.path + "/" + path)
+	_, err := os.Stat(filepath.Join(g.path, path))
 
 	if os.IsNotExist(err) {
 		return false, nil
 	}
 
 	if err != nil {
-		return false, fmt.Errorf("failed to stat file: %w", err)
+		return false, fmt.Errorf("stat file: %w", err)
 	}
 
 	return true, nil
 }
 
-// ListFiles lists all files under the given path (and all subdirectories).
+// ListFiles lists all files under the given path.
 func (g *Git) ListFiles(path string) ([]string, error) {
 	var files []string
 
@@ -119,7 +119,7 @@ func (g *Git) ListFiles(path string) ([]string, error) {
 		if !d.IsDir() {
 			relPath, err := filepath.Rel(fullPath, path)
 			if err != nil {
-				return fmt.Errorf("failed to compute relative path: %w", err)
+				return fmt.Errorf("compute relative path: %w", err)
 			}
 
 			if strings.HasPrefix(relPath, ".git/") {
@@ -132,7 +132,7 @@ func (g *Git) ListFiles(path string) ([]string, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to walk directory: %w", err)
+		return nil, fmt.Errorf("walk directory: %w", err)
 	}
 
 	return files, nil
@@ -151,8 +151,7 @@ func (g *Git) FindFileLastCommit(ctx context.Context, path string) (CommitInfo, 
 	))
 }
 
-// FindFileCommitsAfter lists all commits that contain the given file
-// and that are newer than the commitIDFrom parameter.
+// FindFileCommitsAfter lists commits affecting the file after commitIDFrom.
 func (g *Git) FindFileCommitsAfter(ctx context.Context, path string, commitIDFrom string) ([]CommitInfo, error) {
 	return execToCommitInfoSlice(g.exec(ctx, g.path,
 		"git",
@@ -165,7 +164,7 @@ func (g *Git) FindFileCommitsAfter(ctx context.Context, path string, commitIDFro
 	))
 }
 
-// ListMergePoints lists all commits that are merge points starting from the commitID parameter.
+// ListMergePoints lists merge commits reachable from commitID.
 func (g *Git) ListMergePoints(ctx context.Context, commitID string) ([]CommitInfo, error) {
 	return execToCommitInfoSlice(g.exec(ctx, g.path,
 		"git",
@@ -188,7 +187,7 @@ func (g *Git) Fetch(ctx context.Context) error {
 	))
 }
 
-// ListFreshCommits lists all commits in the main branch that are at origin/main and are not merged yet.
+// ListFreshCommits lists commits present on origin/main but not yet on main.
 func (g *Git) ListFreshCommits(ctx context.Context) ([]CommitInfo, error) {
 	return execToCommitInfoSlice(g.exec(ctx, g.path,
 		"git",
@@ -208,7 +207,7 @@ func (g *Git) Pull(ctx context.Context) error {
 	))
 }
 
-// ListFilesInCommit lists all files that are in the commit with the commitID parameter.
+// ListFilesInCommit lists files changed in a commit.
 func (g *Git) ListFilesInCommit(ctx context.Context, commitID string) ([]string, error) {
 	return execToLines(g.exec(ctx, g.path,
 		"git",
@@ -220,7 +219,7 @@ func (g *Git) ListFilesInCommit(ctx context.Context, commitID string) ([]string,
 	))
 }
 
-// ListAncestorCommits lists ancestor commits starting from the commitID parameter.
+// ListAncestorCommits lists ancestor commits starting from commitID.
 func (g *Git) ListAncestorCommits(ctx context.Context, commitID string) ([]CommitInfo, error) {
 	return execToCommitInfoSlice(g.exec(ctx, g.path,
 		"git",
@@ -232,7 +231,7 @@ func (g *Git) ListAncestorCommits(ctx context.Context, commitID string) ([]Commi
 	))
 }
 
-// ListCommitParents lists the parent commits of the given merge commit ID.
+// ListCommitParents lists parent commits of the given commit.
 func (g *Git) ListCommitParents(ctx context.Context, commitID string) ([]string, error) {
 	return execToSeparatedLines(g.exec(ctx, g.path,
 		"git",
@@ -243,7 +242,7 @@ func (g *Git) ListCommitParents(ctx context.Context, commitID string) ([]string,
 	))
 }
 
-// ListFilesBetweenCommits lists all files present in the branch between the fork commit and the last branch commit.
+// ListFilesBetweenCommits lists files changed between two commits.
 func (g *Git) ListFilesBetweenCommits(ctx context.Context, forkCommitID, branchLastCommitID string) ([]string, error) {
 	return execToLines(g.exec(ctx, g.path,
 		"git",
@@ -352,7 +351,7 @@ func lineToCommitInfo(line string) (CommitInfo, error) {
 
 	normalizedDateTimeStr, err := normalizeDateTimeStr(segs[1])
 	if err != nil {
-		return emptyCommitInfo, fmt.Errorf("failed to normalize date time: %w", err)
+		return emptyCommitInfo, fmt.Errorf("normalize datetime: %w", err)
 	}
 
 	return CommitInfo{
@@ -365,10 +364,8 @@ func lineToCommitInfo(line string) (CommitInfo, error) {
 func normalizeDateTimeStr(dateTimeStr string) (string, error) {
 	parsedTime, err := time.Parse(time.RFC3339, dateTimeStr)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse date time string %s: %w", dateTimeStr, err)
+		return "", fmt.Errorf("parse datetime %q: %w", dateTimeStr, err)
 	}
 
-	formatted := parsedTime.Format("2006-01-02T15:04:05+00:00")
-
-	return formatted, nil
+	return parsedTime.Format("2006-01-02T15:04:05+00:00"), nil
 }

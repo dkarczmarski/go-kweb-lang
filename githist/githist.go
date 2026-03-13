@@ -119,7 +119,7 @@ func (gh *GitHist) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo,
 
 	exists, err := gh.cache.Read(bucket, key, &cached)
 	if err != nil {
-		return nil, fmt.Errorf("read main branch commits from cache: %w", err)
+		return nil, fmt.Errorf("read main branch commits cache: %w", err)
 	}
 
 	if exists {
@@ -132,7 +132,7 @@ func (gh *GitHist) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo,
 	}
 
 	if err := gh.cache.Write(bucket, key, mainBranchCommits); err != nil {
-		return nil, fmt.Errorf("write main branch commits to cache: %w", err)
+		return nil, fmt.Errorf("write main branch commits cache: %w", err)
 	}
 
 	return mainBranchCommits, nil
@@ -225,25 +225,25 @@ func findFirstCommit(
 func (gh *GitHist) PullRefresh(ctx context.Context) ([]string, error) {
 	mainBranchCommits, err := gh.listMainBranchCommits(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list main branch commits: %w", err)
+		return nil, fmt.Errorf("list main branch commits: %w", err)
 	}
 
 	lastMainCommit := gh.getLastMainBranchCommit(mainBranchCommits)
 
-	log.Printf("[githist] the last main branch commit is: %v", lastMainCommit)
+	log.Printf("[githist] last main branch commit: %v", lastMainCommit)
 
 	if err := gh.gitRepo.Fetch(ctx); err != nil {
-		return nil, fmt.Errorf("git fetch error: %w", err)
+		return nil, fmt.Errorf("git fetch: %w", err)
 	}
 
 	freshCommits, err := gh.gitRepo.ListFreshCommits(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("git list fresh commits error: %w", err)
+		return nil, fmt.Errorf("list fresh commits: %w", err)
 	}
 
 	if len(freshCommits) > 0 {
 		if err := gh.InvalidateMainBranchCommits(); err != nil {
-			return nil, fmt.Errorf("error while invalidating main branch commits: %w", err)
+			return nil, fmt.Errorf("invalidate main branch commits cache: %w", err)
 		}
 	}
 
@@ -257,7 +257,7 @@ func (gh *GitHist) PullRefresh(ctx context.Context) ([]string, error) {
 	}
 
 	if err := gh.gitRepo.Pull(ctx); err != nil {
-		return nil, fmt.Errorf("git pull error: %w", err)
+		return nil, fmt.Errorf("git pull: %w", err)
 	}
 
 	return changedFiles, nil
@@ -282,7 +282,7 @@ func (gh *GitHist) processFreshCommits(
 		freshCommit := freshCommits[len(freshCommits)-1-idx]
 
 		log.Printf(
-			"[githist][%d/%d] process fresh commit: %s",
+			"[githist][%d/%d] processing fresh commit: %s",
 			idx+1,
 			len(freshCommits),
 			&freshCommit,
@@ -290,28 +290,23 @@ func (gh *GitHist) processFreshCommits(
 
 		commitFiles, err := gh.gitRepo.ListFilesInCommit(ctx, freshCommit.CommitID)
 		if err != nil {
-			return nil, fmt.Errorf("list files of commit %s error: %w", freshCommit.CommitID, err)
+			return nil, fmt.Errorf("list files in commit %s: %w", freshCommit.CommitID, err)
 		}
 
 		if len(commitFiles) == 0 {
-			// it might be a merge commit
 			mergeCommitFiles, err := gh.mergeCommitFiles(
 				ctx,
 				freshCommit.CommitID,
 				freshMainBranchCommits,
 			)
 			if err != nil {
-				return nil, fmt.Errorf(
-					"failed to list files of the merge commit %s: %w",
-					freshCommit.CommitID,
-					err,
-				)
+				return nil, fmt.Errorf("list files in merge commit %s: %w", freshCommit.CommitID, err)
 			}
 
 			changedFiles = append(changedFiles, mergeCommitFiles...)
 
 			log.Printf(
-				"[githist][%d/%d] files in the merge commit: %s",
+				"[githist][%d/%d] merge commit files: %s",
 				idx+1,
 				len(freshCommits),
 				mergeCommitFiles,
@@ -320,7 +315,7 @@ func (gh *GitHist) processFreshCommits(
 			changedFiles = append(changedFiles, commitFiles...)
 
 			log.Printf(
-				"[githist][%d/%d] files in the commit: %s",
+				"[githist][%d/%d] commit files: %s",
 				idx+1,
 				len(freshCommits),
 				commitFiles,
@@ -358,7 +353,7 @@ func (gh *GitHist) mergeCommitFiles(
 ) ([]string, error) {
 	parents, err := gh.gitRepo.ListCommitParents(ctx, mergeCommitID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list parents of merge commit %s: %w", mergeCommitID, err)
+		return nil, fmt.Errorf("list parents of merge commit %s: %w", mergeCommitID, err)
 	}
 
 	if len(parents) == 1 {
@@ -377,7 +372,7 @@ func (gh *GitHist) mergeCommitFiles(
 				continue
 			}
 
-			return nil, fmt.Errorf("failed to find fork commit for %s: %w", branchParentCommitID, err)
+			return nil, fmt.Errorf("find fork commit for %s: %w", branchParentCommitID, err)
 		}
 
 		filesBetweenCommits, err := gh.gitRepo.ListFilesBetweenCommits(
@@ -387,7 +382,7 @@ func (gh *GitHist) mergeCommitFiles(
 		)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"failed to list files between commits %s and %s: %w",
+				"list files between commits %s and %s: %w",
 				forkCommit.CommitID,
 				branchParentCommitID,
 				err,

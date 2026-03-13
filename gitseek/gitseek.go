@@ -134,7 +134,7 @@ func (gs *GitSeek) InvalidateFile(langCode, path string) error {
 	bucket := FileInfoCacheBucket(langCode)
 
 	if err := gs.cache.Delete(bucket, path); err != nil {
-		return fmt.Errorf("invalidate gitseek cache for (%s)%s: %w", langCode, path, err)
+		return fmt.Errorf("delete file info cache for (%s)%s: %w", langCode, path, err)
 	}
 
 	return nil
@@ -150,7 +150,7 @@ func (gs *GitSeek) checkFileCached(ctx context.Context, pair Pair, langCode stri
 	if err != nil {
 		var zero FileInfo
 
-		return zero, fmt.Errorf("read file info from cache for (%s)%s: %w", langCode, key, err)
+		return zero, fmt.Errorf("read file info cache for (%s)%s: %w", langCode, key, err)
 	}
 
 	if exists {
@@ -165,7 +165,7 @@ func (gs *GitSeek) checkFileCached(ctx context.Context, pair Pair, langCode stri
 	if err := gs.cache.Write(bucket, key, fileInfo); err != nil {
 		var zero FileInfo
 
-		return zero, fmt.Errorf("write file info to cache for (%s)%s: %w", langCode, key, err)
+		return zero, fmt.Errorf("write file info cache for (%s)%s: %w", langCode, key, err)
 	}
 
 	return fileInfo, nil
@@ -181,7 +181,7 @@ func (gs *GitSeek) checkFile(ctx context.Context, pair Pair) (FileInfo, error) {
 
 	langLastCommit, err := gs.gitRepo.FindFileLastCommit(ctx, langFilePath)
 	if err != nil {
-		return fileInfo, fmt.Errorf("error while finding the last commit of the file %s: %w", langFilePath, err)
+		return fileInfo, fmt.Errorf("find last commit for %s: %w", langFilePath, err)
 	}
 
 	fileInfo.LangLastCommit = langLastCommit
@@ -208,12 +208,12 @@ func (gs *GitSeek) checkFile(ctx context.Context, pair Pair) (FileInfo, error) {
 
 	enCommitsAfter, err := gs.gitRepo.FindFileCommitsAfter(ctx, enFilePath, startPoint.CommitID)
 	if err != nil {
-		return fileInfo, fmt.Errorf("error while finding commits after commit %s: %w", startPoint.CommitID, err)
+		return fileInfo, fmt.Errorf("find commits after %s for %s: %w", startPoint.CommitID, enFilePath, err)
 	}
 
 	exists, err := gs.gitRepo.FileExists(enFilePath)
 	if err != nil {
-		return fileInfo, fmt.Errorf("error while checking if the file %s exists: %w", enFilePath, err)
+		return fileInfo, fmt.Errorf("check whether %s exists: %w", enFilePath, err)
 	}
 
 	fileInfo.FileStatus = determineFileStatus(exists, enCommitsAfter)
