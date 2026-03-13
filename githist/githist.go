@@ -76,7 +76,7 @@ func (gh *GitHist) findForkCommit(
 	commitID string,
 	mainBranchCommits []git.CommitInfo,
 ) (*git.CommitInfo, error) {
-	return findCommitFunc(ctx, mainBranchCommits, commitID, gh.gitRepo.ListAncestorCommits)
+	return findFirstIntersectionWithMainBranch(ctx, mainBranchCommits, commitID, gh.gitRepo.ListAncestorCommits)
 }
 
 // FindMergeCommit returns the merge commit
@@ -88,7 +88,7 @@ func (gh *GitHist) FindMergeCommit(ctx context.Context, commitID string) (*git.C
 		return nil, err
 	}
 
-	return findCommitFunc(ctx, mainBranchCommits, commitID, gh.gitRepo.ListMergePoints)
+	return findFirstIntersectionWithMainBranch(ctx, mainBranchCommits, commitID, gh.gitRepo.ListMergePoints)
 }
 
 func (gh *GitHist) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo, error) {
@@ -118,20 +118,37 @@ func (gh *GitHist) listMainBranchCommits(ctx context.Context) ([]git.CommitInfo,
 	return mainBranchCommits, nil
 }
 
-// findCommitFunc invokes listFunc with the given commitID and returns
-// the first item of the list returned by listFunc that exists on the main branch.
-// If the commitID itself exists on the main branch, nil is returned.
-func findCommitFunc(
+// findFirstIntersectionWithMainBranch finds the first commit that exists both
+// on the main branch and on the commit path produced for the given commitID.
+//
+// mainBranchCommits must contain commits from the main branch ordered from
+// the oldest to the newest commit. The element at index 0 must be the oldest
+// commit in the list.
+//
+// pathFunc is used to generate a commit path for the given commitID.
+// The order of commits in the returned slice is important. Commits are checked
+// sequentially starting from index 0.
+//
+// The function returns the first commit from the generated path that also
+// exists in mainBranchCommits.
+//
+// If commitID itself already exists on the main branch, the function returns nil.
+// If pathFunc returns an error, that error is returned.
+//
+// ErrCommitPathsNotConnected is returned when the path returned by pathFunc
+// does not intersect with the main branch. In that case none of the commits
+// from the generated path exist in mainBranchCommits.
+func findFirstIntersectionWithMainBranch(
 	ctx context.Context,
 	mainBranchCommits []git.CommitInfo,
 	commitID string,
-	listFunc func(ctx context.Context, commitID string) ([]git.CommitInfo, error),
+	pathFunc func(ctx context.Context, commitID string) ([]git.CommitInfo, error),
 ) (*git.CommitInfo, error) {
 	if containsCommit(mainBranchCommits, commitID) {
 		return nil, nil
 	}
 
-	commitPath, err := listFunc(ctx, commitID)
+	commitPath, err := pathFunc(ctx, commitID)
 	if err != nil {
 		return nil, err
 	}
