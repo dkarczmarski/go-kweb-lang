@@ -7,11 +7,10 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"path/filepath"
 	"slices"
 	"sort"
-	"strings"
 
+	"github.com/dkarczmarski/go-kweb-lang/filepairs"
 	"github.com/dkarczmarski/go-kweb-lang/github"
 	"github.com/dkarczmarski/go-kweb-lang/proxycache"
 )
@@ -39,6 +38,7 @@ type FilePRFinder struct {
 	gitHub     GitHub
 	cacheStore CacheStore
 	storage    FilePRFinderStorage
+	filePaths  *filepairs.FilePaths
 
 	perPage int
 }
@@ -75,6 +75,7 @@ func NewFilePRFinder(gitHub GitHub, cacheStore CacheStore, opts ...func(config *
 		gitHub:     gitHub,
 		cacheStore: cacheStore, // todo: check it
 		storage:    config.Storage,
+		filePaths:  filepairs.New(),
 		perPage:    config.PerPage,
 	}
 }
@@ -170,14 +171,21 @@ func (p *FilePRFinder) fetchCommitFiles(
 	)
 }
 
-func (p *FilePRFinder) convertToFilePRs(prsFiles map[int][]string, obligatoryPathPrefix string) map[string][]int {
+func (p *FilePRFinder) convertToFilePRs(prsFiles map[int][]string, langCode string) map[string][]int {
 	filePRs := make(map[string][]int)
 
 	for pr, files := range prsFiles {
 		for _, file := range files {
-			if !slices.Contains(filePRs[file], pr) && strings.HasPrefix(file, obligatoryPathPrefix) {
-				filePRs[file] = append(filePRs[file], pr)
+			if slices.Contains(filePRs[file], pr) {
+				continue
 			}
+
+			pathInfo, err := p.filePaths.CheckPath(file)
+			if err != nil || pathInfo.LangCode != langCode {
+				continue
+			}
+
+			filePRs[file] = append(filePRs[file], pr)
 		}
 	}
 
@@ -235,8 +243,7 @@ func (p *FilePRFinder) Update(ctx context.Context, langCode string) error {
 		}
 	}
 
-	obligatoryPathPrefix := filepath.Join("content", langCode)
-	filePRs := p.convertToFilePRs(prsFiles, obligatoryPathPrefix)
+	filePRs := p.convertToFilePRs(prsFiles, langCode)
 
 	if err := p.storage.StoreLangIndex(langCode, filePRs); err != nil {
 		return fmt.Errorf("error while storing %v index: %w", langCode, err)
