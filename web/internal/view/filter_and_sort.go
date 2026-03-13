@@ -36,14 +36,14 @@ func FilterAndSort(
 
 	if len(fileName) > 0 {
 		for _, f := range files {
-			if f.LangRelPath.Text == fileName {
+			if f.LangPath.Text == fileName {
 				newFiles = append(newFiles, f)
 				break
 			}
 		}
 	} else {
 		for _, f := range files {
-			if len(filePath) > 0 && !strings.Contains(f.LangRelPath.Text, filePath) {
+			if len(filePath) > 0 && !strings.Contains(f.LangPath.Text, filePath) {
 				continue
 			}
 
@@ -74,7 +74,7 @@ func FilterAndSort(
 
 			switch sort {
 			case SortByFileName:
-				cmpValue = cmp.Compare(a.LangRelPath.Text, b.LangRelPath.Text)
+				cmpValue = cmp.Compare(a.LangPath.Text, b.LangPath.Text)
 			case SortByStatus:
 				cmpValue = cmp.Compare(a.Status, b.Status)
 			case SortByEnUpdate:

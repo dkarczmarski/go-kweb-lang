@@ -29,19 +29,19 @@ func TestFilterAndSort(t *testing.T) {
 			name: "filter with filename",
 			files: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
+					LangPath: view.LinkModel{Text: "a1"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 				},
 			},
 			fileName: "a2",
 			expected: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 				},
 			},
 		},
@@ -49,22 +49,22 @@ func TestFilterAndSort(t *testing.T) {
 			name: "filter with filepath",
 			files: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a/b/c1"},
+					LangPath: view.LinkModel{Text: "a/b/c1"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a/x"},
+					LangPath: view.LinkModel{Text: "a/x"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a/b/c2"},
+					LangPath: view.LinkModel{Text: "a/b/c2"},
 				},
 			},
 			filePath: "/b",
 			expected: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a/b/c1"},
+					LangPath: view.LinkModel{Text: "a/b/c1"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a/b/c2"},
+					LangPath: view.LinkModel{Text: "a/b/c2"},
 				},
 			},
 		},
@@ -72,25 +72,25 @@ func TestFilterAndSort(t *testing.T) {
 			name: "filter when items type is ItemsAll",
 			files: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
+					LangPath: view.LinkModel{Text: "a1"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 				},
 			},
 			itemsType: view.ItemsAll,
 			expected: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
+					LangPath: view.LinkModel{Text: "a1"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 				},
 			},
 		},
@@ -98,10 +98,10 @@ func TestFilterAndSort(t *testing.T) {
 			name: "filter when items type is ItemsWithUpdate",
 			files: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
+					LangPath: view.LinkModel{Text: "a1"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 					ENUpdates: view.ENUpdateGroups{
 						AfterLastCommit: []view.ENUpdate{
 							{
@@ -115,13 +115,13 @@ func TestFilterAndSort(t *testing.T) {
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 					PRs: []view.LinkModel{
 						{Text: "1001"},
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a4"},
+					LangPath: view.LinkModel{Text: "a4"},
 					ENUpdates: view.ENUpdateGroups{
 						AfterLastCommit: []view.ENUpdate{
 							{
@@ -141,7 +141,7 @@ func TestFilterAndSort(t *testing.T) {
 			itemsType: view.ItemsWithUpdate,
 			expected: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 					ENUpdates: view.ENUpdateGroups{
 						AfterLastCommit: []view.ENUpdate{
 							{
@@ -155,7 +155,7 @@ func TestFilterAndSort(t *testing.T) {
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a4"},
+					LangPath: view.LinkModel{Text: "a4"},
 					ENUpdates: view.ENUpdateGroups{
 						AfterLastCommit: []view.ENUpdate{
 							{
@@ -177,10 +177,10 @@ func TestFilterAndSort(t *testing.T) {
 			name: "filter when items type is ItemsWithUpdateOrPR",
 			files: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
+					LangPath: view.LinkModel{Text: "a1"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 					ENUpdates: view.ENUpdateGroups{
 						AfterLastCommit: []view.ENUpdate{
 							{
@@ -194,13 +194,13 @@ func TestFilterAndSort(t *testing.T) {
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 					PRs: []view.LinkModel{
 						{Text: "1001"},
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a4"},
+					LangPath: view.LinkModel{Text: "a4"},
 					ENUpdates: view.ENUpdateGroups{
 						AfterLastCommit: []view.ENUpdate{
 							{
@@ -220,7 +220,7 @@ func TestFilterAndSort(t *testing.T) {
 			itemsType: view.ItemsWithUpdateOrPR,
 			expected: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 					ENUpdates: view.ENUpdateGroups{
 						AfterLastCommit: []view.ENUpdate{
 							{
@@ -234,13 +234,13 @@ func TestFilterAndSort(t *testing.T) {
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 					PRs: []view.LinkModel{
 						{Text: "1001"},
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a4"},
+					LangPath: view.LinkModel{Text: "a4"},
 					ENUpdates: view.ENUpdateGroups{
 						AfterLastCommit: []view.ENUpdate{
 							{
@@ -262,10 +262,10 @@ func TestFilterAndSort(t *testing.T) {
 			name: "filter when items type is ItemsWithPR",
 			files: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
+					LangPath: view.LinkModel{Text: "a1"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 					ENUpdates: view.ENUpdateGroups{
 						AfterLastCommit: []view.ENUpdate{
 							{
@@ -279,13 +279,13 @@ func TestFilterAndSort(t *testing.T) {
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 					PRs: []view.LinkModel{
 						{Text: "1001"},
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a4"},
+					LangPath: view.LinkModel{Text: "a4"},
 					ENUpdates: view.ENUpdateGroups{
 						AfterLastCommit: []view.ENUpdate{
 							{
@@ -305,13 +305,13 @@ func TestFilterAndSort(t *testing.T) {
 			itemsType: view.ItemsWithPR,
 			expected: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 					PRs: []view.LinkModel{
 						{Text: "1001"},
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a4"},
+					LangPath: view.LinkModel{Text: "a4"},
 					ENUpdates: view.ENUpdateGroups{
 						AfterLastCommit: []view.ENUpdate{
 							{
@@ -333,25 +333,25 @@ func TestFilterAndSort(t *testing.T) {
 			name: "filter when sort is SortByFileName",
 			files: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
+					LangPath: view.LinkModel{Text: "a1"},
 				},
 			},
 			sort: view.SortByFileName,
 			expected: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
+					LangPath: view.LinkModel{Text: "a1"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 				},
 			},
 		},
@@ -359,26 +359,26 @@ func TestFilterAndSort(t *testing.T) {
 			name: "filter when sort is SortByFileName and SortOrderDesc",
 			files: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
+					LangPath: view.LinkModel{Text: "a1"},
 				},
 			},
 			sort:      view.SortByFileName,
 			sortOrder: view.SortOrderDesc,
 			expected: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
+					LangPath: view.LinkModel{Text: "a1"},
 				},
 			},
 		},
@@ -386,31 +386,31 @@ func TestFilterAndSort(t *testing.T) {
 			name: "filter when sort is SortByStatus",
 			files: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
-					Status:      "C",
+					LangPath: view.LinkModel{Text: "a1"},
+					Status:   "C",
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
-					Status:      "A",
+					LangPath: view.LinkModel{Text: "a2"},
+					Status:   "A",
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
-					Status:      "B",
+					LangPath: view.LinkModel{Text: "a3"},
+					Status:   "B",
 				},
 			},
 			sort: view.SortByStatus,
 			expected: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
-					Status:      "A",
+					LangPath: view.LinkModel{Text: "a2"},
+					Status:   "A",
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
-					Status:      "B",
+					LangPath: view.LinkModel{Text: "a3"},
+					Status:   "B",
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
-					Status:      "C",
+					LangPath: view.LinkModel{Text: "a1"},
+					Status:   "C",
 				},
 			},
 		},
@@ -418,19 +418,19 @@ func TestFilterAndSort(t *testing.T) {
 			name: "filter when sort is SortByEnUpdate",
 			files: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
+					LangPath: view.LinkModel{Text: "a1"},
 					ENUpdates: view.ENUpdateGroups{
 						LastCommit: git.CommitInfo{DateTime: "DT-30"},
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 					ENUpdates: view.ENUpdateGroups{
 						LastCommit: git.CommitInfo{DateTime: "DT-10"},
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 					ENUpdates: view.ENUpdateGroups{
 						LastCommit: git.CommitInfo{DateTime: "DT-20"},
 					},
@@ -439,19 +439,19 @@ func TestFilterAndSort(t *testing.T) {
 			sort: view.SortByEnUpdate,
 			expected: []view.FileModel{
 				{
-					LangRelPath: view.LinkModel{Text: "a2"},
+					LangPath: view.LinkModel{Text: "a2"},
 					ENUpdates: view.ENUpdateGroups{
 						LastCommit: git.CommitInfo{DateTime: "DT-10"},
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a3"},
+					LangPath: view.LinkModel{Text: "a3"},
 					ENUpdates: view.ENUpdateGroups{
 						LastCommit: git.CommitInfo{DateTime: "DT-20"},
 					},
 				},
 				{
-					LangRelPath: view.LinkModel{Text: "a1"},
+					LangPath: view.LinkModel{Text: "a1"},
 					ENUpdates: view.ENUpdateGroups{
 						LastCommit: git.CommitInfo{DateTime: "DT-30"},
 					},

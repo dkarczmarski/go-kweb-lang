@@ -52,7 +52,7 @@
                 <input type="text"
                        name="NewFilepath"
                        class="form-control"
-                       placeholder="Lang Relative Path"
+                       placeholder="Lang Path"
                        value="{{ .CurrentFilepath }}"/>
                 <button type="submit"
                         class="btn btn-outline-secondary">
@@ -89,7 +89,7 @@
                hx-target="#table"
                hx-swap="innerHTML"
                class="text-decoration-none text-reset">
-            Lang Relative Path
+            Lang Path
             {{ if eq .CurrentSort "filename" }}
             {{ if eq .CurrentSortOrder "asc" }}
             <i class="bi bi-arrow-down"></i>
@@ -140,9 +140,9 @@
         <td>
             <span class="text-nowrap">
                 {{ if eq .Status "waiting-for-review" }}
-                {{ .LangRelPath.Text }}
+                {{ .LangPath.Text }}
                 {{ else }}
-                <a href="{{ .LangRelPath.URL }}">{{ .LangRelPath.Text }}</a>
+                <a href="{{ .LangPath.URL }}">{{ .LangPath.Text }}</a>
                 {{ end }}
                 <a href="{{ .LangFilenameLink.URL }}" class="invisible-link">&nbsp;#&nbsp;</a>
             </span>

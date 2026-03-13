@@ -1,10 +1,6 @@
 package dashboard
 
 import (
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/dkarczmarski/go-kweb-lang/gitseek"
 )
 
@@ -19,8 +15,7 @@ func buildDashboard(
 ) *Dashboard {
 	items := make([]Item, 0, len(seekerFileInfos))
 	for _, seekerFileInfo := range seekerFileInfos {
-		file := filepath.Join("content", langCode, seekerFileInfo.LangPath)
-		prs := prIndex[file]
+		prs := prIndex[seekerFileInfo.LangPath]
 
 		item := Item{
 			FileInfo: seekerFileInfo,
@@ -30,14 +25,11 @@ func buildDashboard(
 		items = append(items, item)
 	}
 
-	contentPath := filepath.Join("content", langCode) + string(os.PathSeparator)
-
 	for prFilePath, prs := range prIndex {
-		fileRelPath := strings.TrimPrefix(prFilePath, contentPath)
-		if !containsItem(items, fileRelPath) {
+		if !containsItem(items, prFilePath) {
 			items = append(items, Item{
 				FileInfo: gitseek.FileInfo{
-					LangPath:   fileRelPath,
+					LangPath:   prFilePath,
 					FileStatus: StatusWaitingForReview,
 				},
 				PRs: prs,

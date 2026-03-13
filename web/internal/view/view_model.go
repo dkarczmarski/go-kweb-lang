@@ -36,7 +36,7 @@ type LangDashboardFilesModel struct {
 }
 
 type FileModel struct {
-	LangRelPath      LinkModel
+	LangPath         LinkModel
 	LangFilenameLink LinkModel
 	LangLastCommit   git.CommitInfo
 	LangMergeCommit  *git.CommitInfo

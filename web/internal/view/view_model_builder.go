@@ -45,7 +45,7 @@ func BuildLangDashboardFilesModel(langCode string, fileInfos []dashboard.Item) L
 			continue
 		}
 
-		fileModel.LangRelPath = toLangFileLinkModel(langCode, fileInfo.LangPath)
+		fileModel.LangPath = toLangFileLinkModel(langCode, fileInfo.LangPath)
 		fileModel.LangFilenameLink = LinkModel{
 			Text: "#",
 			URL:  fmt.Sprintf("/lang/%s?filename=%s", langCode, fileInfo.LangPath),
@@ -168,10 +168,10 @@ func findLastCommitInGroup(enUpdates []ENUpdate) git.CommitInfo {
 	return lastCommit
 }
 
-func toLangFileLinkModel(langCode, langRelPath string) LinkModel {
+func toLangFileLinkModel(langCode, langPath string) LinkModel {
 	return LinkModel{
-		Text: langRelPath,
-		URL:  fmt.Sprintf("https://github.com/kubernetes/website/blob/main/content/%s/%s", langCode, langRelPath),
+		Text: langPath,
+		URL:  fmt.Sprintf("https://github.com/kubernetes/website/blob/main/content/%s/%s", langCode, langPath),
 	}
 }
 
