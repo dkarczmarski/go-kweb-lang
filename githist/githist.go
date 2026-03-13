@@ -5,6 +5,7 @@ package githist
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -13,6 +14,10 @@ import (
 )
 
 const bucketMainBranchCommits = "git-main-branch-commits"
+
+// ErrCommitPathsNotConnected means that two commit paths do not meet.
+// In other words, they do not share any common commit.
+var ErrCommitPathsNotConnected = errors.New("commit paths are not connected")
 
 // GitRepo is an interface used to decouple this package from the concrete git implementation.
 type GitRepo interface {
@@ -126,12 +131,12 @@ func findCommitFunc(
 		return nil, nil
 	}
 
-	commits, err := listFunc(ctx, commitID)
+	commitPath, err := listFunc(ctx, commitID)
 	if err != nil {
 		return nil, err
 	}
 
-	return findFirstCommit(mainBranchCommits, commits), nil
+	return findFirstCommit(mainBranchCommits, commitPath)
 }
 
 func containsCommit(list []git.CommitInfo, commitID string) bool {
@@ -144,25 +149,36 @@ func containsCommit(list []git.CommitInfo, commitID string) bool {
 	return false
 }
 
-func findFirstCommit(mainBranchCommits []git.CommitInfo, commits []git.CommitInfo) *git.CommitInfo {
-	commitsLen := len(commits)
-	if commitsLen == 0 {
-		return nil
+// findFirstCommit returns the first commit from commitPath that also exists
+// on mainBranchPath.
+//
+// Both paths must be ordered from the top of the history towards older commits.
+// The first element is the newest commit in the path.
+// The last element is the oldest commit in the path.
+//
+// commitPath does not have to reach the repository root. It can be a partial
+// path that contains only a fragment of the history.
+//
+// It returns ErrCommitPathsNotConnected when the two paths do not share any
+// common commit.
+func findFirstCommit(
+	mainBranchPathToRoot []git.CommitInfo,
+	commitPath []git.CommitInfo,
+) (*git.CommitInfo, error) {
+	if len(commitPath) == 0 {
+		return nil, nil
 	}
 
-	for i := range commits {
-		commit := commits[i]
-		if containsCommit(mainBranchCommits, commit.CommitID) {
+	for i := range commitPath {
+		commit := commitPath[i]
+		if containsCommit(mainBranchPathToRoot, commit.CommitID) {
 			clonedCommitInfo := cloneCommitInfo(commit)
 
-			return &clonedCommitInfo
+			return &clonedCommitInfo, nil
 		}
 	}
 
-	// todo: move it
-	log.Fatal("unexpected state: this should never happen")
-
-	return nil
+	return nil, ErrCommitPathsNotConnected
 }
 
 // PullRefresh performs a git fetch to retrieve fresh data, detects any changes, runs git pull
