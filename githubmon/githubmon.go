@@ -7,10 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"path/filepath"
 	"time"
 
 	"github.com/dkarczmarski/go-kweb-lang/github"
-	"github.com/dkarczmarski/go-kweb-lang/proxycache"
+)
+
+const (
+	firstPage = 1
 )
 
 type Monitor struct {
@@ -23,7 +27,6 @@ type Monitor struct {
 
 type GitHub interface {
 	PRSearch(ctx context.Context, filter github.PRSearchFilter, page github.PageRequest) (*github.PRSearchResult, error)
-
 	GetLatestCommit(ctx context.Context) (*github.CommitInfo, error)
 }
 
@@ -48,6 +51,9 @@ const (
 	bucketLastRepoUpdatedAt = "githubmon-repo-updated-at"
 	bucketLastPRUpdatedAt   = "githubmon-pr-updated-at"
 	singleKey               = ""
+
+	defaultRetryDelaySeconds         = 15
+	nonRetryableFallbackDelayMinutes = 5
 )
 
 type CacheStore interface {
@@ -65,67 +71,133 @@ func NewMonitorFileStorage(cacheStore CacheStore) *MonitorFileStorage {
 	}
 }
 
+// LastRepoUpdatedAtCacheBucket returns the cache bucket used for the repository
+// last-updated timestamp.
+func LastRepoUpdatedAtCacheBucket() string {
+	return bucketLastRepoUpdatedAt
+}
+
+// LastRepoUpdatedAtCacheKey returns the cache key used for the repository
+// last-updated timestamp.
+func LastRepoUpdatedAtCacheKey() string {
+	return singleKey
+}
+
+// LastPRUpdatedAtCacheBucket returns the cache bucket used for the global pull
+// request last-updated timestamp.
+func LastPRUpdatedAtCacheBucket() string {
+	return bucketLastPRUpdatedAt
+}
+
+// LastPRUpdatedAtCacheKey returns the cache key used for the global pull
+// request last-updated timestamp.
+func LastPRUpdatedAtCacheKey() string {
+	return singleKey
+}
+
+// LastLangPRUpdatedAtCacheBucket returns the cache bucket used for the given
+// language pull request last-updated timestamp.
+func LastLangPRUpdatedAtCacheBucket(langCode string) string {
+	return filepath.Join("lang", langCode, bucketLastPRUpdatedAt)
+}
+
+// LastLangPRUpdatedAtCacheKey returns the cache key used for the language pull
+// request last-updated timestamp.
+func LastLangPRUpdatedAtCacheKey() string {
+	return singleKey
+}
+
 func (s *MonitorFileStorage) ReadLastRepoUpdatedAt() (string, error) {
-	return proxycache.Get(
-		context.Background(),
-		s.cacheStore,
-		bucketLastRepoUpdatedAt,
-		"",
-		nil,
-		func(ctx context.Context) (string, error) {
-			return "", nil
-		},
+	var value string
+
+	exists, err := s.cacheStore.Read(
+		LastRepoUpdatedAtCacheBucket(),
+		LastRepoUpdatedAtCacheKey(),
+		&value,
 	)
+	if err != nil {
+		return "", fmt.Errorf("read repo update timestamp cache: %w", err)
+	}
+
+	if !exists {
+		return "", nil
+	}
+
+	return value, nil
 }
 
 func (s *MonitorFileStorage) WriteLastRepoUpdatedAt(value string) error {
-	return s.cacheStore.Write(
-		bucketLastRepoUpdatedAt,
-		"",
+	if err := s.cacheStore.Write(
+		LastRepoUpdatedAtCacheBucket(),
+		LastRepoUpdatedAtCacheKey(),
 		value,
-	)
+	); err != nil {
+		return fmt.Errorf("write repo update timestamp cache: %w", err)
+	}
+
+	return nil
 }
 
 func (s *MonitorFileStorage) ReadLastPRUpdatedAt() (string, error) {
-	return proxycache.Get(
-		context.Background(),
-		s.cacheStore,
-		bucketLastPRUpdatedAt,
-		singleKey,
-		nil,
-		func(ctx context.Context) (string, error) {
-			return "", nil
-		},
+	var value string
+
+	exists, err := s.cacheStore.Read(
+		LastPRUpdatedAtCacheBucket(),
+		LastPRUpdatedAtCacheKey(),
+		&value,
 	)
+	if err != nil {
+		return "", fmt.Errorf("read PR update timestamp cache: %w", err)
+	}
+
+	if !exists {
+		return "", nil
+	}
+
+	return value, nil
 }
 
 func (s *MonitorFileStorage) WriteLastPRUpdatedAt(value string) error {
-	return s.cacheStore.Write(
-		bucketLastPRUpdatedAt,
-		singleKey,
+	if err := s.cacheStore.Write(
+		LastPRUpdatedAtCacheBucket(),
+		LastPRUpdatedAtCacheKey(),
 		value,
-	)
+	); err != nil {
+		return fmt.Errorf("write PR update timestamp cache: %w", err)
+	}
+
+	return nil
 }
 
 func (s *MonitorFileStorage) ReadLastLangPRUpdatedAt(langCode string) (string, error) {
-	return proxycache.Get(
-		context.Background(),
-		s.cacheStore,
-		fmt.Sprintf("lang/%s/%s", langCode, bucketLastPRUpdatedAt),
-		singleKey,
-		nil,
-		func(ctx context.Context) (string, error) {
-			return "", nil
-		},
+	var value string
+
+	exists, err := s.cacheStore.Read(
+		LastLangPRUpdatedAtCacheBucket(langCode),
+		LastLangPRUpdatedAtCacheKey(),
+		&value,
 	)
+	if err != nil {
+		return "", fmt.Errorf("read PR update timestamp cache for %s: %w", langCode, err)
+	}
+
+	if !exists {
+		return "", nil
+	}
+
+	return value, nil
 }
 
 func (s *MonitorFileStorage) WriteLastLangPRUpdatedAt(langCode, value string) error {
-	return s.cacheStore.Write(
-		fmt.Sprintf("lang/%s/%s", langCode, bucketLastPRUpdatedAt),
-		singleKey,
+	if err := s.cacheStore.Write(
+		LastLangPRUpdatedAtCacheBucket(langCode),
+		LastLangPRUpdatedAtCacheKey(),
 		value,
-	)
+	); err != nil {
+		return fmt.Errorf("write PR update timestamp cache for %s: %w", langCode, err)
+	}
+
+	return nil
 }
 
 func NewMonitor(
@@ -149,7 +221,7 @@ func (mon *Monitor) IntervalCheck(
 	intervalDelay time.Duration,
 	onUpdateTask OnUpdateTask,
 ) error {
-	retryDelay := time.Second * 15 // magic number
+	retryDelay := defaultRetryDelaySeconds * time.Second
 
 	for {
 		err := mon.RetryCheck(ctx, retryDelay, onUpdateTask)
@@ -163,7 +235,8 @@ func (mon *Monitor) IntervalCheck(
 			if !timer.Stop() {
 				<-timer.C
 			}
-			return ctx.Err()
+
+			return fmt.Errorf("interval check context done: %w", ctx.Err())
 		case <-timer.C:
 		}
 	}
@@ -179,8 +252,8 @@ func (mon *Monitor) RetryCheck(
 		if err != nil {
 			delay := nextRetryDelay(err, retryDelay)
 
-			log.Printf("[githubmon] failed to check for GitHub updates: %v", err)
-			log.Printf("[githubmon] retrying in %s...", delay)
+			log.Printf("[githubmon] check failed: %v", err)
+			log.Printf("[githubmon] retrying in %s", delay)
 
 			timer := time.NewTimer(delay)
 			select {
@@ -188,7 +261,8 @@ func (mon *Monitor) RetryCheck(
 				if !timer.Stop() {
 					<-timer.C
 				}
-				return ctx.Err()
+
+				return fmt.Errorf("retry check context done: %w", ctx.Err())
 			case <-timer.C:
 			}
 
@@ -210,77 +284,106 @@ func nextRetryDelay(err error, baseDelay time.Duration) time.Duration {
 	}
 
 	// fallback delay for non-retryable errors
-	return 5 * time.Minute
+	return nonRetryableFallbackDelayMinutes * time.Minute
 }
 
 func (mon *Monitor) Check(
 	ctx context.Context,
 	onUpdateTask OnUpdateTask,
 ) error {
-	var repoUpdate repoChange
-
-	if !mon.skipGitChecking {
-		var err error
-		repoUpdate, err = mon.isRepoUpdated(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to check if git repo has been updated: %w", err)
-		}
+	repoUpdate, err := mon.checkRepoUpdates(ctx)
+	if err != nil {
+		return err
 	}
 
-	var prLangChanges []langChange
-	var lastPRUpdated bool
-	var lastPRUpdatedAt string
-
-	if !mon.skipPRChecking {
-		var err error
-
-		// pre-check
-		lastPRUpdated, lastPRUpdatedAt, err = mon.changedInPR(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to check if pull requests have been updated: %w", err)
-		}
-
-		if lastPRUpdated {
-			log.Println("[githubmon] found some change in PR (pre-check)")
-
-			prLangChanges, err = mon.changedLangCodesInPR(ctx)
-			if err != nil {
-				return fmt.Errorf("failed to check if pull requests have been updated: %w", err)
-			}
-		} else {
-			log.Printf("[githubmon] no change in PR (pre-check) since %s", lastPRUpdatedAt)
-		}
+	lastPRUpdated, lastPRUpdatedAt, prLangChanges, err := mon.checkPRUpdates(ctx)
+	if err != nil {
+		return err
 	}
 
-	prLangChangesExists := len(prLangChanges) > 0
-
-	if repoUpdate.Updated || prLangChangesExists {
-		changedLangCodes := make([]string, 0, len(prLangChanges))
-		for _, change := range prLangChanges {
-			changedLangCodes = append(changedLangCodes, change.Code)
-		}
-
-		if err := onUpdateTask.OnUpdate(ctx, repoUpdate.Updated, changedLangCodes); err != nil {
-			return fmt.Errorf("failed to perform on-update task: %w", err)
-		}
+	if err := mon.runUpdateTask(ctx, onUpdateTask, repoUpdate.Updated, prLangChanges); err != nil {
+		return err
 	}
 
 	if repoUpdate.Updated {
 		if err := mon.storage.WriteLastRepoUpdatedAt(repoUpdate.UpdatedAt); err != nil {
-			return fmt.Errorf("failed to write repo change timestamp: %w", err)
+			return fmt.Errorf("write repo update timestamp: %w", err)
 		}
 	}
 
 	if lastPRUpdated {
 		if err := mon.storage.WriteLastPRUpdatedAt(lastPRUpdatedAt); err != nil {
-			return fmt.Errorf("failed to write PR change timestamp: %w", err)
+			return fmt.Errorf("write PR update timestamp: %w", err)
 		}
 	}
 
-	if prLangChangesExists {
+	if len(prLangChanges) > 0 {
 		if err := mon.writeChangedLangCodesInPR(prLangChanges); err != nil {
-			return fmt.Errorf("failed to write language change timestamp: %w", err)
+			return fmt.Errorf("write language PR update timestamps: %w", err)
 		}
+	}
+
+	return nil
+}
+
+//nolint:exhaustruct
+func (mon *Monitor) checkRepoUpdates(ctx context.Context) (repoChange, error) {
+	if mon.skipGitChecking {
+		return repoChange{}, nil
+	}
+
+	repoUpdate, err := mon.isRepoUpdated(ctx)
+	if err != nil {
+		return repoChange{}, fmt.Errorf("check repo updates: %w", err)
+	}
+
+	return repoUpdate, nil
+}
+
+func (mon *Monitor) checkPRUpdates(ctx context.Context) (bool, string, []langChange, error) {
+	if mon.skipPRChecking {
+		return false, "", nil, nil
+	}
+
+	// pre-check
+	lastPRUpdated, lastPRUpdatedAt, err := mon.changedInPR(ctx)
+	if err != nil {
+		return false, "", nil, fmt.Errorf("check PR updates: %w", err)
+	}
+
+	var prLangChanges []langChange
+
+	if lastPRUpdated {
+		log.Println("[githubmon] PR changes found in pre-check")
+
+		prLangChanges, err = mon.changedLangCodesInPR(ctx)
+		if err != nil {
+			return false, "", nil, fmt.Errorf("check PR language updates: %w", err)
+		}
+	} else {
+		log.Printf("[githubmon] no PR changes since %s", lastPRUpdatedAt)
+	}
+
+	return lastPRUpdated, lastPRUpdatedAt, prLangChanges, nil
+}
+
+func (mon *Monitor) runUpdateTask(
+	ctx context.Context,
+	onUpdateTask OnUpdateTask,
+	repoUpdated bool,
+	prLangChanges []langChange,
+) error {
+	if !repoUpdated && len(prLangChanges) == 0 {
+		return nil
+	}
+
+	changedLangCodes := make([]string, 0, len(prLangChanges))
+	for _, change := range prLangChanges {
+		changedLangCodes = append(changedLangCodes, change.Code)
+	}
+
+	if err := onUpdateTask.OnUpdate(ctx, repoUpdated, changedLangCodes); err != nil {
+		return fmt.Errorf("run on-update task: %w", err)
 	}
 
 	return nil
@@ -289,7 +392,7 @@ func (mon *Monitor) Check(
 func (mon *Monitor) writeChangedLangCodesInPR(changes []langChange) error {
 	for _, change := range changes {
 		if err := mon.storage.WriteLastLangPRUpdatedAt(change.Code, change.UpdatedAt); err != nil {
-			return err
+			return fmt.Errorf("write PR update timestamp for %s: %w", change.Code, err)
 		}
 	}
 
@@ -302,11 +405,11 @@ type repoChange struct {
 }
 
 func (mon *Monitor) isRepoUpdated(ctx context.Context) (repoChange, error) {
-	log.Printf("[githubmon] checking for git repo changes")
+	log.Printf("[githubmon] checking repo updates")
 
 	lastUpdatedAt, err := mon.storage.ReadLastRepoUpdatedAt()
 	if err != nil {
-		return repoChange{}, err
+		return repoChange{}, fmt.Errorf("read repo update timestamp: %w", err)
 	}
 
 	currentUpdatedAt, err := mon.getCurrentLastRepoUpdatedAt(ctx)
@@ -317,9 +420,9 @@ func (mon *Monitor) isRepoUpdated(ctx context.Context) (repoChange, error) {
 	isUpdated := len(lastUpdatedAt) == 0 || lastUpdatedAt != currentUpdatedAt
 
 	if isUpdated {
-		log.Printf("[githubmon] repo updated (lastUpdatedAt=%s -> currentUpdatedAt=%s)", lastUpdatedAt, currentUpdatedAt)
+		log.Printf("[githubmon] repo updated: %s -> %s", lastUpdatedAt, currentUpdatedAt)
 	} else {
-		log.Printf("[githubmon] repo not updated since %s", lastUpdatedAt)
+		log.Printf("[githubmon] repo unchanged since %s", lastUpdatedAt)
 	}
 
 	return repoChange{
@@ -331,7 +434,7 @@ func (mon *Monitor) isRepoUpdated(ctx context.Context) (repoChange, error) {
 func (mon *Monitor) getCurrentLastRepoUpdatedAt(ctx context.Context) (string, error) {
 	commitInfo, err := mon.gitHub.GetLatestCommit(ctx)
 	if err != nil {
-		return "", fmt.Errorf("GitHub get latest commit error: %w", err)
+		return "", fmt.Errorf("get latest commit: %w", err)
 	}
 
 	return commitInfo.DateTime, nil
@@ -346,7 +449,7 @@ type langChange struct {
 func (mon *Monitor) checkLangChange(ctx context.Context, langCode string) (langChange, error) {
 	lastUpdatedAt, err := mon.storage.ReadLastLangPRUpdatedAt(langCode)
 	if err != nil {
-		return langChange{}, err
+		return langChange{}, fmt.Errorf("read PR update timestamp for %s: %w", langCode, err)
 	}
 
 	currentUpdatedAt, err := mon.getLastLangPRUpdatedAt(ctx, langCode)
@@ -366,7 +469,7 @@ func (mon *Monitor) checkLangChange(ctx context.Context, langCode string) (langC
 func (mon *Monitor) changedInPR(ctx context.Context) (bool, string, error) {
 	lastUpdatedAt, err := mon.storage.ReadLastPRUpdatedAt()
 	if err != nil {
-		return false, "", err
+		return false, "", fmt.Errorf("read PR update timestamp: %w", err)
 	}
 
 	currentUpdatedAt, err := mon.getLastPRUpdatedAt(ctx)
@@ -380,11 +483,11 @@ func (mon *Monitor) changedInPR(ctx context.Context) (bool, string, error) {
 }
 
 func (mon *Monitor) changedLangCodesInPR(ctx context.Context) ([]langChange, error) {
-	log.Printf("[githubmon] checking for PR changes for languages")
+	log.Printf("[githubmon] checking PR updates for languages")
 
 	langCodes, err := mon.langProvider.LangCodes()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get available languages: %w", err)
+		return nil, fmt.Errorf("get language codes: %w", err)
 	}
 
 	var updatedLangCodes []langChange
@@ -392,7 +495,7 @@ func (mon *Monitor) changedLangCodesInPR(ctx context.Context) ([]langChange, err
 	for _, langCode := range langCodes {
 		change, err := mon.checkLangChange(ctx, langCode)
 		if err != nil {
-			return nil, fmt.Errorf("failed to check github for changes: %w", err)
+			return nil, fmt.Errorf("check PR updates for %s: %w", langCode, err)
 		}
 
 		if change.Updated {
@@ -404,9 +507,9 @@ func (mon *Monitor) changedLangCodesInPR(ctx context.Context) ([]langChange, err
 	}
 
 	if len(updatedLangCodes) > 0 {
-		log.Printf("[githubmon] finished checking for language PR changes. changes: %v", updatedLangCodes)
+		log.Printf("[githubmon] language PR changes found: %v", updatedLangCodes)
 	} else {
-		log.Printf("[githubmon] finished checking for lanaguge PR changes. no changes")
+		log.Printf("[githubmon] no language PR changes")
 	}
 
 	return updatedLangCodes, nil
@@ -415,15 +518,17 @@ func (mon *Monitor) changedLangCodesInPR(ctx context.Context) ([]langChange, err
 func (mon *Monitor) getLastPRUpdatedAt(ctx context.Context) (string, error) {
 	result, err := mon.gitHub.PRSearch(
 		ctx,
+		//nolint:exhaustruct
 		github.PRSearchFilter{},
 		github.PageRequest{
 			Sort:    "updated",
 			Order:   "desc",
+			Page:    firstPage,
 			PerPage: 1,
 		},
 	)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("search PRs: %w", err)
 	}
 
 	if len(result.Items) == 0 {
@@ -436,17 +541,19 @@ func (mon *Monitor) getLastPRUpdatedAt(ctx context.Context) (string, error) {
 func (mon *Monitor) getLastLangPRUpdatedAt(ctx context.Context, langCode string) (string, error) {
 	result, err := mon.gitHub.PRSearch(
 		ctx,
+		//nolint:exhaustruct
 		github.PRSearchFilter{
 			LangCode: langCode,
 		},
 		github.PageRequest{
 			Sort:    "updated",
 			Order:   "desc",
+			Page:    firstPage,
 			PerPage: 1,
 		},
 	)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("search PRs for %s: %w", langCode, err)
 	}
 
 	if len(result.Items) == 0 {
