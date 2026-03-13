@@ -19,7 +19,10 @@ import (
 	"github.com/dkarczmarski/go-kweb-lang/web"
 )
 
-const githubThrottleDelay = 3 * time.Second
+const (
+	githubThrottleDelay = 3 * time.Second
+	githubPerPage       = 100
+)
 
 type Services struct {
 	LangCodesProvider    *langcnt.LangCodesProvider
@@ -31,7 +34,7 @@ type Services struct {
 	PairProviders        *filepairs.PairProviders
 	GitSeek              *gitseek.GitSeek
 	GitHub               *github.GitHub
-	FilePRFinder         *pullreq.FilePRFinder
+	FilePRIndex          *pullreq.FilePRIndex
 	RefreshRepoTask      *tasks.RefreshRepoTask
 	RefreshPRTask        *tasks.RefreshPRTask
 	RefreshTask          *tasks.RefreshTask
@@ -83,7 +86,7 @@ func buildCoreServices(cfg config.Config, services *Services) {
 		github.WithThrottle(githubThrottleDelay),
 	)
 
-	services.FilePRFinder = pullreq.NewFilePRFinder(services.GitHub, services.CacheStore)
+	services.FilePRIndex = pullreq.NewFilePRIndex(services.GitHub, services.CacheStore, githubPerPage)
 }
 
 func buildTaskServices(cfg config.Config, services *Services) {
@@ -98,12 +101,12 @@ func buildTaskServices(cfg config.Config, services *Services) {
 		services.LangCodesProvider,
 		services.PairProviders,
 		services.GitSeek,
-		services.FilePRFinder,
+		services.FilePRIndex,
 		services.DashboardStore,
 	)
 
 	services.RefreshPRTask = tasks.NewRefreshPRTask(
-		services.FilePRFinder,
+		services.FilePRIndex,
 		services.LangCodesProvider,
 	)
 

@@ -15,7 +15,7 @@ type RefreshTask struct {
 	langCodesProvider *langcnt.LangCodesProvider
 	pairProviders     *filepairs.PairProviders
 	gitSeeker         *gitseek.GitSeek
-	filePRFinder      *pullreq.FilePRFinder
+	filePRIndex       *pullreq.FilePRIndex
 	store             *Store
 }
 
@@ -23,14 +23,14 @@ func NewRefreshTask(
 	langCodesProvider *langcnt.LangCodesProvider,
 	pairProviders *filepairs.PairProviders,
 	gitSeeker *gitseek.GitSeek,
-	filePRFinder *pullreq.FilePRFinder,
+	filePRIndex *pullreq.FilePRIndex,
 	store *Store,
 ) *RefreshTask {
 	return &RefreshTask{
 		langCodesProvider: langCodesProvider,
 		pairProviders:     pairProviders,
 		gitSeeker:         gitSeeker,
-		filePRFinder:      filePRFinder,
+		filePRIndex:       filePRIndex,
 		store:             store,
 	}
 }
@@ -83,7 +83,7 @@ func (t *RefreshTask) buildDashboard(ctx context.Context, langCode string) (*Das
 		seekerFileInfos = append(seekerFileInfos, fileInfo)
 	}
 
-	prIndex, err := t.filePRFinder.LangIndex(langCode)
+	prIndex, err := t.filePRIndex.LangIndex(langCode)
 	if err != nil {
 		return nil, fmt.Errorf("error while getting pull request index for lang code %s: %w", langCode, err)
 	}

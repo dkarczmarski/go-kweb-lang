@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"github.com/dkarczmarski/go-kweb-lang/gitseek"
+	"github.com/dkarczmarski/go-kweb-lang/pullreq"
 )
 
 const (
@@ -11,7 +12,7 @@ const (
 func buildDashboard(
 	langCode string,
 	seekerFileInfos []gitseek.FileInfo,
-	prIndex map[string][]int,
+	prIndex pullreq.FilePRIndexData,
 ) *Dashboard {
 	items := make([]Item, 0, len(seekerFileInfos))
 	for _, seekerFileInfo := range seekerFileInfos {

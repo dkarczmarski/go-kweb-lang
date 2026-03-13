@@ -12,21 +12,19 @@ import (
 	"github.com/dkarczmarski/go-kweb-lang/store"
 )
 
-func TestFilePRFinder_Update_E2E(t *testing.T) {
+func TestFilePRIndex_RefreshIndex_E2E(t *testing.T) {
 	gitHub := github.NewGitHub(
 		github.WithDefaults(),
 		github.WithThrottle(3*time.Second),
 	)
 	cacheStore := store.NewFileStore(t.TempDir())
-	filePRFinder := pullreq.NewFilePRFinder(
+	filePRIndex := pullreq.NewFilePRIndex(
 		gitHub,
 		cacheStore,
-		func(config *pullreq.FilePRFinderConfig) {
-			config.PerPage = 10
-		},
+		10,
 	)
 
-	err := filePRFinder.Update(context.Background(), "pl")
+	err := filePRIndex.RefreshIndex(context.Background(), "pl")
 	if err != nil {
 		t.Fatal(err)
 	}
