@@ -8,24 +8,40 @@ import (
 	"github.com/dkarczmarski/go-kweb-lang/dashboard"
 	"github.com/dkarczmarski/go-kweb-lang/filepairs"
 	"github.com/dkarczmarski/go-kweb-lang/gitseek"
-	"github.com/dkarczmarski/go-kweb-lang/langcnt"
 	"github.com/dkarczmarski/go-kweb-lang/pullreq"
 )
 
+type PairLister interface {
+	ListPairs(langCode string) ([]filepairs.Pair, error)
+}
+
+type LangChecker interface {
+	CheckLang(ctx context.Context, langCode string, pair gitseek.Pair) (gitseek.FileInfo, error)
+}
+
+type FilePRIndexer interface {
+	LangIndex(langCode string) (pullreq.FilePRIndexData, error)
+}
+
+type DashboardStore interface {
+	WriteDashboard(langDashboard dashboard.Dashboard) error
+	WriteDashboardIndex(langIndex dashboard.LangIndex) error
+}
+
 type RefreshDashboardTask struct {
-	langCodesProvider *langcnt.LangCodesProvider
-	pairProviders     *filepairs.PairProviders
-	gitSeeker         *gitseek.GitSeek
-	filePRIndex       *pullreq.FilePRIndex
-	store             *dashboard.Store
+	langCodesProvider dashboard.LangCodesProvider
+	pairProviders     PairLister
+	gitSeeker         LangChecker
+	filePRIndex       FilePRIndexer
+	store             DashboardStore
 }
 
 func NewRefreshDashboardTask(
-	langCodesProvider *langcnt.LangCodesProvider,
-	pairProviders *filepairs.PairProviders,
-	gitSeeker *gitseek.GitSeek,
-	filePRIndex *pullreq.FilePRIndex,
-	store *dashboard.Store,
+	langCodesProvider dashboard.LangCodesProvider,
+	pairProviders PairLister,
+	gitSeeker LangChecker,
+	filePRIndex FilePRIndexer,
+	store DashboardStore,
 ) *RefreshDashboardTask {
 	return &RefreshDashboardTask{
 		langCodesProvider: langCodesProvider,
@@ -36,40 +52,40 @@ func NewRefreshDashboardTask(
 	}
 }
 
-func (t *RefreshDashboardTask) Run(ctx context.Context) error {
-	langCodes, err := t.langCodesProvider.LangCodes()
+func (task *RefreshDashboardTask) Run(ctx context.Context) error {
+	langCodes, err := task.langCodesProvider.LangCodes()
 	if err != nil {
 		return fmt.Errorf("get available languages: %w", err)
 	}
 
 	for _, langCode := range langCodes {
-		langDashboard, err := t.buildDashboard(ctx, langCode)
+		langDashboard, err := task.buildDashboard(ctx, langCode)
 		if err != nil {
 			return fmt.Errorf("build dashboard for lang code %s: %w", langCode, err)
 		}
 
-		if err := t.store.WriteDashboard(langDashboard); err != nil {
+		if err := task.store.WriteDashboard(langDashboard); err != nil {
 			return fmt.Errorf("write dashboard for lang code %s: %w", langCode, err)
 		}
 	}
 
-	langIndex, err := t.buildLangIndex()
+	langIndex, err := task.buildLangIndex()
 	if err != nil {
 		return fmt.Errorf("build dashboard language index: %w", err)
 	}
 
-	if err := t.store.WriteDashboardIndex(langIndex); err != nil {
+	if err := task.store.WriteDashboardIndex(langIndex); err != nil {
 		return fmt.Errorf("write dashboard language index: %w", err)
 	}
 
 	return nil
 }
 
-func (t *RefreshDashboardTask) buildDashboard(
+func (task *RefreshDashboardTask) buildDashboard(
 	ctx context.Context,
 	langCode string,
 ) (dashboard.Dashboard, error) {
-	pairs, err := t.pairProviders.ListPairs(langCode)
+	pairs, err := task.pairProviders.ListPairs(langCode)
 	if err != nil {
 		return dashboard.Dashboard{}, fmt.Errorf(
 			"list file pairs for lang code %s: %w",
@@ -89,7 +105,7 @@ func (t *RefreshDashboardTask) buildDashboard(
 			pair.LangPath,
 		)
 
-		fileInfo, err := t.gitSeeker.CheckLang(ctx, langCode, gitseek.Pair{
+		fileInfo, err := task.gitSeeker.CheckLang(ctx, langCode, gitseek.Pair{
 			EnPath:   pair.EnPath,
 			LangPath: pair.LangPath,
 		})
@@ -105,7 +121,7 @@ func (t *RefreshDashboardTask) buildDashboard(
 		seekerFileInfos = append(seekerFileInfos, fileInfo)
 	}
 
-	prIndex, err := t.filePRIndex.LangIndex(langCode)
+	prIndex, err := task.filePRIndex.LangIndex(langCode)
 	if err != nil {
 		return dashboard.Dashboard{}, fmt.Errorf(
 			"get pull request index for lang code %s: %w",
@@ -117,8 +133,8 @@ func (t *RefreshDashboardTask) buildDashboard(
 	return dashboard.BuildDashboard(langCode, seekerFileInfos, prIndex), nil
 }
 
-func (t *RefreshDashboardTask) buildLangIndex() (dashboard.LangIndex, error) {
-	langIndex, err := dashboard.BuildLangIndex(t.langCodesProvider)
+func (task *RefreshDashboardTask) buildLangIndex() (dashboard.LangIndex, error) {
+	langIndex, err := dashboard.BuildLangIndex(task.langCodesProvider)
 	if err != nil {
 		return dashboard.LangIndex{}, fmt.Errorf("build lang index: %w", err)
 	}
