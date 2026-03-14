@@ -37,8 +37,8 @@ type Services struct {
 	FilePRIndex          *pullreq.FilePRIndex
 	RefreshRepoTask      *tasks.RefreshRepoTask
 	RefreshPRTask        *tasks.RefreshPRTask
-	RefreshTask          *tasks.RefreshTask
-	RefreshDashboardTask *dashboard.RefreshTask
+	OnGitHubUpdateTask   *tasks.OnGitHubUpdateTask
+	RefreshDashboardTask *tasks.RefreshDashboardTask
 	GitHubMonitor        *githubmon.Monitor
 	Server               *web.Server
 }
@@ -97,7 +97,7 @@ func buildTaskServices(cfg config.Config, services *Services) {
 		services.GitSeek,
 	)
 
-	services.RefreshDashboardTask = dashboard.NewRefreshTask(
+	services.RefreshDashboardTask = tasks.NewRefreshDashboardTask(
 		services.LangCodesProvider,
 		services.PairProviders,
 		services.GitSeek,
@@ -110,7 +110,7 @@ func buildTaskServices(cfg config.Config, services *Services) {
 		services.LangCodesProvider,
 	)
 
-	services.RefreshTask = tasks.NewRefreshTask(
+	services.OnGitHubUpdateTask = tasks.NewOnGitHubUpdateTask(
 		services.RefreshRepoTask,
 		services.RefreshPRTask,
 		services.RefreshDashboardTask,

@@ -49,7 +49,7 @@ func Run(ctx context.Context, app *bootstrap.App) error {
 		app.Config.RunInterval,
 		app.Services.GitRepo,
 		app.Services.GitHubMonitor,
-		app.Services.RefreshTask,
+		app.Services.OnGitHubUpdateTask,
 	); err != nil {
 		return err
 	}

@@ -10,7 +10,7 @@ const (
 	StatusWaitingForReview = "waiting-for-review"
 )
 
-func buildDashboard(
+func BuildDashboard(
 	langCode string,
 	seekerFileInfos []gitseek.FileInfo,
 	prIndex pullreq.FilePRIndexData,

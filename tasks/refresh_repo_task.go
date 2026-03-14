@@ -35,28 +35,37 @@ func NewRefreshRepoTask(
 func (t *RefreshRepoTask) Run(ctx context.Context) error {
 	filesToInvalidate, err := t.gitRepoHist.PullRefresh(ctx)
 	if err != nil {
-		return fmt.Errorf("git cache pull refresh error: %w", err)
+		return fmt.Errorf("pull refresh: %w", err)
 	}
 
-	invalidated := make(map[string]int)
-	for i, file := range filesToInvalidate {
-		if invalidatedAt, isInvalidated := invalidated[file]; !isInvalidated {
-			log.Printf("[githist][%d/%d] invalidate file %s", i+1, len(filesToInvalidate), file)
+	invalidatedAtByPath := make(map[string]int, len(filesToInvalidate))
 
-			if err := t.invalidateChangedPath(file); err != nil {
-				return fmt.Errorf("invalidate changed path %s error: %w", file, err)
-			}
-
-			invalidated[file] = i
-		} else {
+	for fileIndex, filePath := range filesToInvalidate {
+		previousIndex, alreadyInvalidated := invalidatedAtByPath[filePath]
+		if alreadyInvalidated {
 			log.Printf(
 				"[githist][%d/%d] invalidate file %s - (skip) already done at %d",
-				i+1,
+				fileIndex+1,
 				len(filesToInvalidate),
-				file,
-				invalidatedAt,
+				filePath,
+				previousIndex+1,
 			)
+
+			continue
 		}
+
+		log.Printf(
+			"[githist][%d/%d] invalidate file %s",
+			fileIndex+1,
+			len(filesToInvalidate),
+			filePath,
+		)
+
+		if err := t.invalidateChangedPath(filePath); err != nil {
+			return fmt.Errorf("invalidate changed path %s: %w", filePath, err)
+		}
+
+		invalidatedAtByPath[filePath] = fileIndex
 	}
 
 	return nil
@@ -86,11 +95,16 @@ func (t *RefreshRepoTask) invalidateChangedPath(changedPath string) error {
 		for _, langCode := range langCodes {
 			langPath, err := pathInfo.LangPath(langCode)
 			if err != nil {
-				return fmt.Errorf("build language path for %s: %w", langCode, err)
+				return fmt.Errorf("build language path for lang code %s: %w", langCode, err)
 			}
 
 			if err := t.invalidator.InvalidateFile(langCode, langPath); err != nil {
-				return fmt.Errorf("invalidate gitseek cache for (%s)%s: %w", langCode, langPath, err)
+				return fmt.Errorf(
+					"invalidate gitseek cache for lang code %s and path %s: %w",
+					langCode,
+					langPath,
+					err,
+				)
 			}
 		}
 
@@ -98,7 +112,12 @@ func (t *RefreshRepoTask) invalidateChangedPath(changedPath string) error {
 	}
 
 	if err := t.invalidator.InvalidateFile(pathInfo.LangCode, changedPath); err != nil {
-		return fmt.Errorf("invalidate gitseek cache for (%s)%s: %w", pathInfo.LangCode, changedPath, err)
+		return fmt.Errorf(
+			"invalidate gitseek cache for lang code %s and path %s: %w",
+			pathInfo.LangCode,
+			changedPath,
+			err,
+		)
 	}
 
 	return nil

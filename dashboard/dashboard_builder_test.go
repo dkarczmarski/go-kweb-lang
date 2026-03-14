@@ -29,7 +29,7 @@ func TestBuildDashboard(t *testing.T) {
 			"content/pl/b.md": {101, 102},
 		}
 
-		got := buildDashboard("pl", seekerFileInfos, prIndex)
+		got := BuildDashboard("pl", seekerFileInfos, prIndex)
 
 		if got.LangCode != "pl" {
 			t.Fatalf("expected lang code pl, got %q", got.LangCode)
@@ -74,7 +74,7 @@ func TestBuildDashboard(t *testing.T) {
 			"content/pl/missing.md": {555},
 		}
 
-		got := buildDashboard("pl", seekerFileInfos, prIndex)
+		got := BuildDashboard("pl", seekerFileInfos, prIndex)
 
 		if len(got.Items) != 2 {
 			t.Fatalf("expected 2 items, got %d", len(got.Items))
@@ -109,7 +109,7 @@ func TestBuildDashboard(t *testing.T) {
 			"content/pl/a.md": {123},
 		}
 
-		got := buildDashboard("pl", seekerFileInfos, prIndex)
+		got := BuildDashboard("pl", seekerFileInfos, prIndex)
 
 		if len(got.Items) != 1 {
 			t.Fatalf("expected 1 item, got %d", len(got.Items))

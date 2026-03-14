@@ -30,9 +30,9 @@ func TestBuildLangIndex(t *testing.T) {
 			langCodes: []string{"pl", "de", "fr"},
 		}
 
-		got, err := buildLangIndex(provider)
+		got, err := BuildLangIndex(provider)
 		if err != nil {
-			t.Fatalf("buildLangIndex returned error: %v", err)
+			t.Fatalf("BuildLangIndex returned error: %v", err)
 		}
 
 		if len(got.Items) != 3 {
@@ -60,7 +60,7 @@ func TestBuildLangIndex(t *testing.T) {
 			err: providerErr,
 		}
 
-		got, err := buildLangIndex(provider)
+		got, err := BuildLangIndex(provider)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -85,9 +85,9 @@ func TestBuildLangIndex(t *testing.T) {
 			langCodes: []string{},
 		}
 
-		got, err := buildLangIndex(provider)
+		got, err := BuildLangIndex(provider)
 		if err != nil {
-			t.Fatalf("buildLangIndex returned error: %v", err)
+			t.Fatalf("BuildLangIndex returned error: %v", err)
 		}
 
 		if got.Items == nil {

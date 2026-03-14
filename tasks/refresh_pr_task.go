@@ -24,9 +24,8 @@ func NewRefreshPRTask(
 }
 
 func (t *RefreshPRTask) Run(ctx context.Context, langCode string) error {
-	err := t.filePRIndex.RefreshIndex(ctx, langCode)
-	if err != nil {
-		return fmt.Errorf("error while updating PRs for lang %v: %w", langCode, err)
+	if err := t.filePRIndex.RefreshIndex(ctx, langCode); err != nil {
+		return fmt.Errorf("refresh PR index for lang code %s: %w", langCode, err)
 	}
 
 	return nil
