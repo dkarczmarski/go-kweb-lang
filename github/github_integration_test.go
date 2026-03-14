@@ -1,7 +1,6 @@
 package github_test
 
 import (
-	"context"
 	_ "embed"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +15,8 @@ import (
 var GetCommitFiles []byte
 
 func TestGitHub_GetCommitFiles_Integration(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		name           string
 		commitID       string
@@ -37,7 +38,9 @@ func TestGitHub_GetCommitFiles_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			t.Parallel()
+
+			ctx := t.Context()
 
 			mockServer := newMockServer(t, tc.expectedURL, url.Values{}, tc.response)
 			defer mockServer.Close()
@@ -63,6 +66,8 @@ func TestGitHub_GetCommitFiles_Integration(t *testing.T) {
 var GetPRCommits []byte
 
 func TestGitHub_GetPRCommits_Integration(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		name           string
 		prNumber       int
@@ -78,7 +83,9 @@ func TestGitHub_GetPRCommits_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			t.Parallel()
+
+			ctx := t.Context()
 
 			mockServer := newMockServer(t, tc.expectedURL, url.Values{}, tc.response)
 			defer mockServer.Close()
@@ -104,6 +111,8 @@ func TestGitHub_GetPRCommits_Integration(t *testing.T) {
 var PRSearch []byte
 
 func TestGitHub_PRSearch_Integration(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		name                string
 		filter              github.PRSearchFilter
@@ -145,7 +154,9 @@ func TestGitHub_PRSearch_Integration(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			t.Parallel()
+
+			ctx := t.Context()
 
 			mockServer := newMockServer(t, tc.expectedURL, tc.expectedQueryParams, tc.response)
 			defer mockServer.Close()
@@ -167,7 +178,14 @@ func TestGitHub_PRSearch_Integration(t *testing.T) {
 	}
 }
 
-func newMockServer(t *testing.T, expectedURL string, expectedQueryParams url.Values, response []byte) *httptest.Server {
+func newMockServer(
+	t *testing.T,
+	expectedURL string,
+	expectedQueryParams url.Values,
+	response []byte,
+) *httptest.Server {
+	t.Helper()
+
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != expectedURL {
 			t.Errorf("result URL\nexpected : %+v\nactual   : %+v", expectedURL, r.URL.Path)
@@ -180,6 +198,7 @@ func newMockServer(t *testing.T, expectedURL string, expectedQueryParams url.Val
 			actualValues, ok := actualQuery[key]
 			if !ok {
 				t.Errorf("missing query param: %s", key)
+
 				continue
 			}
 
@@ -192,6 +211,7 @@ func newMockServer(t *testing.T, expectedURL string, expectedQueryParams url.Val
 			_, ok := expectedQuery[key]
 			if !ok {
 				t.Errorf("unexptected query param: %s", key)
+
 				continue
 			}
 		}

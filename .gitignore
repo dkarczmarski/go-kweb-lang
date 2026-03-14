@@ -7,3 +7,6 @@ go-kweb-lang
 .github-token.txt
 git/testdata/repo
 dist
+*notes*md
+*notes*txt
+test-output

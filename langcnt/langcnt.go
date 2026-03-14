@@ -1,4 +1,5 @@
-// Package langcnt provides information about the 'content' directory in the kubernetes repository.
+// Package langcnt provides language code information from the content
+// directory in the Kubernetes repository.
 package langcnt
 
 import (
@@ -8,54 +9,69 @@ import (
 	"slices"
 )
 
+const contentDirName = "content"
+
 type LangCodesProvider struct {
 	RepoDir string
 
 	langCodesFilter []string
 }
 
-// SetLangCodesFilter sets a filter for available lang codes.
-func (c *LangCodesProvider) SetLangCodesFilter(langCodes []string) {
-	c.langCodesFilter = langCodes
+// SetLangCodesFilter sets the allowed language codes.
+// When the filter is empty, all detected language codes are returned.
+func (p *LangCodesProvider) SetLangCodesFilter(langCodes []string) {
+	p.langCodesFilter = langCodes
 }
 
-// LangCodes returns all lang codes based on the 'content' directory in the Kubernetes repository.
-// If a filter is set via SetLangCodesFilter, it omits lang codes that are not in the filter.
-func (c *LangCodesProvider) LangCodes() ([]string, error) {
-	allLangCodes, err := listLangDirectories(filepath.Join(c.RepoDir, "content"))
+// LangCodes returns language codes found in the repository content directory.
+//
+// The "en" directory is excluded.
+//
+// If a filter was set with SetLangCodesFilter, only language codes present in
+// that filter are returned.
+func (p *LangCodesProvider) LangCodes() ([]string, error) {
+	allLangCodes, err := listLangDirectories(filepath.Join(p.RepoDir, contentDirName))
 	if err != nil {
 		return nil, err
 	}
 
-	if len(c.langCodesFilter) == 0 {
+	if len(p.langCodesFilter) == 0 {
 		return allLangCodes, nil
 	}
 
 	langCodes := make([]string, 0, len(allLangCodes))
-	for _, lang := range allLangCodes {
-		if !slices.Contains(c.langCodesFilter, lang) {
+
+	for _, langCode := range allLangCodes {
+		if !slices.Contains(p.langCodesFilter, langCode) {
 			continue
 		}
 
-		langCodes = append(langCodes, lang)
+		langCodes = append(langCodes, langCode)
 	}
 
 	return langCodes, nil
 }
 
 func listLangDirectories(path string) ([]string, error) {
-	var dirs []string
-
-	files, err := os.ReadDir(path)
+	entries, err := os.ReadDir(path)
 	if err != nil {
-		return nil, fmt.Errorf("error while listing directory %s: %w", path, err)
+		return nil, fmt.Errorf("read directory %s: %w", path, err)
 	}
 
-	for _, file := range files {
-		if file.IsDir() && file.Name() != "en" {
-			dirs = append(dirs, file.Name())
+	langCodes := make([]string, 0, len(entries))
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
 		}
+
+		langCode := entry.Name()
+		if langCode == "en" {
+			continue
+		}
+
+		langCodes = append(langCodes, langCode)
 	}
 
-	return dirs, nil
+	return langCodes, nil
 }

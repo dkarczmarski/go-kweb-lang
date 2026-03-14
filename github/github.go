@@ -19,6 +19,21 @@ import (
 	"github.com/dkarczmarski/go-kweb-lang/github/internal/throttle"
 )
 
+const (
+	defaultBaseURL        = "https://api.github.com"
+	maxHTTPRetries        = 10
+	defaultRetryWait      = time.Minute
+	retryResetSafetyDelay = 3 * time.Second
+)
+
+var (
+	ErrUnexpectedHTTPStatus = errors.New("unexpected http status")
+	ErrRateLimitExceeded    = errors.New("api rate limit exceeded")
+	ErrSecondaryRateLimit   = errors.New("secondary api rate limit exceeded")
+	ErrInvalidBaseURL       = errors.New("invalid github base url")
+	ErrNoCommitsFound       = errors.New("no commits found")
+)
+
 type Config struct {
 	BaseURL          string
 	HTTPClient       *http.Client
@@ -51,11 +66,13 @@ type PageRequest struct {
 	PerPage int
 }
 
+//nolint:tagliatelle
 type PRSearchResult struct {
 	Items      []PRItem `json:"items"`
 	TotalCount int      `json:"total_count"`
 }
 
+//nolint:tagliatelle
 type PRItem struct {
 	Number    int    `json:"number"`
 	UpdatedAt string `json:"updated_at"`
@@ -68,29 +85,28 @@ type CommitFiles struct {
 
 func WithDefaults() func(*Config) {
 	return func(config *Config) {
-		config.BaseURL = "https://api.github.com"
+		config.BaseURL = defaultBaseURL
+		//nolint:exhaustruct
 		config.HTTPClient = &http.Client{
 			Timeout: time.Minute,
 		}
 	}
 }
 
-func WithAuthorization(token, userAgent string) func(config *Config) {
+func WithAuthorization(token, userAgent string) func(*Config) {
 	return func(config *Config) {
-		var transport http.RoundTripper
+		if len(token) == 0 {
+			return
+		}
 
-		if len(token) > 0 {
-			transport = &authorizationTransport{
-				Token:     token,
-				UserAgent: userAgent,
-			}
-
-			config.HTTPClient.Transport = transport
+		config.HTTPClient.Transport = &authorizationTransport{
+			Token:     token,
+			UserAgent: userAgent,
 		}
 	}
 }
 
-func WithThrottle(interval time.Duration) func(config *Config) {
+func WithThrottle(interval time.Duration) func(*Config) {
 	return func(config *Config) {
 		if interval > 0 {
 			config.ThrottleInterval = interval
@@ -105,15 +121,15 @@ func NewGitHub(opts ...func(*Config)) *GitHub {
 		opt(&config)
 	}
 
-	var throttler *throttle.Throttler
+	var throttlerInstance *throttle.Throttler
 	if config.ThrottleInterval > 0 {
-		throttler = throttle.NewThrottler(config.ThrottleInterval)
+		throttlerInstance = throttle.NewThrottler(config.ThrottleInterval)
 	}
 
 	return &GitHub{
 		baseURL:    config.BaseURL,
 		httpClient: config.HTTPClient,
-		throttler:  throttler,
+		throttler:  throttlerInstance,
 	}
 }
 
@@ -129,11 +145,11 @@ func (gh *GitHub) GetLatestCommit(ctx context.Context) (*CommitInfo, error) {
 
 	var commits []commitResponse
 	if err := json.NewDecoder(resp.Body).Decode(&commits); err != nil {
-		return nil, fmt.Errorf("json error: %w", err)
+		return nil, fmt.Errorf("decode latest commit response: %w", err)
 	}
 
 	if len(commits) == 0 {
-		return nil, nil
+		return nil, ErrNoCommitsFound
 	}
 
 	commitInfo := CommitInfo{
@@ -153,11 +169,17 @@ type commitResponse struct {
 	} `json:"commit"`
 }
 
-func (gh *GitHub) PRSearch(ctx context.Context, filter PRSearchFilter, page PageRequest) (*PRSearchResult, error) {
-	// normalize lang code
+func (gh *GitHub) PRSearch(
+	ctx context.Context,
+	filter PRSearchFilter,
+	page PageRequest,
+) (*PRSearchResult, error) {
 	filter.LangCode = toShortLangCode(filter.LangCode)
 
-	urlStr := gh.buildPRSearchURL(filter, page)
+	urlStr, err := gh.buildPRSearchURL(filter, page)
+	if err != nil {
+		return nil, fmt.Errorf("build PR search URL: %w", err)
+	}
 
 	resp, err := gh.httpGetWithRetry(ctx, urlStr)
 	if err != nil {
@@ -168,18 +190,18 @@ func (gh *GitHub) PRSearch(ctx context.Context, filter PRSearchFilter, page Page
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error while reading response body: %w", err)
+		return nil, fmt.Errorf("read PR search response body: %w", err)
 	}
 
 	var result PRSearchResult
 	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, fmt.Errorf("error while parsing JSON response: %w", err)
+		return nil, fmt.Errorf("parse PR search JSON response: %w", err)
 	}
 
 	return &result, nil
 }
 
-// for example zh-cn -> zh , pt-br -> pt
+// toShortLangCode shortens compound language codes, for example zh-cn -> zh, pt-br -> pt.
 func toShortLangCode(langCode string) string {
 	if len(langCode) > 2 && langCode[2] == '-' {
 		langCode = langCode[:2]
@@ -188,53 +210,52 @@ func toShortLangCode(langCode string) string {
 	return langCode
 }
 
-func (gh *GitHub) buildPRSearchURL(filter PRSearchFilter, page PageRequest) string {
+func (gh *GitHub) buildPRSearchURL(filter PRSearchFilter, page PageRequest) (string, error) {
 	baseURL := fmt.Sprintf("%v/search/issues", gh.baseURL)
 
-	qParts := []string{
+	queryParts := []string{
 		"repo:kubernetes/website",
 		"is:pr",
 	}
 
 	if filter.OnlyOpen {
-		qParts = append(qParts, "state:open")
+		queryParts = append(queryParts, "state:open")
 	}
 
 	if len(filter.LangCode) > 0 {
-		qParts = append(qParts, "label:language/"+filter.LangCode)
+		queryParts = append(queryParts, "label:language/"+filter.LangCode)
 	}
 
 	if len(filter.UpdatedFrom) > 0 {
-		// format: updated:>2024-12-01
-		qParts = append(qParts, "updated:>"+filter.UpdatedFrom)
+		queryParts = append(queryParts, "updated:>"+filter.UpdatedFrom)
 	}
 
-	q := strings.Join(qParts, "+")
+	queryText := strings.Join(queryParts, "+")
 
-	query := url.Values{}
+	queryValues := url.Values{}
 
 	if len(page.Sort) > 0 {
-		query.Set("sort", page.Sort)
+		queryValues.Set("sort", page.Sort)
 	}
 
 	if len(page.Order) > 0 {
-		query.Set("order", page.Order)
+		queryValues.Set("order", page.Order)
 	}
 
 	if page.PerPage > 0 {
-		query.Set("per_page", fmt.Sprintf("%v", page.PerPage))
+		queryValues.Set("per_page", strconv.Itoa(page.PerPage))
 	}
 
-	query.Set("page", "1")
+	queryValues.Set("page", "1")
 
-	u, err := url.Parse(baseURL)
+	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
-		log.Fatal(fmt.Errorf("error while parsing base URL: %w", err))
+		return "", fmt.Errorf("%w: %w", ErrInvalidBaseURL, err)
 	}
 
-	u.RawQuery = fmt.Sprintf("q=%s&%s", q, query.Encode())
+	parsedURL.RawQuery = fmt.Sprintf("q=%s&%s", queryText, queryValues.Encode())
 
-	return u.String()
+	return parsedURL.String(), nil
 }
 
 func (gh *GitHub) GetPRCommits(ctx context.Context, prNumber int) ([]string, error) {
@@ -249,10 +270,10 @@ func (gh *GitHub) GetPRCommits(ctx context.Context, prNumber int) ([]string, err
 
 	var commits []commitItem
 	if err := json.NewDecoder(resp.Body).Decode(&commits); err != nil {
-		return nil, fmt.Errorf("error while decoding JSON: %w", err)
+		return nil, fmt.Errorf("decode PR commits JSON: %w", err)
 	}
 
-	var commitIDs []string
+	commitIDs := make([]string, 0, len(commits))
 	for _, commit := range commits {
 		commitIDs = append(commitIDs, commit.SHA)
 	}
@@ -276,17 +297,17 @@ func (gh *GitHub) GetCommitFiles(ctx context.Context, commitID string) (*CommitF
 
 	var detail commitModel
 	if err := json.NewDecoder(resp.Body).Decode(&detail); err != nil {
-		return nil, fmt.Errorf("error while decoding JSON: %w", err)
+		return nil, fmt.Errorf("decode commit files JSON: %w", err)
 	}
 
-	var files []string
-	for _, f := range detail.Files {
-		files = append(files, f.Filename)
+	files := make([]string, 0, len(detail.Files))
+	for _, file := range detail.Files {
+		files = append(files, file.Filename)
 	}
 
 	return &CommitFiles{
-		detail.SHA,
-		files,
+		CommitID: detail.SHA,
+		Files:    files,
 	}, nil
 }
 
@@ -298,13 +319,14 @@ type commitModel struct {
 }
 
 func (gh *GitHub) httpGetWithRetry(ctx context.Context, urlStr string) (*http.Response, error) {
-	var resp *http.Response
-	var err error
+	var (
+		resp *http.Response
+		err  error
+	)
 
-	maxRetries := 10 // magic number
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxHTTPRetries {
 		if i > 0 {
-			log.Printf("[%d/%d] retry http GET %s", i, maxRetries, urlStr)
+			log.Printf("[%d/%d] retry http GET %s", i, maxHTTPRetries, urlStr)
 		}
 
 		resp, err = gh.httpGet(ctx, urlStr)
@@ -312,46 +334,74 @@ func (gh *GitHub) httpGetWithRetry(ctx context.Context, urlStr string) (*http.Re
 			break
 		}
 
-		var terr *retryErr
-		if errors.As(err, &terr) {
-			log.Printf("connection error: %+v", terr)
-
-			if len(terr.retryAfterStr) > 0 {
-				if seconds, err := strconv.Atoi(terr.retryAfterStr); err == nil {
-					log.Printf("received http code %d with Retry-After header. wait for %d seconds",
-						terr.statusCode, seconds)
-					if err := sleepCtx(ctx, time.Duration(seconds)*time.Second); err != nil {
-						return nil, err
-					}
-				}
-			} else if len(terr.resetStr) > 0 {
-				resetUnix, _ := strconv.ParseInt(terr.resetStr, 10, 64)
-
-				if resetUnix > 0 {
-					resetTime := time.Unix(resetUnix, 0)
-					wait := time.Until(resetTime)
-					wait += 3 * time.Second // increase it a bit
-
-					if wait > 0 {
-						log.Printf("received http code %d with X-RateLimit-Reset header. wait for %v seconds until reset at %v",
-							terr.statusCode, wait.Seconds(), resetTime)
-						if err := sleepCtx(ctx, wait); err != nil {
-							return nil, err
-						}
-					}
-				}
-			} else {
-				log.Printf("wait for 1 minute")
-				if err := sleepCtx(ctx, time.Minute); err != nil {
-					return nil, err
-				}
-			}
-		} else {
+		var retryableErr *retryError
+		if !errors.As(err, &retryableErr) {
 			break
+		}
+
+		log.Printf("connection error: %+v", retryableErr)
+
+		if waitErr := waitForRetry(ctx, retryableErr); waitErr != nil {
+			return nil, waitErr
 		}
 	}
 
 	return resp, err
+}
+
+func waitForRetry(ctx context.Context, retryableErr *retryError) error {
+	switch {
+	case len(retryableErr.retryAfterStr) > 0:
+		return waitForRetryAfterHeader(ctx, retryableErr)
+	case len(retryableErr.resetStr) > 0:
+		return waitForRateLimitReset(ctx, retryableErr)
+	default:
+		log.Printf("wait for %v", defaultRetryWait)
+
+		return sleepCtx(ctx, defaultRetryWait)
+	}
+}
+
+func waitForRetryAfterHeader(ctx context.Context, retryableErr *retryError) error {
+	seconds, err := strconv.Atoi(retryableErr.retryAfterStr)
+	if err != nil {
+		log.Printf("invalid Retry-After header value: %q", retryableErr.retryAfterStr)
+
+		return sleepCtx(ctx, defaultRetryWait)
+	}
+
+	log.Printf(
+		"received http code %d with Retry-After header. wait for %d seconds",
+		retryableErr.statusCode,
+		seconds,
+	)
+
+	return sleepCtx(ctx, time.Duration(seconds)*time.Second)
+}
+
+func waitForRateLimitReset(ctx context.Context, retryableErr *retryError) error {
+	resetUnix, err := strconv.ParseInt(retryableErr.resetStr, 10, 64)
+	if err != nil || resetUnix <= 0 {
+		log.Printf("invalid X-RateLimit-Reset header value: %q", retryableErr.resetStr)
+
+		return sleepCtx(ctx, defaultRetryWait)
+	}
+
+	resetTime := time.Unix(resetUnix, 0)
+	waitDuration := time.Until(resetTime) + retryResetSafetyDelay
+
+	if waitDuration <= 0 {
+		return nil
+	}
+
+	log.Printf(
+		"received http code %d with X-RateLimit-Reset header. wait for %v seconds until reset at %v",
+		retryableErr.statusCode,
+		waitDuration.Seconds(),
+		resetTime,
+	)
+
+	return sleepCtx(ctx, waitDuration)
 }
 
 func sleepCtx(ctx context.Context, d time.Duration) error {
@@ -360,7 +410,7 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("sleep interrupted by context: %w", ctx.Err())
 	case <-timer.C:
 		return nil
 	}
@@ -369,23 +419,23 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 func (gh *GitHub) httpGet(ctx context.Context, urlStr string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
-		return nil, fmt.Errorf("error while creating request: %w", err)
+		return nil, fmt.Errorf("create request: %w", err)
 	}
 
 	if gh.throttler != nil {
-		// small delay to avoid secondary rate limit
 		if err := gh.throttler.Throttle(ctx); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("github throttling failed: %w", err)
 		}
 	}
 
 	resp, err := gh.httpClient.Do(req)
 	if err != nil {
 		if isTimeoutErr(err) {
-			err = &retryErr{err: err}
+			//nolint:exhaustruct
+			err = &retryError{err: err}
 		}
 
-		return nil, fmt.Errorf("error while sending request: %w", err)
+		return nil, fmt.Errorf("send request: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -393,18 +443,24 @@ func (gh *GitHub) httpGet(ctx context.Context, urlStr string) (*http.Response, e
 
 		body, _ := io.ReadAll(resp.Body)
 
-		if ok, err := isRateLimitError(resp, body); ok {
-			return nil, err
+		if ok, rateLimitErr := isRateLimitError(resp, body); ok {
+			return nil, rateLimitErr
 		}
 
-		return nil, fmt.Errorf("error while reading response.\nstatus: %s\nbody: %s", resp.Status, string(body))
+		return nil, fmt.Errorf(
+			"%w: status=%s body=%s",
+			ErrUnexpectedHTTPStatus,
+			resp.Status,
+			string(body),
+		)
 	}
 
-	return resp, err
+	return resp, nil
 }
 
 func isTimeoutErr(err error) bool {
 	var netErr net.Error
+
 	return errors.As(err, &netErr) && netErr.Timeout()
 }
 
@@ -413,36 +469,40 @@ func isRateLimitError(resp *http.Response, body []byte) (bool, error) {
 		return false, nil
 	}
 
-	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
-		remainingStr := resp.Header.Get("X-RateLimit-Remaining")
-		resetStr := resp.Header.Get("X-RateLimit-Reset")
-		retryAfterStr := resp.Header.Get("Retry-After")
+	if resp.StatusCode != http.StatusForbidden && resp.StatusCode != http.StatusTooManyRequests {
+		return false, nil
+	}
 
-		if len(body) > 0 && bytes.Contains(body, []byte("rate limit exceeded")) {
-			return true, &retryErr{
-				err:           errors.New("API rate limit exceeded"),
-				statusCode:    resp.StatusCode,
-				remainingStr:  remainingStr,
-				resetStr:      resetStr,
-				retryAfterStr: retryAfterStr,
-			}
+	// GitHub API uses:
+	// - X-RateLimit-Remaining
+	// - X-RateLimit-Reset
+	remainingStr := resp.Header.Get("X-Ratelimit-Remaining")
+	resetStr := resp.Header.Get("X-Ratelimit-Reset")
+	retryAfterStr := resp.Header.Get("Retry-After")
+
+	switch {
+	case len(body) > 0 && bytes.Contains(body, []byte("rate limit exceeded")):
+		return true, &retryError{
+			err:           ErrRateLimitExceeded,
+			statusCode:    resp.StatusCode,
+			remainingStr:  remainingStr,
+			resetStr:      resetStr,
+			retryAfterStr: retryAfterStr,
 		}
-
-		if len(body) > 0 && bytes.Contains(body, []byte("secondary rate limit")) {
-			return true, &retryErr{
-				err:           errors.New("secondary API rate limit exceeded"),
-				statusCode:    resp.StatusCode,
-				remainingStr:  remainingStr,
-				resetStr:      resetStr,
-				retryAfterStr: retryAfterStr,
-			}
+	case len(body) > 0 && bytes.Contains(body, []byte("secondary rate limit")):
+		return true, &retryError{
+			err:           ErrSecondaryRateLimit,
+			statusCode:    resp.StatusCode,
+			remainingStr:  remainingStr,
+			resetStr:      resetStr,
+			retryAfterStr: retryAfterStr,
 		}
 	}
 
 	return false, nil
 }
 
-type retryErr struct {
+type retryError struct {
 	err error
 
 	statusCode    int
@@ -451,14 +511,14 @@ type retryErr struct {
 	retryAfterStr string
 }
 
-func (e *retryErr) Error() string {
+func (e *retryError) Error() string {
 	return e.err.Error()
 }
 
-func (e *retryErr) Unwrap() error {
+func (e *retryError) Unwrap() error {
 	return e.err
 }
 
-func (e *retryErr) IsRetryable() bool {
+func (e *retryError) IsRetryable() bool {
 	return true
 }

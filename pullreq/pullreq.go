@@ -5,85 +5,109 @@ package pullreq
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
-	"path/filepath"
-	"slices"
 	"sort"
-	"strings"
+	"strconv"
 
+	"github.com/dkarczmarski/go-kweb-lang/filepairs"
 	"github.com/dkarczmarski/go-kweb-lang/github"
 	"github.com/dkarczmarski/go-kweb-lang/proxycache"
+	"github.com/dkarczmarski/go-kweb-lang/pullreq/internal/cachetypes"
 )
-
-type FilePRFinderConfig struct {
-	Storage FilePRFinderStorage
-	PerPage int
-}
 
 type GitHub interface {
 	PRSearch(ctx context.Context, filter github.PRSearchFilter, page github.PageRequest) (*github.PRSearchResult, error)
-
 	GetPRCommits(ctx context.Context, prNumber int) ([]string, error)
-
 	GetCommitFiles(ctx context.Context, commitID string) (*github.CommitFiles, error)
 }
 
-type CacheStore interface {
+type CacheStorage interface {
 	Read(bucket, key string, buff any) (bool, error)
 	Write(bucket, key string, data any) error
 	Delete(bucket, key string) error
 }
 
-type FilePRFinder struct {
-	gitHub     GitHub
-	cacheStore CacheStore
-	storage    FilePRFinderStorage
+type FilePRIndexData map[string][]int
 
-	perPage int
-}
-
-type FilePRFinderStorage interface {
-	LangIndex(langCode string) (map[string][]int, error)
-	StoreLangIndex(langCode string, filePRs map[string][]int) error
+type FilePRIndex struct {
+	gitHub       GitHub
+	cacheStorage CacheStorage
+	filePaths    *filepairs.FilePaths
+	perPage      int
 }
 
 const (
-	BucketPrCommits    = "pr-pr-commits"
-	BucketCommitFiles  = "pr-commit-files"
-	BucketFilePrsIndex = "pr-fileprs-index"
+	bucketPRCommits    = "pr-pr-commits"
+	bucketCommitFiles  = "pr-commit-files"
+	bucketFilePRsIndex = "pr-fileprs-index"
+	maxPages           = 20
 )
 
-type PRCommits struct {
-	UpdatedAt string
-	CommitIds []string
-}
+var (
+	ErrPaginationDidNotAdvance = errors.New("pagination did not advance")
+	ErrOpenPRPageLimitExceeded = errors.New("open pull request pagination exceeded page limit")
+	ErrLangIndexNotFound       = errors.New("language pull request index not found")
+)
 
-func NewFilePRFinder(gitHub GitHub, cacheStore CacheStore, opts ...func(config *FilePRFinderConfig)) *FilePRFinder {
-	config := FilePRFinderConfig{
-		Storage: &FilePRFinderFileStorage{
-			cacheStore: cacheStore,
-		},
-		PerPage: 100,
-	}
-
-	for _, opt := range opts {
-		opt(&config)
-	}
-
-	return &FilePRFinder{
-		gitHub:     gitHub,
-		cacheStore: cacheStore, // todo: check it
-		storage:    config.Storage,
-		perPage:    config.PerPage,
+func NewFilePRIndex(gitHub GitHub, cacheStore CacheStorage, perPage int) *FilePRIndex {
+	return &FilePRIndex{
+		gitHub:       gitHub,
+		cacheStorage: cacheStore,
+		filePaths:    filepairs.New(),
+		perPage:      perPage,
 	}
 }
 
-func (p *FilePRFinder) fetchLangOpenedPRs(ctx context.Context, langCode string) ([]github.PRItem, error) {
-	var prs []github.PRItem
+// PRCommitsCacheBucket returns the cache bucket used for PR commit lists
+// for the given language.
+func PRCommitsCacheBucket(langCode string) string {
+	return fmt.Sprintf("lang/%s/%s", langCode, bucketPRCommits)
+}
 
-	var maxUpdatedAt string
-	for safetyCounter := 20; safetyCounter >= 0; safetyCounter-- {
+// PRCommitsCacheKey returns the cache key used for a PR commit list.
+func PRCommitsCacheKey(prNumber int) string {
+	return strconv.Itoa(prNumber)
+}
+
+// CommitFilesCacheBucket returns the cache bucket used for commit file lists
+// for the given language.
+func CommitFilesCacheBucket(langCode string) string {
+	return fmt.Sprintf("lang/%s/%s", langCode, bucketCommitFiles)
+}
+
+// CommitFilesCacheKey returns the cache key used for a commit file list.
+func CommitFilesCacheKey(commitID string) string {
+	return commitID
+}
+
+// FilePRsIndexCacheBucket returns the cache bucket used for the file-to-PR index
+// for the given language.
+func FilePRsIndexCacheBucket(langCode string) string {
+	return fmt.Sprintf("lang/%s/%s", langCode, bucketFilePRsIndex)
+}
+
+// FilePRsIndexCacheKey returns the cache key used for the file-to-PR index
+// for the given language.
+func FilePRsIndexCacheKey(langCode string) string {
+	return langCode
+}
+
+const firstPage = 1
+
+func (p *FilePRIndex) fetchOpenPRsForLang(ctx context.Context, langCode string) ([]github.PRItem, error) {
+	var (
+		pullRequests []github.PRItem
+		maxUpdatedAt string
+	)
+
+	for page := range maxPages {
+		log.Printf(
+			"[pullreq][%s] fetching open PRs page %d/%d (updatedFrom=%q)",
+			langCode, page+1, maxPages, maxUpdatedAt,
+		)
+
 		result, err := p.gitHub.PRSearch(
 			ctx,
 			github.PRSearchFilter{
@@ -94,90 +118,301 @@ func (p *FilePRFinder) fetchLangOpenedPRs(ctx context.Context, langCode string) 
 			github.PageRequest{
 				Sort:    "updated",
 				Order:   "asc",
+				Page:    firstPage,
 				PerPage: p.perPage,
 			},
 		)
 		if err != nil {
-			return nil, fmt.Errorf("error while searching for pull requests: %w", err)
+			return nil, fmt.Errorf("search open pull requests for %s: %w", langCode, err)
 		}
+
 		if len(result.Items) == 0 {
-			break
+			log.Printf("[pullreq][%s] no more open PRs to fetch", langCode)
+
+			return pullRequests, nil
 		}
 
-		prs = append(prs, result.Items...)
+		pullRequests = append(pullRequests, result.Items...)
 
-		maxUpdatedAt = result.Items[len(result.Items)-1].UpdatedAt
-
-		if safetyCounter == 0 {
-			log.Fatal("too many requests. probably something is wrong")
+		nextUpdatedAt := result.Items[len(result.Items)-1].UpdatedAt
+		if nextUpdatedAt == maxUpdatedAt {
+			return nil, fmt.Errorf(
+				"%w: lang=%s updatedAt=%s",
+				ErrPaginationDidNotAdvance,
+				langCode,
+				maxUpdatedAt,
+			)
 		}
+
+		maxUpdatedAt = nextUpdatedAt
 	}
 
-	return prs, nil
+	return nil, fmt.Errorf(
+		"%w: lang=%s limit=%d",
+		ErrOpenPRPageLimitExceeded,
+		langCode,
+		maxPages,
+	)
 }
 
-func (p *FilePRFinder) fetchPRCommits(ctx context.Context, langCode string, pr github.PRItem) ([]string, error) {
-	key := fmt.Sprintf("%v", pr.Number)
+func (p *FilePRIndex) fetchPRCommits(
+	ctx context.Context,
+	langCode string,
+	pullRequest github.PRItem,
+) ([]string, error) {
 	commits, err := proxycache.Get(
 		ctx,
-		p.cacheStore,
-		fmt.Sprintf("lang/%s/%s", langCode, BucketPrCommits),
-		key,
-		func(cachedPrCommits PRCommits) bool {
-			isInvalid := cachedPrCommits.UpdatedAt != pr.UpdatedAt
+		p.cacheStorage,
+		PRCommitsCacheBucket(langCode),
+		PRCommitsCacheKey(pullRequest.Number),
+		func(cachedPRCommits cachetypes.PRCommits) bool {
+			isStale := cachedPRCommits.UpdatedAt != pullRequest.UpdatedAt
 
-			if isInvalid {
-				log.Printf("[pullreq] PR #%v hit cache but is out of date: %v", pr.Number, cachedPrCommits.UpdatedAt)
+			if isStale {
+				log.Printf(
+					"[pullreq][%s][pr:%d] commit cache stale: cached=%s current=%s",
+					langCode,
+					pullRequest.Number,
+					cachedPRCommits.UpdatedAt,
+					pullRequest.UpdatedAt,
+				)
 			}
 
-			return isInvalid
+			return isStale
 		},
-		func(ctx context.Context) (PRCommits, error) {
-			log.Printf("[pullreq] fetching commit list for PR #%v", pr.Number)
+		func(ctx context.Context) (cachetypes.PRCommits, error) {
+			log.Printf("[pullreq][%s][pr:%d] fetching commit IDs", langCode, pullRequest.Number)
 
-			commitIds, err := p.gitHub.GetPRCommits(ctx, pr.Number)
+			commitIDs, err := p.gitHub.GetPRCommits(ctx, pullRequest.Number)
 			if err != nil {
-				return PRCommits{}, err
+				return cachetypes.PRCommits{}, fmt.Errorf(
+					"fetch commit IDs for PR #%d in %s: %w",
+					pullRequest.Number,
+					langCode,
+					err,
+				)
 			}
 
-			return PRCommits{
-				UpdatedAt: pr.UpdatedAt,
-				CommitIds: commitIds,
+			return cachetypes.PRCommits{
+				UpdatedAt: pullRequest.UpdatedAt,
+				CommitIDs: commitIDs,
 			}, nil
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(
+			"load commit IDs for PR #%d in %s: %w",
+			pullRequest.Number,
+			langCode,
+			err,
+		)
 	}
 
-	return commits.CommitIds, nil
+	return commits.CommitIDs, nil
 }
 
-func (p *FilePRFinder) fetchCommitFiles(
+func (p *FilePRIndex) fetchCommitFiles(
 	ctx context.Context,
 	langCode string,
 	commitID string,
 ) (*github.CommitFiles, error) {
-	return proxycache.Get(
+	commitFiles, err := proxycache.Get(
 		ctx,
-		p.cacheStore,
-		fmt.Sprintf("lang/%s/%s", langCode, BucketCommitFiles),
-		commitID,
+		p.cacheStorage,
+		CommitFilesCacheBucket(langCode),
+		CommitFilesCacheKey(commitID),
 		nil,
 		func(ctx context.Context) (*github.CommitFiles, error) {
-			return p.gitHub.GetCommitFiles(ctx, commitID)
+			log.Printf("[pullreq][%s][commit:%s] fetching files", langCode, commitID)
+
+			files, err := p.gitHub.GetCommitFiles(ctx, commitID)
+			if err != nil {
+				return nil, fmt.Errorf("fetch files for commit %s in %s: %w", commitID, langCode, err)
+			}
+
+			return files, nil
 		},
 	)
+	if err != nil {
+		return nil, fmt.Errorf("load files for commit %s in %s: %w", commitID, langCode, err)
+	}
+
+	return commitFiles, nil
 }
 
-func (p *FilePRFinder) convertToFilePRs(prsFiles map[int][]string, obligatoryPathPrefix string) map[string][]int {
-	filePRs := make(map[string][]int)
+func (p *FilePRIndex) fetchFilesForCommitList(
+	ctx context.Context,
+	langCode string,
+	pullRequest github.PRItem,
+	pullRequestIndex int,
+	pullRequestsCount int,
+	commitIDs []string,
+) ([]string, error) {
+	files := make([]string, 0)
+	commitCount := len(commitIDs)
 
-	for pr, files := range prsFiles {
-		for _, file := range files {
-			if !slices.Contains(filePRs[file], pr) && strings.HasPrefix(file, obligatoryPathPrefix) {
-				filePRs[file] = append(filePRs[file], pr)
+	for commitIndex, commitID := range commitIDs {
+		log.Printf(
+			"[pullreq][%s][%d/%d][pr:%d][%d/%d] loading files for commit %s",
+			langCode,
+			pullRequestIndex+1,
+			pullRequestsCount,
+			pullRequest.Number,
+			commitIndex+1,
+			commitCount,
+			commitID,
+		)
+
+		commitFiles, err := p.fetchCommitFiles(ctx, langCode, commitID)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"load files for commit %s in PR #%d for %s: %w",
+				commitID,
+				pullRequest.Number,
+				langCode,
+				err,
+			)
+		}
+
+		log.Printf(
+			"[pullreq][%s][%d/%d][pr:%d][%d/%d] commit %s contains %d files",
+			langCode,
+			pullRequestIndex+1,
+			pullRequestsCount,
+			pullRequest.Number,
+			commitIndex+1,
+			commitCount,
+			commitID,
+			len(commitFiles.Files),
+		)
+
+		files = append(files, commitFiles.Files...)
+	}
+
+	return files, nil
+}
+
+func (p *FilePRIndex) fetchFilesForPR(
+	ctx context.Context,
+	langCode string,
+	pullRequest github.PRItem,
+	pullRequestIndex int,
+	pullRequestsCount int,
+) ([]string, error) {
+	log.Printf(
+		"[pullreq][%s][%d/%d][pr:%d] loading PR details (updatedAt=%s)",
+		langCode,
+		pullRequestIndex+1,
+		pullRequestsCount,
+		pullRequest.Number,
+		pullRequest.UpdatedAt,
+	)
+
+	commitIDs, err := p.fetchPRCommits(ctx, langCode, pullRequest)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"load commit IDs for PR #%d in %s: %w",
+			pullRequest.Number,
+			langCode,
+			err,
+		)
+	}
+
+	log.Printf(
+		"[pullreq][%s][%d/%d][pr:%d] found %d commits",
+		langCode,
+		pullRequestIndex+1,
+		pullRequestsCount,
+		pullRequest.Number,
+		len(commitIDs),
+	)
+
+	files, err := p.fetchFilesForCommitList(
+		ctx,
+		langCode,
+		pullRequest,
+		pullRequestIndex,
+		pullRequestsCount,
+		commitIDs,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("load files for PR #%d in %s: %w", pullRequest.Number, langCode, err)
+	}
+
+	return files, nil
+}
+
+func (p *FilePRIndex) fetchPRFiles(
+	ctx context.Context,
+	langCode string,
+	pullRequests []github.PRItem,
+) (map[int][]string, error) {
+	prsFiles := make(map[int][]string, len(pullRequests))
+	pullRequestsCount := len(pullRequests)
+
+	for pullRequestIndex, pullRequest := range pullRequests {
+		files, err := p.fetchFilesForPR(
+			ctx,
+			langCode,
+			pullRequest,
+			pullRequestIndex,
+			pullRequestsCount,
+		)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"load files for PR #%d in %s: %w",
+				pullRequest.Number,
+				langCode,
+				err,
+			)
+		}
+
+		prsFiles[pullRequest.Number] = files
+	}
+
+	return prsFiles, nil
+}
+
+func (p *FilePRIndex) filterFilesForLang(files []string, langCode string) []string {
+	filtered := make([]string, 0, len(files))
+
+	for _, file := range files {
+		pathInfo, err := p.filePaths.CheckPath(file)
+		if err != nil {
+			log.Printf("[pullreq][%s] skipping file %q: path check failed: %v", langCode, file, err)
+
+			continue
+		}
+
+		if pathInfo.LangCode != langCode {
+			continue
+		}
+
+		filtered = append(filtered, file)
+	}
+
+	return filtered
+}
+
+func (p *FilePRIndex) buildFilePRIndex(prsFiles map[int][]string, langCode string) FilePRIndexData {
+	filePRs := make(FilePRIndexData, len(prsFiles))
+	seen := make(map[string]map[int]struct{}, len(prsFiles))
+
+	for prNumber, files := range prsFiles {
+		langFiles := p.filterFilesForLang(files, langCode)
+
+		for _, file := range langFiles {
+			if seen[file] == nil {
+				seen[file] = make(map[int]struct{})
 			}
+
+			if _, exists := seen[file][prNumber]; exists {
+				continue
+			}
+
+			seen[file][prNumber] = struct{}{}
+
+			filePRs[file] = append(filePRs[file], prNumber)
 		}
 	}
 
@@ -189,92 +424,64 @@ func (p *FilePRFinder) convertToFilePRs(prsFiles map[int][]string, obligatoryPat
 	return filePRs
 }
 
-// Update updates the file-to-PR index for the given langCode.
-func (p *FilePRFinder) Update(ctx context.Context, langCode string) error {
-	log.Printf("[pullreq][%v] updating the index of PR files", langCode)
-
-	prs, err := p.fetchLangOpenedPRs(ctx, langCode)
-	if err != nil {
-		return fmt.Errorf("error while getting pull requests: %w", err)
-	}
-
-	prsLen := len(prs)
-	log.Printf("[pullreq][%v] fetched a PR list of size %v", langCode, prsLen)
-
-	prsFiles := make(map[int][]string)
-	for prIndex, pr := range prs {
-		log.Printf("[pullreq][%s][%d/%d] fetched info for PR #%v. updated at: %v",
-			langCode, prIndex+1, prsLen, pr.Number, pr.UpdatedAt)
-
-		log.Printf("[pullreq][%s][%d/%d] getting commit ids for PR #%v",
-			langCode, prIndex+1, prsLen, pr.Number)
-
-		commitIds, err := p.fetchPRCommits(ctx, langCode, pr)
-		if err != nil {
-			return fmt.Errorf("error while getting commits for pr %v: %w", pr.Number, err)
-		}
-
-		commitIdsLen := len(commitIds)
-
-		log.Printf("[pullreq][%s][%d/%d] for PR #%v got commit list of size %v",
-			langCode, prIndex+1, prsLen, pr.Number, commitIdsLen)
-
-		for commitIndex, commitID := range commitIds {
-			log.Printf("[pullreq][%s][%d/%d][%d/%d] getting file list for commit: %v",
-				langCode, prIndex+1, prsLen, commitIndex+1, commitIdsLen, commitID)
-
-			commitFiles, err := p.fetchCommitFiles(ctx, langCode, commitID)
-			if err != nil {
-				return fmt.Errorf("error while getting files for commit id %v: %w", commitID, err)
-			}
-
-			log.Printf("[pullreq][%s][%d/%d][%d/%d] for commit %v got file list of size %v",
-				langCode, prIndex+1, prsLen, commitIndex+1, commitIdsLen, commitID, len(commitFiles.Files))
-
-			prsFiles[pr.Number] = append(prsFiles[pr.Number], commitFiles.Files...)
-		}
-	}
-
-	obligatoryPathPrefix := filepath.Join("content", langCode)
-	filePRs := p.convertToFilePRs(prsFiles, obligatoryPathPrefix)
-
-	if err := p.storage.StoreLangIndex(langCode, filePRs); err != nil {
-		return fmt.Errorf("error while storing %v index: %w", langCode, err)
+func (p *FilePRIndex) writeLangIndex(langCode string, filePRs FilePRIndexData) error {
+	if err := p.cacheStorage.Write(
+		FilePRsIndexCacheBucket(langCode),
+		FilePRsIndexCacheKey(langCode),
+		filePRs,
+	); err != nil {
+		return fmt.Errorf("write file PR index for %s: %w", langCode, err)
 	}
 
 	return nil
 }
 
-// LangIndex returns a map from file names to a list of pull request indices for the given langCode.
-func (p *FilePRFinder) LangIndex(langCode string) (map[string][]int, error) {
-	return p.storage.LangIndex(langCode)
+// RefreshIndex fetches current PR data and rebuilds the file-to-PR index
+// for the given language.
+func (p *FilePRIndex) RefreshIndex(ctx context.Context, langCode string) error {
+	log.Printf("[pullreq][%s] refreshing file PR index", langCode)
+
+	pullRequests, err := p.fetchOpenPRsForLang(ctx, langCode)
+	if err != nil {
+		return fmt.Errorf("fetch open pull requests for %s: %w", langCode, err)
+	}
+
+	log.Printf("[pullreq][%s] fetched %d open pull requests", langCode, len(pullRequests))
+
+	prsFiles, err := p.fetchPRFiles(ctx, langCode, pullRequests)
+	if err != nil {
+		return fmt.Errorf("fetch pull request files for %s: %w", langCode, err)
+	}
+
+	filePRs := p.buildFilePRIndex(prsFiles, langCode)
+
+	log.Printf("[pullreq][%s] built file PR index with %d files", langCode, len(filePRs))
+
+	if err := p.writeLangIndex(langCode, filePRs); err != nil {
+		return fmt.Errorf("store file PR index for %s: %w", langCode, err)
+	}
+
+	log.Printf("[pullreq][%s] file PR index refreshed", langCode)
+
+	return nil
 }
 
-type FilePRFinderFileStorage struct {
-	cacheStore CacheStore
-}
+// LangIndex returns a map from file names to a list of pull request indices for
+// the given langCode.
+func (p *FilePRIndex) LangIndex(langCode string) (FilePRIndexData, error) {
+	bucket := FilePRsIndexCacheBucket(langCode)
+	key := FilePRsIndexCacheKey(langCode)
 
-func (sto *FilePRFinderFileStorage) LangIndex(langCode string) (map[string][]int, error) {
-	return proxycache.Get(
-		context.Background(),
-		sto.cacheStore,
-		filePrsIndexBucketName(langCode),
-		langCode,
-		nil,
-		func(ctx context.Context) (map[string][]int, error) {
-			return nil, nil
-		},
-	)
-}
+	var filePRs FilePRIndexData
 
-func (sto *FilePRFinderFileStorage) StoreLangIndex(langCode string, filePRs map[string][]int) error {
-	return sto.cacheStore.Write(
-		filePrsIndexBucketName(langCode),
-		langCode,
-		filePRs,
-	)
-}
+	exists, err := p.cacheStorage.Read(bucket, key, &filePRs)
+	if err != nil {
+		return nil, fmt.Errorf("read file PR index for %s: %w", langCode, err)
+	}
 
-func filePrsIndexBucketName(langCode string) string {
-	return fmt.Sprintf("lang/%s/%s", langCode, BucketFilePrsIndex)
+	if !exists {
+		return nil, fmt.Errorf("%w: %s", ErrLangIndexNotFound, langCode)
+	}
+
+	return filePRs, nil
 }

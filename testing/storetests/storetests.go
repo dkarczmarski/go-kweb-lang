@@ -5,6 +5,7 @@ func MockReadReturn[T any](found bool, value T, err error) func(_, _ string, v a
 		if out, ok := v.(*T); ok {
 			*out = value
 		}
+
 		return found, err
 	}
 }

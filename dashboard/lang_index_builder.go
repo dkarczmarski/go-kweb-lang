@@ -6,10 +6,10 @@ type LangCodesProvider interface {
 	LangCodes() ([]string, error)
 }
 
-func buildLangIndex(langCodesProvider LangCodesProvider) (*LangIndex, error) {
+func BuildLangIndex(langCodesProvider LangCodesProvider) (LangIndex, error) {
 	langCodes, err := langCodesProvider.LangCodes()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get available languages: %w", err)
+		return LangIndex{}, fmt.Errorf("failed to get available languages: %w", err)
 	}
 
 	items := make([]LangIndexItem, 0, len(langCodes))
@@ -19,7 +19,7 @@ func buildLangIndex(langCodesProvider LangCodesProvider) (*LangIndex, error) {
 		})
 	}
 
-	return &LangIndex{
+	return LangIndex{
 		Items: items,
 	}, nil
 }

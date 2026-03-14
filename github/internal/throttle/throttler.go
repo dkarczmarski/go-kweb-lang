@@ -2,6 +2,7 @@ package throttle
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -13,6 +14,7 @@ type Throttler struct {
 }
 
 func NewThrottler(interval time.Duration) *Throttler {
+	//nolint:exhaustruct
 	return &Throttler{interval: interval}
 }
 
@@ -30,6 +32,7 @@ func (t *Throttler) Throttle(ctx context.Context) error {
 	}
 
 	t.last = time.Now()
+
 	return nil
 }
 
@@ -39,7 +42,7 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("sleep interrupted by context: %w", ctx.Err())
 	case <-timer.C:
 		return nil
 	}

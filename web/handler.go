@@ -2,143 +2,145 @@ package web
 
 import (
 	_ "embed"
-	"errors"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 
 	"github.com/dkarczmarski/go-kweb-lang/dashboard"
-
-	"github.com/dkarczmarski/go-kweb-lang/web/internal/weberror"
-
-	"github.com/dkarczmarski/go-kweb-lang/web/internal/reqhelper"
-	"github.com/dkarczmarski/go-kweb-lang/web/internal/view"
 )
 
 //go:embed lang_codes.html
 var langCodesHTML string
 
-func createListLangCodesHandler(dashboardStore *dashboard.Store) func(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.New("lang_codes.html")
-	htmlTmpl := template.Must(tmpl.Parse(langCodesHTML))
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		dashboardIndex, err := dashboardStore.ReadDashboardIndex()
-		if err != nil {
-			logAndHTTPError(w, "failed to get language codes", err, http.StatusInternalServerError)
-
-			return
-		}
-
-		model := view.BuildLangCodesModel(dashboardIndex)
-
-		if err := htmlTmpl.Execute(w, model); err != nil {
-			logAndHTTPError(w, "failed to execute template", err, http.StatusInternalServerError)
-
-			return
-		}
-	}
-}
-
 //go:embed lang_dashboard.html
 var langDashboardHTML string
 
-func createLangDashboardHandler(dashboardStore *dashboard.Store) func(w http.ResponseWriter, r *http.Request) {
-	funcMap := template.FuncMap{
-		"truncate": truncate,
-	}
+type Handler struct {
+	dashboardStore *dashboard.Store
+	langCodesTmpl  *template.Template
+	dashboardTmpl  *template.Template
+}
 
-	tmpl := template.New("lang_dashboard.html").Funcs(funcMap)
-	htmlTmpl := template.Must(tmpl.Parse(langDashboardHTML))
+func NewHandler(dashboardStore *dashboard.Store) *Handler {
+	langCodesTemplate := template.Must(template.New("lang_codes.html").Parse(langCodesHTML))
+	dashboardTemplate := template.Must(template.New("lang_dashboard.html").Parse(langDashboardHTML))
 
-	return func(w http.ResponseWriter, r *http.Request) {
-		model, err := handleLangDashboardRequest(w, r, dashboardStore)
-		if err != nil {
-			logAndHTTPError(w, "failed to prepare view model", err, http.StatusInternalServerError)
-
-			return
-		}
-
-		if err := htmlTmpl.Execute(w, model); err != nil {
-			logAndHTTPError(w, "failed to execute template", err, http.StatusInternalServerError)
-
-			return
-		}
+	return &Handler{
+		dashboardStore: dashboardStore,
+		langCodesTmpl:  langCodesTemplate,
+		dashboardTmpl:  dashboardTemplate,
 	}
 }
 
-func createLangDashboardTableHandler(dashboardStore *dashboard.Store) func(w http.ResponseWriter, r *http.Request) {
-	funcMap := template.FuncMap{
-		"truncate": truncate,
-	}
-
-	tmpl := template.New("lang_dashboard.html").Funcs(funcMap)
-	htmlTmpl := template.Must(tmpl.Parse(langDashboardHTML))
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		err := r.ParseForm()
-		if err != nil {
-			logAndHTTPError(w, "failed to parse form", err, http.StatusBadRequest)
-
-			return
-		}
-
-		model, err := handleLangDashboardRequest(w, r, dashboardStore)
-		if err != nil {
-			logAndHTTPError(w, "failed to prepare view model", err, http.StatusInternalServerError)
-
-			return
-		}
-
-		if err := htmlTmpl.ExecuteTemplate(w, "table", model); err != nil {
-			logAndHTTPError(w, "failed to execute template", err, http.StatusInternalServerError)
-
-			return
-		}
-	}
+func (handler *Handler) Register(mux *http.ServeMux) {
+	mux.HandleFunc("GET /", handler.ListLangCodes)
+	mux.HandleFunc("GET /lang/{code}", handler.ShowLangDashboard)
+	mux.HandleFunc("POST /lang/{code}", handler.ShowLangDashboardTable)
 }
 
-func truncate(s string, length int) string {
-	if len(s) > length {
-		return s[:length]
-	}
-	return s
-}
-
-func handleLangDashboardRequest(
-	w http.ResponseWriter,
-	r *http.Request,
-	dashboardStore *dashboard.Store,
-) (*view.LangDashboardViewModel, error) {
-	requestModel, err := reqhelper.ParseListLangDashboardRequest(r)
+func (handler *Handler) ListLangCodes(responseWriter http.ResponseWriter, _ *http.Request) {
+	index, err := handler.dashboardStore.ReadDashboardIndex()
 	if err != nil {
-		return nil, err
+		log.Printf("list lang codes: %v", err)
+		http.Error(
+			responseWriter,
+			http.StatusText(http.StatusInternalServerError),
+			http.StatusInternalServerError,
+		)
+
+		return
 	}
 
-	langDashboard, err := dashboardStore.ReadDashboard(requestModel.LangCode)
+	pageViewModel := BuildLangCodesPageVM(index)
+	if err := handler.langCodesTmpl.Execute(responseWriter, pageViewModel); err != nil {
+		log.Printf("render lang codes: %v", err)
+		http.Error(
+			responseWriter,
+			http.StatusText(http.StatusInternalServerError),
+			http.StatusInternalServerError,
+		)
+
+		return
+	}
+}
+
+func (handler *Handler) ShowLangDashboard(
+	responseWriter http.ResponseWriter,
+	request *http.Request,
+) {
+	pageViewModel, err := handler.prepareLangDashboardVM(request)
 	if err != nil {
-		return nil, err
+		log.Printf("prepare dashboard model: %v", err)
+		http.Error(
+			responseWriter,
+			http.StatusText(http.StatusInternalServerError),
+			http.StatusInternalServerError,
+		)
+
+		return
 	}
 
-	handleHtmx(w, r, requestModel)
+	responseWriter.Header().Set("HX-Push", pageViewModel.PageURL)
 
-	langDashboardFilesModel := view.BuildLangDashboardFilesModel(langDashboard.LangCode, langDashboard.Items)
+	if err := handler.dashboardTmpl.Execute(responseWriter, pageViewModel); err != nil {
+		log.Printf("render dashboard: %v", err)
+		http.Error(
+			responseWriter,
+			http.StatusText(http.StatusInternalServerError),
+			http.StatusInternalServerError,
+		)
 
-	return view.BuildLangDashboardModel(r, requestModel, langDashboardFilesModel)
-}
-
-func handleHtmx(w http.ResponseWriter, r *http.Request, requestModel reqhelper.RequestModel) {
-	url := view.BuildURL(r.URL.Path, requestModel)
-	w.Header().Set("HX-Push", url)
-}
-
-func logAndHTTPError(w http.ResponseWriter, msg string, err error, code int) {
-	log.Printf("%s: %v", msg, err)
-
-	var webError *weberror.WebError
-	if errors.As(err, &webError) {
-		http.Error(w, http.StatusText(webError.HTTPCode), webError.HTTPCode)
-	} else {
-		http.Error(w, http.StatusText(code), code)
+		return
 	}
+}
+
+func (handler *Handler) ShowLangDashboardTable(
+	responseWriter http.ResponseWriter,
+	request *http.Request,
+) {
+	pageViewModel, err := handler.prepareLangDashboardVM(request)
+	if err != nil {
+		log.Printf("prepare dashboard table model: %v", err)
+		http.Error(
+			responseWriter,
+			http.StatusText(http.StatusInternalServerError),
+			http.StatusInternalServerError,
+		)
+
+		return
+	}
+
+	responseWriter.Header().Set("HX-Push", pageViewModel.PageURL)
+
+	if err := handler.dashboardTmpl.ExecuteTemplate(responseWriter, "table", pageViewModel); err != nil {
+		log.Printf("render dashboard table: %v", err)
+		http.Error(
+			responseWriter,
+			http.StatusText(http.StatusInternalServerError),
+			http.StatusInternalServerError,
+		)
+
+		return
+	}
+}
+
+func (handler *Handler) prepareLangDashboardVM(request *http.Request) (LangDashboardPageVM, error) {
+	if err := request.ParseForm(); err != nil {
+		return LangDashboardPageVM{}, fmt.Errorf("parse lang dashboard form: %w", err)
+	}
+
+	langCode := request.PathValue("code")
+	params := ParseLangDashboardParams(langCode, request.Form)
+
+	dashboardData, err := handler.dashboardStore.ReadDashboard(langCode)
+	if err != nil {
+		return LangDashboardPageVM{}, fmt.Errorf("read dashboard for lang code %s: %w", langCode, err)
+	}
+
+	return BuildLangDashboardPageVM(LangDashboardBuildInput{
+		PagePath:  request.URL.Path,
+		Dashboard: dashboardData,
+		Params:    params,
+	}), nil
 }

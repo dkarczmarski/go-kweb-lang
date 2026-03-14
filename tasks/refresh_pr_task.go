@@ -9,24 +9,23 @@ import (
 )
 
 type RefreshPRTask struct {
-	filePRFinder      *pullreq.FilePRFinder
+	filePRIndex       *pullreq.FilePRIndex
 	langCodesProvider *langcnt.LangCodesProvider
 }
 
 func NewRefreshPRTask(
-	filePRFinder *pullreq.FilePRFinder,
+	filePRIndex *pullreq.FilePRIndex,
 	langCodesProvider *langcnt.LangCodesProvider,
 ) *RefreshPRTask {
 	return &RefreshPRTask{
-		filePRFinder:      filePRFinder,
+		filePRIndex:       filePRIndex,
 		langCodesProvider: langCodesProvider,
 	}
 }
 
 func (t *RefreshPRTask) Run(ctx context.Context, langCode string) error {
-	err := t.filePRFinder.Update(ctx, langCode)
-	if err != nil {
-		return fmt.Errorf("error while updating PRs for lang %v: %w", langCode, err)
+	if err := t.filePRIndex.RefreshIndex(ctx, langCode); err != nil {
+		return fmt.Errorf("refresh PR index for lang code %s: %w", langCode, err)
 	}
 
 	return nil

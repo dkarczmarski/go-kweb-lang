@@ -7,11 +7,12 @@ import (
 	"github.com/dkarczmarski/go-kweb-lang/github"
 	"github.com/dkarczmarski/go-kweb-lang/githubmon"
 	"github.com/dkarczmarski/go-kweb-lang/githubmon/internal/mocks"
-
 	"go.uber.org/mock/gomock"
 )
 
 func TestMonitor_Check(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		name      string
 		initMocks func(ctx context.Context,
@@ -60,7 +61,7 @@ func TestMonitor_Check(t *testing.T) {
 				githubMock *mocks.MockGitHub,
 				langMock *mocks.MockLangProvider,
 				storageMock *mocks.MockMonitorStorage,
-				task *mocks.MockOnUpdateTask,
+				_ *mocks.MockOnUpdateTask,
 			) {
 				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("DT-0", nil)
 				githubMock.EXPECT().GetLatestCommit(ctx).
@@ -148,9 +149,9 @@ func TestMonitor_Check(t *testing.T) {
 			name: "pre-check: PR unchanged so no language scan and no writes",
 			initMocks: func(ctx context.Context,
 				githubMock *mocks.MockGitHub,
-				langMock *mocks.MockLangProvider,
+				_ *mocks.MockLangProvider,
 				storageMock *mocks.MockMonitorStorage,
-				task *mocks.MockOnUpdateTask,
+				_ *mocks.MockOnUpdateTask,
 			) {
 				storageMock.EXPECT().ReadLastRepoUpdatedAt().Return("DT-0", nil)
 				githubMock.EXPECT().GetLatestCommit(ctx).
@@ -166,7 +167,9 @@ func TestMonitor_Check(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			t.Parallel()
+
+			ctx := t.Context()
 
 			ctrl := gomock.NewController(t)
 

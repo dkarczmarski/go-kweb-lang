@@ -2,10 +2,19 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/dkarczmarski/go-kweb-lang/dashboard"
+)
+
+const (
+	readHeaderTimeout = 5 * time.Second
+	readTimeout       = 10 * time.Second
+	writeTimeout      = 10 * time.Second
+	idleTimeout       = 60 * time.Second
+	maxHeaderBytes    = 50 * 1024
 )
 
 type Server struct {
@@ -14,18 +23,18 @@ type Server struct {
 
 func NewServer(webHTTPAddr string, dashboardStore *dashboard.Store) *Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", createListLangCodesHandler(dashboardStore))
-	mux.HandleFunc("GET /lang/{code}", createLangDashboardHandler(dashboardStore))
-	mux.HandleFunc("POST /lang/{code}", createLangDashboardTableHandler(dashboardStore))
+	handler := NewHandler(dashboardStore)
+	handler.Register(mux)
 
+	//nolint:exhaustruct
 	httpServer := &http.Server{
 		Addr:              webHTTPAddr,
 		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       60 * time.Second,
-		MaxHeaderBytes:    50 * 1024,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
+		MaxHeaderBytes:    maxHeaderBytes,
 	}
 
 	return &Server{
@@ -33,10 +42,20 @@ func NewServer(webHTTPAddr string, dashboardStore *dashboard.Store) *Server {
 	}
 }
 
-func (srv *Server) ListenAndServe() error {
-	return srv.httpServer.ListenAndServe()
+func (server *Server) ListenAndServe() error {
+	err := server.httpServer.ListenAndServe()
+	if err != nil {
+		return fmt.Errorf("listen and serve web server: %w", err)
+	}
+
+	return nil
 }
 
-func (srv *Server) Shutdown(ctx context.Context) error {
-	return srv.httpServer.Shutdown(ctx)
+func (server *Server) Shutdown(ctx context.Context) error {
+	err := server.httpServer.Shutdown(ctx)
+	if err != nil {
+		return fmt.Errorf("shutdown web server: %w", err)
+	}
+
+	return nil
 }
