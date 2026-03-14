@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"github.com/dkarczmarski/go-kweb-lang/git"
 	"github.com/dkarczmarski/go-kweb-lang/gitseek"
 	"github.com/dkarczmarski/go-kweb-lang/pullreq"
 )
@@ -13,8 +14,9 @@ func buildDashboard(
 	langCode string,
 	seekerFileInfos []gitseek.FileInfo,
 	prIndex pullreq.FilePRIndexData,
-) *Dashboard {
+) Dashboard {
 	items := make([]Item, 0, len(seekerFileInfos))
+
 	for _, seekerFileInfo := range seekerFileInfos {
 		prs := prIndex[seekerFileInfo.LangPath]
 
@@ -30,15 +32,19 @@ func buildDashboard(
 		if !containsItem(items, prFilePath) {
 			items = append(items, Item{
 				FileInfo: gitseek.FileInfo{
-					LangPath:   prFilePath,
-					FileStatus: StatusWaitingForReview,
+					LangPath:        prFilePath,
+					FileStatus:      StatusWaitingForReview,
+					LangLastCommit:  git.CommitInfo{}, //nolint:exhaustruct
+					LangMergeCommit: nil,
+					LangForkCommit:  nil,
+					EnUpdates:       nil,
 				},
 				PRs: prs,
 			})
 		}
 	}
 
-	return &Dashboard{
+	return Dashboard{
 		LangCode: langCode,
 		Items:    items,
 	}

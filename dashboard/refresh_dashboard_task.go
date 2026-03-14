@@ -42,13 +42,14 @@ func (t *RefreshTask) Run(ctx context.Context) error {
 	}
 
 	for _, langCode := range langCodes {
-		langDashboard, err := t.buildDashboard(ctx, langCode)
-		if err != nil {
-			return err
+		langDashboard, buildErr := t.buildDashboard(ctx, langCode)
+		if buildErr != nil {
+			return buildErr
 		}
 
-		if err := t.store.WriteDashboard(langDashboard); err != nil {
-			return fmt.Errorf("failed to store language dashboard: %w", err)
+		writeErr := t.store.WriteDashboard(langDashboard)
+		if writeErr != nil {
+			return fmt.Errorf("failed to write dashboard for lang code %s: %w", langCode, writeErr)
 		}
 	}
 
@@ -57,40 +58,63 @@ func (t *RefreshTask) Run(ctx context.Context) error {
 		return err
 	}
 
-	if err := t.store.WriteDashboardIndex(langIndex); err != nil {
-		return fmt.Errorf("failed to store dashboard index: %w", err)
+	writeErr := t.store.WriteDashboardIndex(langIndex)
+	if writeErr != nil {
+		return fmt.Errorf("failed to write dashboard index: %w", writeErr)
 	}
 
 	return nil
 }
 
-func (t *RefreshTask) buildDashboard(ctx context.Context, langCode string) (*Dashboard, error) {
+func (t *RefreshTask) buildDashboard(ctx context.Context, langCode string) (Dashboard, error) {
 	pairs, err := t.pairProviders.ListPairs(langCode)
 	if err != nil {
-		return nil, fmt.Errorf("error while listing file pairs for lang code %s: %w", langCode, err)
+		return Dashboard{}, fmt.Errorf(
+			"error while listing file pairs for lang code %s: %w",
+			langCode,
+			err,
+		)
 	}
 
 	seekerFileInfos := make([]gitseek.FileInfo, 0, len(pairs))
+
 	for i, pair := range pairs {
-		log.Printf("[gitseek][%s][%d/%d] checking for updates for %v", langCode, i+1, len(pairs), pair.LangPath)
-		fileInfo, err := t.gitSeeker.CheckLang(ctx, langCode, gitseek.Pair{
+		log.Printf(
+			"[gitseek][%s][%d/%d] checking for updates for %v",
+			langCode,
+			i+1,
+			len(pairs),
+			pair.LangPath,
+		)
+
+		fileInfo, checkErr := t.gitSeeker.CheckLang(ctx, langCode, gitseek.Pair{
 			EnPath:   pair.EnPath,
 			LangPath: pair.LangPath,
 		})
-		if err != nil {
-			return nil, fmt.Errorf("error while checking file pair %s for the language code %s: %w", pair.LangPath, langCode, err)
+		if checkErr != nil {
+			return Dashboard{}, fmt.Errorf(
+				"error while checking file pair %s for the language code %s: %w",
+				pair.LangPath,
+				langCode,
+				checkErr,
+			)
 		}
+
 		seekerFileInfos = append(seekerFileInfos, fileInfo)
 	}
 
 	prIndex, err := t.filePRIndex.LangIndex(langCode)
 	if err != nil {
-		return nil, fmt.Errorf("error while getting pull request index for lang code %s: %w", langCode, err)
+		return Dashboard{}, fmt.Errorf(
+			"error while getting pull request index for lang code %s: %w",
+			langCode,
+			err,
+		)
 	}
 
 	return buildDashboard(langCode, seekerFileInfos, prIndex), nil
 }
 
-func (t *RefreshTask) buildLangIndex() (*LangIndex, error) {
+func (t *RefreshTask) buildLangIndex() (LangIndex, error) {
 	return buildLangIndex(t.langCodesProvider)
 }

@@ -1,8 +1,6 @@
 package dashboard
 
-import (
-	"github.com/dkarczmarski/go-kweb-lang/gitseek"
-)
+import "github.com/dkarczmarski/go-kweb-lang/gitseek"
 
 type Dashboard struct {
 	LangCode string

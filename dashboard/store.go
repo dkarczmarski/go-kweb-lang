@@ -1,68 +1,106 @@
 package dashboard
 
-import (
-	"context"
-	"fmt"
+import "fmt"
 
-	"github.com/dkarczmarski/go-kweb-lang/proxycache"
-)
-
-// CacheStore is an interface used to decouple this package from the concrete store.FileStore implementation.
-type CacheStore interface {
+// CacheStorage decouples dashboard storage from the concrete cache implementation.
+type CacheStorage interface {
 	Read(bucket, key string, buff any) (bool, error)
 	Write(bucket, key string, data any) error
-	Delete(bucket, key string) error
 }
 
 type Store struct {
-	cacheStore CacheStore
+	cacheStorage CacheStorage
 }
 
-func NewStore(cacheStore CacheStore) *Store {
+func NewStore(cacheStorage CacheStorage) *Store {
 	return &Store{
-		cacheStore: cacheStore,
+		cacheStorage: cacheStorage,
 	}
 }
 
 const (
-	langIndexBucket = "dashboard-index"
-	singleKey       = ""
+	dashboardIndexBucketName = "dashboard-index"
+	singleCacheKey           = ""
 )
 
-func (s *Store) WriteDashboard(dashboard *Dashboard) error {
-	return s.cacheStore.Write(langDashboardBucket(dashboard.LangCode), singleKey, dashboard)
+func LangIndexBucket() string {
+	return dashboardIndexBucketName
 }
 
-func (s *Store) ReadDashboard(langCode string) (*Dashboard, error) {
-	return proxycache.Get(
-		context.Background(), // this context is not used
-		s.cacheStore,
-		langDashboardBucket(langCode),
-		singleKey,
-		nil,
-		func(_ context.Context) (*Dashboard, error) {
-			return &Dashboard{}, nil
-		},
-	)
+func LangIndexKey() string {
+	return singleCacheKey
 }
 
-func (s *Store) WriteDashboardIndex(langIndex *LangIndex) error {
-	return s.cacheStore.Write(langIndexBucket, singleKey, langIndex)
-}
-
-func (s *Store) ReadDashboardIndex() (*LangIndex, error) {
-	return proxycache.Get(
-		context.Background(), // this context is not used
-		s.cacheStore,
-		langIndexBucket,
-		singleKey,
-		nil,
-		func(_ context.Context) (*LangIndex, error) {
-			return &LangIndex{}, nil
-		},
-	)
-}
-
-func langDashboardBucket(langCode string) string {
+func LangDashboardBucket(langCode string) string {
 	return fmt.Sprintf("lang/%s/dashboard", langCode)
+}
+
+func LangDashboardKey() string {
+	return singleCacheKey
+}
+
+func (s *Store) WriteDashboard(dashboard Dashboard) error {
+	bucket := LangDashboardBucket(dashboard.LangCode)
+	key := LangDashboardKey()
+
+	err := s.cacheStorage.Write(bucket, key, &dashboard)
+	if err != nil {
+		return fmt.Errorf("write dashboard to cache store bucket=%q key=%q: %w", bucket, key, err)
+	}
+
+	return nil
+}
+
+func (s *Store) ReadDashboard(langCode string) (Dashboard, error) {
+	var (
+		dashboard Dashboard
+		empty     Dashboard
+	)
+
+	bucket := LangDashboardBucket(langCode)
+	key := LangDashboardKey()
+
+	found, err := s.cacheStorage.Read(bucket, key, &dashboard)
+	if err != nil {
+		return empty, fmt.Errorf("read dashboard from cache store bucket=%q key=%q: %w", bucket, key, err)
+	}
+
+	if !found {
+		return empty, nil
+	}
+
+	return dashboard, nil
+}
+
+func (s *Store) WriteDashboardIndex(langIndex LangIndex) error {
+	bucket := LangIndexBucket()
+	key := LangIndexKey()
+
+	err := s.cacheStorage.Write(bucket, key, &langIndex)
+	if err != nil {
+		return fmt.Errorf("write dashboard index to cache store bucket=%q key=%q: %w", bucket, key, err)
+	}
+
+	return nil
+}
+
+func (s *Store) ReadDashboardIndex() (LangIndex, error) {
+	var (
+		langIndex LangIndex
+		empty     LangIndex
+	)
+
+	bucket := LangIndexBucket()
+	key := LangIndexKey()
+
+	found, err := s.cacheStorage.Read(bucket, key, &langIndex)
+	if err != nil {
+		return empty, fmt.Errorf("read dashboard index from cache store bucket=%q key=%q: %w", bucket, key, err)
+	}
+
+	if !found {
+		return empty, nil
+	}
+
+	return langIndex, nil
 }
