@@ -1,15 +1,50 @@
 linters:
-  enable:
-    - govet
-    - staticcheck
-    - errcheck
-    - gofmt
-    - goimports
-    - gosimple
-    - unused
-    - dupl
-    - gocyclo
-    - stylecheck
+  enable-all: true
+  disable:
+    - tenv
+
+linters-settings:
+  ireturn:
+    allow:
+      - anon
+      - error
+      - stdlib
+  nolintlint:
+    allow-unused: true
+    require-explanation: false
+    require-specific: true
+  lll:
+    line-length: 120
+  depguard:
+    rules:
+      main:
+        list-mode: lax
+        files:
+          - $all
+          - "!$test"
+        allow:
+          - $gostd
+          - $gomod
+
+      tests:
+        list-mode: lax
+        files:
+          - $test
+        allow:
+          - $gostd
+          - $gomod
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - funlen
+        - err113
+        - exhaustruct
+        - cyclop
+        - gocognit
+        - maintidx
+        - varnamelen
 
 output:
   formats:
