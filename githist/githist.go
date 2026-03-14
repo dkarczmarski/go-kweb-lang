@@ -187,7 +187,7 @@ func (gh *GitHist) PullRefresh(ctx context.Context) ([]string, error) {
 	}
 
 	if len(freshCommits) > 0 {
-		if err := gh.invalidateMainBranchCommits(); err != nil {
+		if err := gh.InvalidateMainBranchCommits(); err != nil {
 			return nil, fmt.Errorf("error while invalidating main branch commits: %w", err)
 		}
 	}
@@ -255,7 +255,7 @@ func (gh *GitHist) PullRefresh(ctx context.Context) ([]string, error) {
 	return changedFiles, nil
 }
 
-func (gh *GitHist) invalidateMainBranchCommits() error {
+func (gh *GitHist) InvalidateMainBranchCommits() error {
 	if err := gh.cache.Delete(bucketMainBranchCommits, ""); err != nil {
 		return fmt.Errorf("delete main branch commits cache: %w", err)
 	}
