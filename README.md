@@ -175,7 +175,7 @@ the entire frontend part of this tool consists of only two pages:
 
 the dashboard page mainly consists of a single table with the following columns:
 
-**Lang Relative Path** - the relative path to the file, starting from the directory of the given language, i.e., `content/{lang_code}`. in addition to the path, key timestamps are shown: the date of the last commit and, if the commit was made in a separate branch, the dates of the branch creation (fork) and the merge into main. these timestamps can often be spread weeks or even months apart. these dates are especially important if updates to the original file were made during the lifetime of such a branch. in other words, if subsequent updates to the original overlap with the language branch
+**Lang Path** - the full path to the language file in the repository, typically in the form `content/{lang_code}/...`. in addition to the path, key timestamps are shown: the date of the last commit and, if the commit was made in a separate branch, the dates of the branch creation (fork) and the merge into main. these timestamps can often be spread weeks or even months apart. these dates are especially important if updates to the original file were made during the lifetime of such a branch. in other words, if subsequent updates to the original overlap with the language branch.
 
 to the right of the file’s relative path, there is a `#` link that renders the dashboard only for this specific file. such a link can be useful if you want to share information about a single specific file with someone.
 
@@ -187,7 +187,7 @@ to the right of the file’s relative path, there is a `#` link that renders the
 - **waiting-for-review** - *the language file* has not yet been merged into the main branch and is waiting for review.
 - *(no status)* - none of the above situations apply. the file may still appear on the dashboard if there is an open PR associated with it.
 
-**EN Updates** - the list of *updates* to the corresponding *original file* that were made after the last modification date of *the language file*. to make it easier to analyze changes (especially in the case of false positives), *updates* are grouped by the key timestamps of *the language file* (fork commit date, last commit date, merge commit date). in a special case, if *the original file* existed but has since been deleted, the date of the commit that deleted it may even be earlier than the fork commit of the language file. if *the update* was made in a separate branch, both the commit introducing the change and the merge commit that merged it are shown. this can be very useful if the commit and merge commit are far apart in time.
+**En Updates** - the list of *updates* to the corresponding *original file* that were made after the last modification date of *the language file*. to make it easier to analyze changes (especially in the case of false positives), *updates* are grouped by the key timestamps of *the language file* (fork commit date, last commit date, merge commit date). in a special case, if *the original file* existed but has since been deleted, the date of the commit that deleted it may even be earlier than the fork commit of the language file. if *the update* was made in a separate branch, both the commit introducing the change and the merge commit that merged it are shown. this can be very useful if the commit and merge commit are far apart in time.
 
 **PR** - the list of pull requests related to this file that have the `language/{lang_code}` label.
 
