@@ -18,6 +18,13 @@ dev-install-lint:
 dev-install-gofumpt:
 	go install mvdan.cc/gofumpt@latest
 
+dev-install-goreleaser:
+	go install github.com/goreleaser/goreleaser/v2@latest
+
+dev-goreleaser-verify:
+	goreleaser check
+	goreleaser release --snapshot --clean
+
 dev-lint:
 	golangci-lint run
 
