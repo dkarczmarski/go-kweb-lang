@@ -530,6 +530,59 @@ func TestGitSeek_CheckLang_UsesLangLastCommitAsStartPointWhenForkIsNil(t *testin
 	}
 }
 
+func TestGitSeek_CheckLang_SetsStatusLangFileMissing(t *testing.T) {
+	t.Parallel()
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{
+		fileExistsFunc: func(path string) (bool, error) {
+			if path == "content/pl/foo.md" {
+				return false, nil
+			}
+
+			return true, nil
+		},
+	}
+	hist := &fakeGitRepoHist{}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	got, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+	if err != nil {
+		t.Fatalf("CheckLang returned error: %v", err)
+	}
+
+	if got.FileStatus != gitseek.StatusLangFileMissing {
+		t.Fatalf("unexpected status: got %q, want %q", got.FileStatus, gitseek.StatusLangFileMissing)
+	}
+
+	if len(repo.findFileLastCommitCalls) != 0 {
+		t.Fatalf("FindFileLastCommit should not be called when lang file is missing")
+	}
+
+	if len(repo.findFileCommitsAfterCalls) != 0 {
+		t.Fatalf("FindFileCommitsAfter should not be called when lang file is missing")
+	}
+
+	if len(hist.findMergeCommitCalls) != 0 || len(hist.findForkCommitCalls) != 0 {
+		t.Fatalf("history methods should not be called when lang file is missing")
+	}
+}
+
 func TestGitSeek_CheckLang_SetsStatusEnFileDoesNotExist(t *testing.T) {
 	t.Parallel()
 
@@ -570,6 +623,50 @@ func TestGitSeek_CheckLang_SetsStatusLangFileUpToDateWhenEnFileExistsAndHasNoUpd
 	}
 }
 
+func TestGitSeek_CheckLang_ReturnsErrorWhenLangFileExistsCheckFails(t *testing.T) {
+	t.Parallel()
+
+	expectedErr := errors.New("lang file exists failed")
+
+	cache := &fakeCacheStorage{
+		readFunc: func(_, _ string, _ any) (bool, error) {
+			return false, nil
+		},
+		writeFunc: func(_, _ string, _ any) error {
+			return nil
+		},
+		deleteFunc: func(_, _ string) error {
+			return nil
+		},
+	}
+
+	repo := &fakeGitRepo{
+		fileExistsFunc: func(path string) (bool, error) {
+			if path == "content/pl/foo.md" {
+				return false, expectedErr
+			}
+
+			return true, nil
+		},
+	}
+	hist := &fakeGitRepoHist{}
+
+	gs := gitseek.New(repo, hist, cache)
+
+	_, err := gs.CheckLang(t.Context(), "pl", gitseek.Pair{
+		EnPath:   "content/en/foo.md",
+		LangPath: "content/pl/foo.md",
+	})
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestGitSeek_CheckLang_ReturnsErrorWhenFindFileLastCommitFails(t *testing.T) {
 	t.Parallel()
 
@@ -588,6 +685,13 @@ func TestGitSeek_CheckLang_ReturnsErrorWhenFindFileLastCommitFails(t *testing.T)
 	}
 
 	repo := &fakeGitRepo{
+		fileExistsFunc: func(path string) (bool, error) {
+			if path == "content/pl/foo.md" {
+				return true, nil
+			}
+
+			return true, nil
+		},
 		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
 			return git.CommitInfo{}, expectedErr
 		},
@@ -628,6 +732,13 @@ func TestGitSeek_CheckLang_ReturnsErrorWhenFindMergeCommitForLangFails(t *testin
 	}
 
 	repo := &fakeGitRepo{
+		fileExistsFunc: func(path string) (bool, error) {
+			if path == "content/pl/foo.md" {
+				return true, nil
+			}
+
+			return true, nil
+		},
 		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
 			return git.CommitInfo{CommitID: "lang-last"}, nil
 		},
@@ -672,6 +783,13 @@ func TestGitSeek_CheckLang_ReturnsErrorWhenFindForkCommitFails(t *testing.T) {
 	}
 
 	repo := &fakeGitRepo{
+		fileExistsFunc: func(path string) (bool, error) {
+			if path == "content/pl/foo.md" {
+				return true, nil
+			}
+
+			return true, nil
+		},
 		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
 			return git.CommitInfo{CommitID: "lang-last"}, nil
 		},
@@ -719,6 +837,13 @@ func TestGitSeek_CheckLang_ReturnsErrorWhenFindFileCommitsAfterFails(t *testing.
 	}
 
 	repo := &fakeGitRepo{
+		fileExistsFunc: func(path string) (bool, error) {
+			if path == "content/pl/foo.md" {
+				return true, nil
+			}
+
+			return true, nil
+		},
 		findFileLastCommitFunc: func(_ context.Context, _ string) (git.CommitInfo, error) {
 			return git.CommitInfo{CommitID: "lang-last"}, nil
 		},
@@ -751,10 +876,10 @@ func TestGitSeek_CheckLang_ReturnsErrorWhenFindFileCommitsAfterFails(t *testing.
 	}
 }
 
-func TestGitSeek_CheckLang_ReturnsErrorWhenFileExistsFails(t *testing.T) {
+func TestGitSeek_CheckLang_ReturnsErrorWhenEnFileExistsCheckFails(t *testing.T) {
 	t.Parallel()
 
-	expectedErr := errors.New("file exists failed")
+	expectedErr := errors.New("en file exists failed")
 
 	cache := &fakeCacheStorage{
 		readFunc: func(_, _ string, _ any) (bool, error) {
@@ -775,7 +900,11 @@ func TestGitSeek_CheckLang_ReturnsErrorWhenFileExistsFails(t *testing.T) {
 		findFileCommitsAfterFunc: func(_ context.Context, _, _ string) ([]git.CommitInfo, error) {
 			return nil, nil
 		},
-		fileExistsFunc: func(_ string) (bool, error) {
+		fileExistsFunc: func(path string) (bool, error) {
+			if path == "content/pl/foo.md" {
+				return true, nil
+			}
+
 			return false, expectedErr
 		},
 	}
@@ -932,7 +1061,7 @@ func TestGitSeek_InvalidateFile_ReturnsErrorWhenDeleteFails(t *testing.T) {
 	}
 }
 
-func runCheckLangForStatus(t *testing.T, fileExists bool, enCommitsAfter []git.CommitInfo) gitseek.FileInfo {
+func runCheckLangForStatus(t *testing.T, enFileExists bool, enCommitsAfter []git.CommitInfo) gitseek.FileInfo {
 	t.Helper()
 
 	cache := &fakeCacheStorage{
@@ -954,8 +1083,12 @@ func runCheckLangForStatus(t *testing.T, fileExists bool, enCommitsAfter []git.C
 		findFileCommitsAfterFunc: func(_ context.Context, _, _ string) ([]git.CommitInfo, error) {
 			return enCommitsAfter, nil
 		},
-		fileExistsFunc: func(_ string) (bool, error) {
-			return fileExists, nil
+		fileExistsFunc: func(path string) (bool, error) {
+			if path == "content/pl/foo.md" {
+				return true, nil
+			}
+
+			return enFileExists, nil
 		},
 	}
 

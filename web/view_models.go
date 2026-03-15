@@ -25,6 +25,7 @@ type DashboardFiltersVM struct {
 	ItemsWithPR               FilterLinkVM
 	ItemsEnFileDoesNotExist   FilterLinkVM
 	ItemsEnFileNoLongerExists FilterLinkVM
+	ItemsLangFileMissing      FilterLinkVM
 	ItemsWaitingForReview     FilterLinkVM
 	ItemsLangFileUpToDate     FilterLinkVM
 }

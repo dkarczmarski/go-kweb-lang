@@ -1,3 +1,4 @@
+//nolint:goconst
 package filepairs_test
 
 import (
@@ -48,15 +49,24 @@ func TestContentPairProvider_ListPairs(t *testing.T) {
 
 	provider := filepairs.NewContentPairProvider(fakeContentFilesLister{
 		listFilesFunc: func(path string) ([]string, error) {
-			if path != "content/pl" {
-				t.Fatalf("ListFiles() path = %q, want %q", path, "content/pl")
-			}
+			switch path {
+			case "content/en":
+				return []string{
+					"docs/page1.md",
+					"OWNERS",
+					"docs/page2.md",
+				}, nil
+			case "content/pl":
+				return []string{
+					"docs/page2.md",
+					"OWNERS",
+					"docs/page3.md",
+				}, nil
+			default:
+				t.Fatalf("ListFiles() path = %q, want one of %q or %q", path, "content/en", "content/pl")
 
-			return []string{
-				"docs/page1.md",
-				"OWNERS",
-				"docs/page2.md",
-			}, nil
+				return nil, nil
+			}
 		},
 	})
 
@@ -67,12 +77,16 @@ func TestContentPairProvider_ListPairs(t *testing.T) {
 
 	want := []filepairs.Pair{
 		{
-			EnPath:   "content/en/docs/page1.md",
-			LangPath: "content/pl/docs/page1.md",
-		},
-		{
 			EnPath:   "content/en/docs/page2.md",
 			LangPath: "content/pl/docs/page2.md",
+		},
+		{
+			EnPath:   "content/en/docs/page3.md",
+			LangPath: "content/pl/docs/page3.md",
+		},
+		{
+			EnPath:   "content/en/docs/page1.md",
+			LangPath: "content/pl/docs/page1.md",
 		},
 	}
 
@@ -87,14 +101,23 @@ func TestContentPairProvider_ListPairs(t *testing.T) {
 	}
 }
 
-func TestContentPairProvider_ListPairs_ListFilesError(t *testing.T) {
+func TestContentPairProvider_ListPairs_ListFilesEnError(t *testing.T) {
 	t.Parallel()
 
 	wantErr := errors.New("boom")
 
 	provider := filepairs.NewContentPairProvider(fakeContentFilesLister{
-		listFilesFunc: func(_ string) ([]string, error) {
-			return nil, wantErr
+		listFilesFunc: func(path string) ([]string, error) {
+			switch path {
+			case "content/pl":
+				return []string{"docs/page1.md"}, nil
+			case "content/en":
+				return nil, wantErr
+			default:
+				t.Fatalf("ListFiles() path = %q, want one of %q or %q", path, "content/pl", "content/en")
+
+				return nil, nil
+			}
 		},
 	})
 
@@ -104,12 +127,69 @@ func TestContentPairProvider_ListPairs_ListFilesError(t *testing.T) {
 	}
 }
 
-func TestContentPairProvider_ListPairs_InvalidListedPath(t *testing.T) {
+func TestContentPairProvider_ListPairs_ListFilesLangError(t *testing.T) {
+	t.Parallel()
+
+	wantErr := errors.New("boom")
+
+	provider := filepairs.NewContentPairProvider(fakeContentFilesLister{
+		listFilesFunc: func(path string) ([]string, error) {
+			switch path {
+			case "content/pl":
+				return nil, wantErr
+			default:
+				t.Fatalf("ListFiles() path = %q, want %q", path, "content/pl")
+
+				return nil, nil
+			}
+		},
+	})
+
+	_, err := provider.ListPairs("pl")
+	if err == nil {
+		t.Fatal("ListPairs() error = nil, want error")
+	}
+}
+
+func TestContentPairProvider_ListPairs_InvalidListedEnPath(t *testing.T) {
 	t.Parallel()
 
 	provider := filepairs.NewContentPairProvider(fakeContentFilesLister{
-		listFilesFunc: func(_ string) ([]string, error) {
-			return []string{""}, nil
+		listFilesFunc: func(path string) ([]string, error) {
+			switch path {
+			case "content/pl":
+				return nil, nil
+			case "content/en":
+				return []string{""}, nil
+			default:
+				t.Fatalf("ListFiles() path = %q, want one of %q or %q", path, "content/pl", "content/en")
+
+				return nil, nil
+			}
+		},
+	})
+
+	_, err := provider.ListPairs("pl")
+	if err == nil {
+		t.Fatal("ListPairs() error = nil, want error")
+	}
+}
+
+func TestContentPairProvider_ListPairs_InvalidListedLangPath(t *testing.T) {
+	t.Parallel()
+
+	provider := filepairs.NewContentPairProvider(fakeContentFilesLister{
+		listFilesFunc: func(path string) ([]string, error) {
+			switch path {
+			case "content/pl":
+				return []string{""}, nil
+			case "content/en":
+				return []string{"docs/page1.md"}, nil
+			default:
+				t.Fatalf("ListFiles() path = %q, want one of %q or %q", path, "content/pl", "content/en")
+
+				return nil, nil
+			}
 		},
 	})
 

@@ -101,6 +101,14 @@ func TestBuildLangDashboardPageVM(t *testing.T) {
 		t.Fatal("expected ItemsEnFileNoLongerExists to be active")
 	}
 
+	if viewModel.Filters.ItemsLangFileMissing.Active {
+		t.Fatal("expected ItemsLangFileMissing to be inactive")
+	}
+
+	if viewModel.Filters.ItemsLangFileUpToDate.Active {
+		t.Fatal("expected ItemsLangFileUpToDate to be inactive")
+	}
+
 	if len(viewModel.Table.Rows) != 1 {
 		t.Fatalf("expected 1 row, got %d", len(viewModel.Table.Rows))
 	}

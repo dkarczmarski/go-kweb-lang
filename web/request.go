@@ -11,6 +11,7 @@ const (
 	ItemsTypeWithPR               = "with-pr"
 	ItemsTypeEnFileDoesNotExist   = "en-file-does-not-exist"
 	ItemsTypeEnFileNoLongerExists = "en-file-no-longer-exists"
+	ItemsTypeLangFileMissing      = "lang-file-missing"
 	ItemsTypeWaitingForReview     = "waiting-for-review"
 	ItemsTypeLangFileUpToDate     = "up-to-date"
 )
@@ -61,6 +62,8 @@ func normalizeItemsTypes(values []string) []string {
 			normalized = appendIfMissing(normalized, ItemsTypeEnFileDoesNotExist)
 		case ItemsTypeEnFileNoLongerExists:
 			normalized = appendIfMissing(normalized, ItemsTypeEnFileNoLongerExists)
+		case ItemsTypeLangFileMissing:
+			normalized = appendIfMissing(normalized, ItemsTypeLangFileMissing)
 		case ItemsTypeWaitingForReview:
 			normalized = appendIfMissing(normalized, ItemsTypeWaitingForReview)
 		case ItemsTypeLangFileUpToDate:
@@ -82,7 +85,6 @@ func defaultItemsTypes() []string {
 		ItemsTypeEnFileDoesNotExist,
 		ItemsTypeEnFileNoLongerExists,
 		ItemsTypeWaitingForReview,
-		ItemsTypeLangFileUpToDate,
 	}
 }
 

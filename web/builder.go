@@ -70,6 +70,11 @@ func buildFiltersVM(params LangDashboardParams) DashboardFiltersVM {
 			Value:  ItemsTypeEnFileNoLongerExists,
 			Active: hasItemsType(params.ItemsTypes, ItemsTypeEnFileNoLongerExists),
 		},
+		ItemsLangFileMissing: FilterLinkVM{
+			Label:  "lang file missing",
+			Value:  ItemsTypeLangFileMissing,
+			Active: hasItemsType(params.ItemsTypes, ItemsTypeLangFileMissing),
+		},
 		ItemsWaitingForReview: FilterLinkVM{
 			Label:  "waiting for review",
 			Value:  ItemsTypeWaitingForReview,

@@ -30,6 +30,9 @@ const (
 	// StatusLangFileUpToDate indicates that the language file is up-to-date
 	// with the English source file.
 	StatusLangFileUpToDate = "up-to-date"
+
+	// StatusLangFileMissing indicates that the language file does not exist.
+	StatusLangFileMissing = "lang-file-missing"
 )
 
 // FileInfo contains information about the state of a language file compared
@@ -176,60 +179,81 @@ func (gs *GitSeek) checkFileCached(ctx context.Context, pair Pair, langCode stri
 }
 
 func (gs *GitSeek) checkFile(ctx context.Context, pair Pair) (FileInfo, error) {
-	var fileInfo FileInfo
+	//nolint:exhaustruct
+	fileInfo := FileInfo{
+		LangPath: pair.LangPath,
+	}
 
-	enFilePath := pair.EnPath
-	langFilePath := pair.LangPath
+	langExists, err := gs.gitRepo.FileExists(pair.LangPath)
+	if err != nil {
+		return fileInfo, fmt.Errorf("check whether %s exists: %w", pair.LangPath, err)
+	}
 
-	fileInfo.LangPath = langFilePath
+	if !langExists {
+		fileInfo.FileStatus = StatusLangFileMissing
 
+		return fileInfo, nil
+	}
+
+	if err := gs.getLangFileInfo(ctx, pair.LangPath, &fileInfo); err != nil {
+		return fileInfo, err
+	}
+
+	if err := gs.getEnFileInfo(ctx, pair.EnPath, &fileInfo); err != nil {
+		return fileInfo, err
+	}
+
+	return fileInfo, nil
+}
+
+func (gs *GitSeek) getLangFileInfo(ctx context.Context, langFilePath string, fileInfo *FileInfo) error {
 	langLastCommit, err := gs.gitRepo.FindFileLastCommit(ctx, langFilePath)
 	if err != nil {
-		return fileInfo, fmt.Errorf("find last commit for %s: %w", langFilePath, err)
+		return fmt.Errorf("find last commit for %s: %w", langFilePath, err)
 	}
 
 	fileInfo.LangLastCommit = langLastCommit
 
 	mergeCommit, err := gs.gitRepoHist.FindMergeCommit(ctx, langLastCommit.CommitID)
-	if err != nil {
-		if !errors.Is(err, githist.ErrCommitOnMainBranch) {
-			return fileInfo, fmt.Errorf("find merge commit for %s: %w", langLastCommit.CommitID, err)
-		}
+	if err != nil && !errors.Is(err, githist.ErrCommitOnMainBranch) {
+		return fmt.Errorf("find merge commit for %s: %w", langLastCommit.CommitID, err)
 	}
 
 	fileInfo.LangMergeCommit = mergeCommit
 
 	forkCommit, err := gs.gitRepoHist.FindForkCommit(ctx, langLastCommit.CommitID)
-	if err != nil {
-		if !errors.Is(err, githist.ErrCommitOnMainBranch) {
-			return fileInfo, fmt.Errorf("find fork commit for %s: %w", langLastCommit.CommitID, err)
-		}
+	if err != nil && !errors.Is(err, githist.ErrCommitOnMainBranch) {
+		return fmt.Errorf("find fork commit for %s: %w", langLastCommit.CommitID, err)
 	}
 
 	fileInfo.LangForkCommit = forkCommit
 
-	startPoint := determineStartPoint(forkCommit, langLastCommit)
+	return nil
+}
+
+func (gs *GitSeek) getEnFileInfo(ctx context.Context, enFilePath string, fileInfo *FileInfo) error {
+	startPoint := determineStartPoint(fileInfo.LangForkCommit, fileInfo.LangLastCommit)
 
 	enCommitsAfter, err := gs.gitRepo.FindFileCommitsAfter(ctx, enFilePath, startPoint.CommitID)
 	if err != nil {
-		return fileInfo, fmt.Errorf("find commits after %s for %s: %w", startPoint.CommitID, enFilePath, err)
+		return fmt.Errorf("find commits after %s for %s: %w", startPoint.CommitID, enFilePath, err)
 	}
 
 	exists, err := gs.gitRepo.FileExists(enFilePath)
 	if err != nil {
-		return fileInfo, fmt.Errorf("check whether %s exists: %w", enFilePath, err)
+		return fmt.Errorf("check whether %s exists: %w", enFilePath, err)
 	}
 
 	fileInfo.FileStatus = determineFileStatus(exists, enCommitsAfter)
 
 	enUpdates, err := gs.getEnUpdates(ctx, enCommitsAfter)
 	if err != nil {
-		return fileInfo, err
+		return err
 	}
 
 	fileInfo.EnUpdates = enUpdates
 
-	return fileInfo, nil
+	return nil
 }
 
 func (gs *GitSeek) getEnUpdates(ctx context.Context, enCommitsAfter []git.CommitInfo) ([]EnUpdate, error) {
