@@ -560,13 +560,13 @@ func TestGitSeek_CheckLang_SetsStatusEnFileUpdated(t *testing.T) {
 	}
 }
 
-func TestGitSeek_CheckLang_LeavesStatusEmptyWhenEnFileExistsAndHasNoUpdates(t *testing.T) {
+func TestGitSeek_CheckLang_SetsStatusLangFileUpToDateWhenEnFileExistsAndHasNoUpdates(t *testing.T) {
 	t.Parallel()
 
 	got := runCheckLangForStatus(t, true, nil)
 
-	if got.FileStatus != "" {
-		t.Fatalf("unexpected status: got %q, want empty", got.FileStatus)
+	if got.FileStatus != gitseek.StatusLangFileUpToDate {
+		t.Fatalf("unexpected status: got %q, want %q", got.FileStatus, gitseek.StatusLangFileUpToDate)
 	}
 }
 

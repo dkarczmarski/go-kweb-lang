@@ -26,6 +26,10 @@ const (
 	// StatusEnFileUpdated indicates that the EN file has new commits after
 	// the fork or last translation commit.
 	StatusEnFileUpdated = "en-file-updated"
+
+	// StatusLangFileUpToDate indicates that the language file is up-to-date
+	// with the English source file.
+	StatusLangFileUpToDate = "up-to-date"
 )
 
 // FileInfo contains information about the state of a language file compared
@@ -275,5 +279,5 @@ func determineFileStatus(exists bool, enCommitsAfter []git.CommitInfo) string {
 		return StatusEnFileUpdated
 	}
 
-	return ""
+	return StatusLangFileUpToDate
 }

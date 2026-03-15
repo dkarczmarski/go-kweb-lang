@@ -12,7 +12,7 @@ const (
 	ItemsTypeEnFileDoesNotExist   = "en-file-does-not-exist"
 	ItemsTypeEnFileNoLongerExists = "en-file-no-longer-exists"
 	ItemsTypeWaitingForReview     = "waiting-for-review"
-	ItemsTypeLangFileUpToDate     = "lang-file-up-to-date"
+	ItemsTypeLangFileUpToDate     = "up-to-date"
 )
 
 const (

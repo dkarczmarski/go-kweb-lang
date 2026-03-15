@@ -26,7 +26,7 @@ func TestGitSeek_CheckLang_UseCase_EnUnchangedAfterLang(t *testing.T) {
 		},
 		LangMergeCommit: nil,
 		LangForkCommit:  nil,
-		FileStatus:      "",
+		FileStatus:      gitseek.StatusLangFileUpToDate,
 		EnUpdates:       nil,
 	}
 
@@ -194,7 +194,7 @@ func TestGitSeek_CheckLang_UseCase_ForkCommitExistsWithoutEnUpdatesAfterFork(t *
 			DateTime: "2020-01-02T00:00:00+00:00",
 			Comment:  "A: add content/en/docs/test.md",
 		},
-		FileStatus: "",
+		FileStatus: gitseek.StatusLangFileUpToDate,
 		EnUpdates:  nil,
 	}
 

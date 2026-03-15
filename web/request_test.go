@@ -14,13 +14,13 @@ func TestParseLangDashboardParams(t *testing.T) {
 		t.Parallel()
 
 		values := url.Values{}
-		values.Add("itemsType", "with-en-updates")
-		values.Add("itemsType", "with-pr")
-		values.Add("itemsType", "en-file-no-longer-exists")
+		values.Add("itemsType", ItemsTypeWithEnUpdates)
+		values.Add("itemsType", ItemsTypeWithPR)
+		values.Add("itemsType", ItemsTypeEnFileNoLongerExists)
 		values.Set("filename", "content/pl/test.md")
 		values.Set("filepath", "content/pl")
-		values.Set("sort", "status")
-		values.Set("order", "desc")
+		values.Set("sort", SortByStatus)
+		values.Set("order", SortOrderDesc)
 
 		got := ParseLangDashboardParams("pl", values)
 
@@ -94,14 +94,14 @@ func TestParseLangDashboardParams(t *testing.T) {
 		t.Parallel()
 
 		values := url.Values{}
-		values.Add("itemsType", " with-pr ")
-		values.Add("itemsType", " with-en-updates ")
-		values.Add("itemsType", " en-file-no-longer-exists ")
-		values.Add("itemsType", " with-pr ")
+		values.Add("itemsType", " "+ItemsTypeWithPR+" ")
+		values.Add("itemsType", " "+ItemsTypeWithEnUpdates+" ")
+		values.Add("itemsType", " "+ItemsTypeEnFileNoLongerExists+" ")
+		values.Add("itemsType", " "+ItemsTypeWithPR+" ")
 		values.Set("filename", " content/pl/test.md ")
 		values.Set("filepath", " content/pl ")
-		values.Set("sort", " updates ")
-		values.Set("order", " desc ")
+		values.Set("sort", " "+SortByUpdates+" ")
+		values.Set("order", " "+SortOrderDesc+" ")
 
 		got := ParseLangDashboardParams(" pl ", values)
 

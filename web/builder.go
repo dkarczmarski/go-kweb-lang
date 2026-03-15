@@ -76,7 +76,7 @@ func buildFiltersVM(params LangDashboardParams) DashboardFiltersVM {
 			Active: hasItemsType(params.ItemsTypes, ItemsTypeWaitingForReview),
 		},
 		ItemsLangFileUpToDate: FilterLinkVM{
-			Label:  "lang file up to date",
+			Label:  "up to date",
 			Value:  ItemsTypeLangFileUpToDate,
 			Active: hasItemsType(params.ItemsTypes, ItemsTypeLangFileUpToDate),
 		},

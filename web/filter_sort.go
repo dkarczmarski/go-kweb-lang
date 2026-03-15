@@ -85,7 +85,7 @@ func matchesSingleItemsType(item dashboard.Item, itemsType string) bool {
 	case ItemsTypeWaitingForReview:
 		return item.FileStatus == dashboard.StatusWaitingForReview
 	case ItemsTypeLangFileUpToDate:
-		return item.FileStatus == ""
+		return item.FileStatus == gitseek.StatusLangFileUpToDate
 	default:
 		return false
 	}

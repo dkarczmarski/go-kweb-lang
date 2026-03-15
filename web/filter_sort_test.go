@@ -38,7 +38,7 @@ func TestFilterAndSortItems(t *testing.T) {
 		{
 			FileInfo: gitseek.FileInfo{
 				LangPath:   "content/pl/c.md",
-				FileStatus: "",
+				FileStatus: gitseek.StatusLangFileUpToDate,
 				LangLastCommit: git.CommitInfo{
 					DateTime: "2023-01-03T12:00:00Z",
 				},
@@ -237,23 +237,23 @@ func TestFilterAndSortItems(t *testing.T) {
 		}
 		sorted := FilterAndSortItems(items, params)
 
-		if sorted[0].FileStatus != "" {
-			t.Fatalf("expected first status empty, got %q", sorted[0].FileStatus)
+		if sorted[0].FileStatus != ItemsTypeEnFileDoesNotExist {
+			t.Fatalf("expected first status en-file-does-not-exist, got %q", sorted[0].FileStatus)
 		}
 
-		if sorted[1].FileStatus != "en-file-does-not-exist" {
-			t.Fatalf("expected second status en-file-does-not-exist, got %q", sorted[1].FileStatus)
+		if sorted[1].FileStatus != ItemsTypeEnFileNoLongerExists {
+			t.Fatalf("expected second status en-file-no-longer-exists, got %q", sorted[1].FileStatus)
 		}
 
-		if sorted[2].FileStatus != "en-file-no-longer-exists" {
-			t.Fatalf("expected third status en-file-no-longer-exists, got %q", sorted[2].FileStatus)
+		if sorted[2].FileStatus != gitseek.StatusEnFileUpdated {
+			t.Fatalf("expected third status en-file-updated, got %q", sorted[2].FileStatus)
 		}
 
-		if sorted[3].FileStatus != "en-file-updated" {
-			t.Fatalf("expected fourth status en-file-updated, got %q", sorted[3].FileStatus)
+		if sorted[3].FileStatus != gitseek.StatusLangFileUpToDate {
+			t.Fatalf("expected fourth status up-to-date, got %q", sorted[3].FileStatus)
 		}
 
-		if sorted[4].FileStatus != "waiting-for-review" {
+		if sorted[4].FileStatus != ItemsTypeWaitingForReview {
 			t.Fatalf("expected fifth status waiting-for-review, got %q", sorted[4].FileStatus)
 		}
 	})
