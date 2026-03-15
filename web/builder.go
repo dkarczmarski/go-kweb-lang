@@ -38,7 +38,7 @@ func BuildLangDashboardPageVM(input LangDashboardBuildInput) LangDashboardPageVM
 		PageURL:   urlBuilder.Current(),
 		LangCode:  input.Dashboard.LangCode,
 		ShowPanel: shouldShowPanel(input.Params),
-		Filters:   buildFiltersVM(urlBuilder, input.Params),
+		Filters:   buildFiltersVM(input.Params),
 		Table:     buildTableVM(urlBuilder, input.Params, rows),
 	}
 }
@@ -47,28 +47,38 @@ func shouldShowPanel(params LangDashboardParams) bool {
 	return params.Filename == ""
 }
 
-func buildFiltersVM(urlBuilder DashboardURLBuilder, params LangDashboardParams) DashboardFiltersVM {
+func buildFiltersVM(params LangDashboardParams) DashboardFiltersVM {
 	return DashboardFiltersVM{
 		CurrentFilepath: params.Filepath,
-		AllItems: FilterLinkVM{
-			Label:  "all",
-			URL:    urlBuilder.WithItemsType(ItemsTypeAll),
-			Active: params.ItemsType == ItemsTypeAll,
-		},
-		ItemsWithUpdate: FilterLinkVM{
-			Label:  "with update",
-			URL:    urlBuilder.WithItemsType(ItemsTypeWithUpdate),
-			Active: params.ItemsType == ItemsTypeWithUpdate,
-		},
-		ItemsWithUpdateOrPR: FilterLinkVM{
-			Label:  "with update or pr",
-			URL:    urlBuilder.WithItemsType(ItemsTypeWithUpdateOrPR),
-			Active: params.ItemsType == ItemsTypeWithUpdateOrPR,
+		ItemsWithEnUpdates: FilterLinkVM{
+			Label:  "with en updates",
+			Value:  ItemsTypeWithEnUpdates,
+			Active: hasItemsType(params.ItemsTypes, ItemsTypeWithEnUpdates),
 		},
 		ItemsWithPR: FilterLinkVM{
 			Label:  "with pr",
-			URL:    urlBuilder.WithItemsType(ItemsTypeWithPR),
-			Active: params.ItemsType == ItemsTypeWithPR,
+			Value:  ItemsTypeWithPR,
+			Active: hasItemsType(params.ItemsTypes, ItemsTypeWithPR),
+		},
+		ItemsEnFileDoesNotExist: FilterLinkVM{
+			Label:  "en file does not exist",
+			Value:  ItemsTypeEnFileDoesNotExist,
+			Active: hasItemsType(params.ItemsTypes, ItemsTypeEnFileDoesNotExist),
+		},
+		ItemsEnFileNoLongerExists: FilterLinkVM{
+			Label:  "en file no longer exists",
+			Value:  ItemsTypeEnFileNoLongerExists,
+			Active: hasItemsType(params.ItemsTypes, ItemsTypeEnFileNoLongerExists),
+		},
+		ItemsWaitingForReview: FilterLinkVM{
+			Label:  "waiting for review",
+			Value:  ItemsTypeWaitingForReview,
+			Active: hasItemsType(params.ItemsTypes, ItemsTypeWaitingForReview),
+		},
+		ItemsLangFileUpToDate: FilterLinkVM{
+			Label:  "lang file up to date",
+			Value:  ItemsTypeLangFileUpToDate,
+			Active: hasItemsType(params.ItemsTypes, ItemsTypeLangFileUpToDate),
 		},
 	}
 }

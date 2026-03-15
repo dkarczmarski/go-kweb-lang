@@ -63,10 +63,10 @@ func TestBuildLangDashboardPageVM(t *testing.T) {
 	}
 
 	params := LangDashboardParams{
-		LangCode:  "pl",
-		ItemsType: ItemsTypeAll,
-		SortBy:    SortByFilename,
-		SortOrder: SortOrderAsc,
+		LangCode:   "pl",
+		ItemsTypes: defaultItemsTypes(),
+		SortBy:     SortByFilename,
+		SortOrder:  SortOrderAsc,
 	}
 
 	input := LangDashboardBuildInput{
@@ -87,6 +87,18 @@ func TestBuildLangDashboardPageVM(t *testing.T) {
 
 	if viewModel.PageURL != "/lang/pl" {
 		t.Fatalf("expected PageURL /lang/pl, got %q", viewModel.PageURL)
+	}
+
+	if !viewModel.Filters.ItemsWithEnUpdates.Active {
+		t.Fatal("expected ItemsWithEnUpdates to be active")
+	}
+
+	if !viewModel.Filters.ItemsWithPR.Active {
+		t.Fatal("expected ItemsWithPR to be active")
+	}
+
+	if !viewModel.Filters.ItemsEnFileNoLongerExists.Active {
+		t.Fatal("expected ItemsEnFileNoLongerExists to be active")
 	}
 
 	if len(viewModel.Table.Rows) != 1 {
