@@ -17,6 +17,7 @@ func TestParseLangDashboardParams(t *testing.T) {
 		values.Add("itemsType", ItemsTypeWithEnUpdates)
 		values.Add("itemsType", ItemsTypeWithPR)
 		values.Add("itemsType", ItemsTypeEnFileNoLongerExists)
+		values.Add("itemsType", ItemsTypeLangFileMissing)
 		values.Set("filename", "content/pl/test.md")
 		values.Set("filepath", "content/pl")
 		values.Set("sort", SortByStatus)
@@ -32,6 +33,7 @@ func TestParseLangDashboardParams(t *testing.T) {
 			ItemsTypeWithEnUpdates,
 			ItemsTypeWithPR,
 			ItemsTypeEnFileNoLongerExists,
+			ItemsTypeLangFileMissing,
 		}
 		if !reflect.DeepEqual(got.ItemsTypes, wantItemsTypes) {
 			t.Fatalf("expected ItemsTypes %#v, got %#v", wantItemsTypes, got.ItemsTypes)
@@ -97,6 +99,7 @@ func TestParseLangDashboardParams(t *testing.T) {
 		values.Add("itemsType", " "+ItemsTypeWithPR+" ")
 		values.Add("itemsType", " "+ItemsTypeWithEnUpdates+" ")
 		values.Add("itemsType", " "+ItemsTypeEnFileNoLongerExists+" ")
+		values.Add("itemsType", " "+ItemsTypeLangFileMissing+" ")
 		values.Add("itemsType", " "+ItemsTypeWithPR+" ")
 		values.Set("filename", " content/pl/test.md ")
 		values.Set("filepath", " content/pl ")
@@ -113,6 +116,7 @@ func TestParseLangDashboardParams(t *testing.T) {
 			ItemsTypeWithPR,
 			ItemsTypeWithEnUpdates,
 			ItemsTypeEnFileNoLongerExists,
+			ItemsTypeLangFileMissing,
 		}
 		if !reflect.DeepEqual(got.ItemsTypes, wantItemsTypes) {
 			t.Fatalf("expected ItemsTypes %#v, got %#v", wantItemsTypes, got.ItemsTypes)

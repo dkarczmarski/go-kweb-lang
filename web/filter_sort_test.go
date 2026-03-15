@@ -62,6 +62,12 @@ func TestFilterAndSortItems(t *testing.T) {
 				},
 			},
 		},
+		{
+			FileInfo: gitseek.FileInfo{
+				LangPath:   "content/pl/f.md",
+				FileStatus: gitseek.StatusLangFileMissing,
+			},
+		},
 	}
 
 	t.Run("Filter by ItemsTypeWithEnUpdates", func(t *testing.T) {
@@ -124,6 +130,21 @@ func TestFilterAndSortItems(t *testing.T) {
 		}
 	})
 
+	t.Run("Filter by ItemsTypeLangFileMissing", func(t *testing.T) {
+		t.Parallel()
+
+		params := LangDashboardParams{ItemsTypes: []string{ItemsTypeLangFileMissing}}
+		filtered := FilterAndSortItems(items, params)
+
+		if len(filtered) != 1 {
+			t.Fatalf("expected 1 item, got %d", len(filtered))
+		}
+
+		if filtered[0].LangPath != "content/pl/f.md" {
+			t.Fatalf("expected content/pl/f.md, got %q", filtered[0].LangPath)
+		}
+	})
+
 	t.Run("Filter by ItemsTypeWaitingForReview", func(t *testing.T) {
 		t.Parallel()
 
@@ -161,12 +182,13 @@ func TestFilterAndSortItems(t *testing.T) {
 			ItemsTypes: []string{
 				ItemsTypeWithPR,
 				ItemsTypeEnFileNoLongerExists,
+				ItemsTypeLangFileMissing,
 			},
 		}
 		filtered := FilterAndSortItems(items, params)
 
-		if len(filtered) != 2 {
-			t.Fatalf("expected 2 items, got %d", len(filtered))
+		if len(filtered) != 3 {
+			t.Fatalf("expected 3 items, got %d", len(filtered))
 		}
 
 		if filtered[0].LangPath != "content/pl/b.md" {
@@ -175,6 +197,10 @@ func TestFilterAndSortItems(t *testing.T) {
 
 		if filtered[1].LangPath != "content/pl/e.md" {
 			t.Fatalf("expected second item content/pl/e.md, got %q", filtered[1].LangPath)
+		}
+
+		if filtered[2].LangPath != "content/pl/f.md" {
+			t.Fatalf("expected third item content/pl/f.md, got %q", filtered[2].LangPath)
 		}
 	})
 
@@ -196,34 +222,77 @@ func TestFilterAndSortItems(t *testing.T) {
 		}
 	})
 
-	t.Run("Sort by Filename desc", func(t *testing.T) {
+	t.Run("default items types exclude lang file missing and up to date", func(t *testing.T) {
 		t.Parallel()
 
 		params := LangDashboardParams{
 			ItemsTypes: defaultItemsTypes(),
 			SortBy:     SortByFilename,
-			SortOrder:  SortOrderDesc,
+			SortOrder:  SortOrderAsc,
+		}
+		filtered := FilterAndSortItems(items, params)
+
+		if len(filtered) != 4 {
+			t.Fatalf("expected 4 items, got %d", len(filtered))
+		}
+
+		if filtered[0].LangPath != "content/pl/a.md" {
+			t.Fatalf("expected first path content/pl/a.md, got %q", filtered[0].LangPath)
+		}
+
+		if filtered[1].LangPath != "content/pl/b.md" {
+			t.Fatalf("expected second path content/pl/b.md, got %q", filtered[1].LangPath)
+		}
+
+		if filtered[2].LangPath != "content/pl/d.md" {
+			t.Fatalf("expected third path content/pl/d.md, got %q", filtered[2].LangPath)
+		}
+
+		if filtered[3].LangPath != "content/pl/e.md" {
+			t.Fatalf("expected fourth path content/pl/e.md, got %q", filtered[3].LangPath)
+		}
+	})
+
+	t.Run("Sort by Filename desc", func(t *testing.T) {
+		t.Parallel()
+
+		params := LangDashboardParams{
+			ItemsTypes: []string{
+				ItemsTypeWithEnUpdates,
+				ItemsTypeWithPR,
+				ItemsTypeEnFileDoesNotExist,
+				ItemsTypeEnFileNoLongerExists,
+				ItemsTypeLangFileMissing,
+				ItemsTypeWaitingForReview,
+				ItemsTypeLangFileUpToDate,
+			},
+			SortBy:    SortByFilename,
+			SortOrder: SortOrderDesc,
 		}
 		sorted := FilterAndSortItems(items, params)
 
-		if sorted[0].LangPath != "content/pl/e.md" {
-			t.Fatalf("expected first path content/pl/e.md, got %q", sorted[0].LangPath)
+		if sorted[0].LangPath != "content/pl/f.md" {
+			t.Fatalf("expected first path content/pl/f.md, got %q", sorted[0].LangPath)
 		}
 
-		if sorted[1].LangPath != "content/pl/d.md" {
-			t.Fatalf("expected second path content/pl/d.md, got %q", sorted[1].LangPath)
+		if sorted[1].LangPath != "content/pl/e.md" {
+			t.Fatalf("expected second path content/pl/e.md, got %q", sorted[1].LangPath)
 		}
 
-		if sorted[2].LangPath != "content/pl/c.md" {
-			t.Fatalf("expected third path content/pl/c.md, got %q", sorted[2].LangPath)
+		if sorted[2].LangPath != "content/pl/d.md" {
+			t.Fatalf("expected third path content/pl/d.md, got %q", sorted[2].LangPath)
 		}
 
-		if sorted[3].LangPath != "content/pl/b.md" {
-			t.Fatalf("expected fourth path content/pl/b.md, got %q", sorted[3].LangPath)
+		if sorted[3].LangPath != "content/pl/c.md" {
+			t.Fatalf("expected fourth path content/pl/c.md, got %q", sorted[3].LangPath)
 		}
 
-		if sorted[4].LangPath != "content/pl/a.md" {
-			t.Fatalf("expected fifth path content/pl/a.md, got %q", sorted[4].LangPath)
+		if sorted[4].LangPath != "content/pl/b.md" {
+			t.Fatalf("expected fifth path content/pl/b.md, got %q", sorted[4].LangPath)
+		}
+
+		if sorted[5].LangPath != "content/pl/a.md" {
+			t.Fatalf("expected sixth path content/pl/a.md, got %q", sorted[5].LangPath)
 		}
 	})
 
@@ -231,9 +300,17 @@ func TestFilterAndSortItems(t *testing.T) {
 		t.Parallel()
 
 		params := LangDashboardParams{
-			ItemsTypes: defaultItemsTypes(),
-			SortBy:     SortByStatus,
-			SortOrder:  SortOrderAsc,
+			ItemsTypes: []string{
+				ItemsTypeWithEnUpdates,
+				ItemsTypeWithPR,
+				ItemsTypeEnFileDoesNotExist,
+				ItemsTypeEnFileNoLongerExists,
+				ItemsTypeLangFileMissing,
+				ItemsTypeWaitingForReview,
+				ItemsTypeLangFileUpToDate,
+			},
+			SortBy:    SortByStatus,
+			SortOrder: SortOrderAsc,
 		}
 		sorted := FilterAndSortItems(items, params)
 
@@ -249,12 +326,16 @@ func TestFilterAndSortItems(t *testing.T) {
 			t.Fatalf("expected third status en-file-updated, got %q", sorted[2].FileStatus)
 		}
 
-		if sorted[3].FileStatus != gitseek.StatusLangFileUpToDate {
-			t.Fatalf("expected fourth status up-to-date, got %q", sorted[3].FileStatus)
+		if sorted[3].FileStatus != ItemsTypeLangFileMissing {
+			t.Fatalf("expected fourth status lang-file-missing, got %q", sorted[3].FileStatus)
 		}
 
-		if sorted[4].FileStatus != ItemsTypeWaitingForReview {
-			t.Fatalf("expected fifth status waiting-for-review, got %q", sorted[4].FileStatus)
+		if sorted[4].FileStatus != gitseek.StatusLangFileUpToDate {
+			t.Fatalf("expected fifth status up-to-date, got %q", sorted[4].FileStatus)
+		}
+
+		if sorted[5].FileStatus != ItemsTypeWaitingForReview {
+			t.Fatalf("expected sixth status waiting-for-review, got %q", sorted[5].FileStatus)
 		}
 	})
 

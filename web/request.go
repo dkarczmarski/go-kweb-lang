@@ -84,9 +84,7 @@ func defaultItemsTypes() []string {
 		ItemsTypeWithPR,
 		ItemsTypeEnFileDoesNotExist,
 		ItemsTypeEnFileNoLongerExists,
-		ItemsTypeLangFileMissing,
 		ItemsTypeWaitingForReview,
-		ItemsTypeLangFileUpToDate,
 	}
 }
 
