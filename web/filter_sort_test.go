@@ -1,4 +1,4 @@
-//nolint:testpackage,dupl,goconst
+//nolint:testpackage,dupl,goconst,gocyclo
 package web
 
 import (
@@ -16,7 +16,7 @@ func TestFilterAndSortItems(t *testing.T) {
 		{
 			FileInfo: gitseek.FileInfo{
 				LangPath:   "content/pl/a.md",
-				FileStatus: "en-file-updated",
+				FileStatus: gitseek.StatusEnFileUpdated,
 				LangLastCommit: git.CommitInfo{
 					DateTime: "2023-01-01T12:00:00Z",
 				},
@@ -28,7 +28,7 @@ func TestFilterAndSortItems(t *testing.T) {
 		{
 			FileInfo: gitseek.FileInfo{
 				LangPath:   "content/pl/b.md",
-				FileStatus: "waiting-for-review",
+				FileStatus: dashboard.StatusWaitingForReview,
 				LangLastCommit: git.CommitInfo{
 					DateTime: "2023-01-05T12:00:00Z",
 				},
@@ -38,18 +38,36 @@ func TestFilterAndSortItems(t *testing.T) {
 		{
 			FileInfo: gitseek.FileInfo{
 				LangPath:   "content/pl/c.md",
-				FileStatus: "up-to-date",
+				FileStatus: "",
 				LangLastCommit: git.CommitInfo{
 					DateTime: "2023-01-03T12:00:00Z",
 				},
 			},
 		},
+		{
+			FileInfo: gitseek.FileInfo{
+				LangPath:   "content/pl/d.md",
+				FileStatus: gitseek.StatusEnFileDoesNotExist,
+				LangLastCommit: git.CommitInfo{
+					DateTime: "2023-01-04T12:00:00Z",
+				},
+			},
+		},
+		{
+			FileInfo: gitseek.FileInfo{
+				LangPath:   "content/pl/e.md",
+				FileStatus: gitseek.StatusEnFileNoLongerExists,
+				LangLastCommit: git.CommitInfo{
+					DateTime: "2023-01-06T12:00:00Z",
+				},
+			},
+		},
 	}
 
-	t.Run("Filter by ItemsTypeWithUpdate", func(t *testing.T) {
+	t.Run("Filter by ItemsTypeWithEnUpdates", func(t *testing.T) {
 		t.Parallel()
 
-		params := LangDashboardParams{ItemsType: ItemsTypeWithUpdate}
+		params := LangDashboardParams{ItemsTypes: []string{ItemsTypeWithEnUpdates}}
 		filtered := FilterAndSortItems(items, params)
 
 		if len(filtered) != 1 {
@@ -64,7 +82,7 @@ func TestFilterAndSortItems(t *testing.T) {
 	t.Run("Filter by ItemsTypeWithPR", func(t *testing.T) {
 		t.Parallel()
 
-		params := LangDashboardParams{ItemsType: ItemsTypeWithPR}
+		params := LangDashboardParams{ItemsTypes: []string{ItemsTypeWithPR}}
 		filtered := FilterAndSortItems(items, params)
 
 		if len(filtered) != 1 {
@@ -76,10 +94,97 @@ func TestFilterAndSortItems(t *testing.T) {
 		}
 	})
 
+	t.Run("Filter by ItemsTypeEnFileDoesNotExist", func(t *testing.T) {
+		t.Parallel()
+
+		params := LangDashboardParams{ItemsTypes: []string{ItemsTypeEnFileDoesNotExist}}
+		filtered := FilterAndSortItems(items, params)
+
+		if len(filtered) != 1 {
+			t.Fatalf("expected 1 item, got %d", len(filtered))
+		}
+
+		if filtered[0].LangPath != "content/pl/d.md" {
+			t.Fatalf("expected content/pl/d.md, got %q", filtered[0].LangPath)
+		}
+	})
+
+	t.Run("Filter by ItemsTypeEnFileNoLongerExists", func(t *testing.T) {
+		t.Parallel()
+
+		params := LangDashboardParams{ItemsTypes: []string{ItemsTypeEnFileNoLongerExists}}
+		filtered := FilterAndSortItems(items, params)
+
+		if len(filtered) != 1 {
+			t.Fatalf("expected 1 item, got %d", len(filtered))
+		}
+
+		if filtered[0].LangPath != "content/pl/e.md" {
+			t.Fatalf("expected content/pl/e.md, got %q", filtered[0].LangPath)
+		}
+	})
+
+	t.Run("Filter by ItemsTypeWaitingForReview", func(t *testing.T) {
+		t.Parallel()
+
+		params := LangDashboardParams{ItemsTypes: []string{ItemsTypeWaitingForReview}}
+		filtered := FilterAndSortItems(items, params)
+
+		if len(filtered) != 1 {
+			t.Fatalf("expected 1 item, got %d", len(filtered))
+		}
+
+		if filtered[0].LangPath != "content/pl/b.md" {
+			t.Fatalf("expected content/pl/b.md, got %q", filtered[0].LangPath)
+		}
+	})
+
+	t.Run("Filter by ItemsTypeLangFileUpToDate", func(t *testing.T) {
+		t.Parallel()
+
+		params := LangDashboardParams{ItemsTypes: []string{ItemsTypeLangFileUpToDate}}
+		filtered := FilterAndSortItems(items, params)
+
+		if len(filtered) != 1 {
+			t.Fatalf("expected 1 item, got %d", len(filtered))
+		}
+
+		if filtered[0].LangPath != "content/pl/c.md" {
+			t.Fatalf("expected content/pl/c.md, got %q", filtered[0].LangPath)
+		}
+	})
+
+	t.Run("Filter by multiple items types uses or semantics", func(t *testing.T) {
+		t.Parallel()
+
+		params := LangDashboardParams{
+			ItemsTypes: []string{
+				ItemsTypeWithPR,
+				ItemsTypeEnFileNoLongerExists,
+			},
+		}
+		filtered := FilterAndSortItems(items, params)
+
+		if len(filtered) != 2 {
+			t.Fatalf("expected 2 items, got %d", len(filtered))
+		}
+
+		if filtered[0].LangPath != "content/pl/b.md" {
+			t.Fatalf("expected first item content/pl/b.md, got %q", filtered[0].LangPath)
+		}
+
+		if filtered[1].LangPath != "content/pl/e.md" {
+			t.Fatalf("expected second item content/pl/e.md, got %q", filtered[1].LangPath)
+		}
+	})
+
 	t.Run("Filter by Filepath", func(t *testing.T) {
 		t.Parallel()
 
-		params := LangDashboardParams{Filepath: "a.md"}
+		params := LangDashboardParams{
+			ItemsTypes: defaultItemsTypes(),
+			Filepath:   "a.md",
+		}
 		filtered := FilterAndSortItems(items, params)
 
 		if len(filtered) != 1 {
@@ -94,38 +199,62 @@ func TestFilterAndSortItems(t *testing.T) {
 	t.Run("Sort by Filename desc", func(t *testing.T) {
 		t.Parallel()
 
-		params := LangDashboardParams{SortBy: SortByFilename, SortOrder: SortOrderDesc}
+		params := LangDashboardParams{
+			ItemsTypes: defaultItemsTypes(),
+			SortBy:     SortByFilename,
+			SortOrder:  SortOrderDesc,
+		}
 		sorted := FilterAndSortItems(items, params)
 
-		if sorted[0].LangPath != "content/pl/c.md" {
-			t.Fatalf("expected first path content/pl/c.md, got %q", sorted[0].LangPath)
+		if sorted[0].LangPath != "content/pl/e.md" {
+			t.Fatalf("expected first path content/pl/e.md, got %q", sorted[0].LangPath)
 		}
 
-		if sorted[1].LangPath != "content/pl/b.md" {
-			t.Fatalf("expected second path content/pl/b.md, got %q", sorted[1].LangPath)
+		if sorted[1].LangPath != "content/pl/d.md" {
+			t.Fatalf("expected second path content/pl/d.md, got %q", sorted[1].LangPath)
 		}
 
-		if sorted[2].LangPath != "content/pl/a.md" {
-			t.Fatalf("expected third path content/pl/a.md, got %q", sorted[2].LangPath)
+		if sorted[2].LangPath != "content/pl/c.md" {
+			t.Fatalf("expected third path content/pl/c.md, got %q", sorted[2].LangPath)
+		}
+
+		if sorted[3].LangPath != "content/pl/b.md" {
+			t.Fatalf("expected fourth path content/pl/b.md, got %q", sorted[3].LangPath)
+		}
+
+		if sorted[4].LangPath != "content/pl/a.md" {
+			t.Fatalf("expected fifth path content/pl/a.md, got %q", sorted[4].LangPath)
 		}
 	})
 
 	t.Run("Sort by Status", func(t *testing.T) {
 		t.Parallel()
 
-		params := LangDashboardParams{SortBy: SortByStatus, SortOrder: SortOrderAsc}
+		params := LangDashboardParams{
+			ItemsTypes: defaultItemsTypes(),
+			SortBy:     SortByStatus,
+			SortOrder:  SortOrderAsc,
+		}
 		sorted := FilterAndSortItems(items, params)
 
-		if sorted[0].FileStatus != "en-file-updated" {
-			t.Fatalf("expected first status en-file-updated, got %q", sorted[0].FileStatus)
+		if sorted[0].FileStatus != "" {
+			t.Fatalf("expected first status empty, got %q", sorted[0].FileStatus)
 		}
 
-		if sorted[1].FileStatus != "up-to-date" {
-			t.Fatalf("expected second status up-to-date, got %q", sorted[1].FileStatus)
+		if sorted[1].FileStatus != "en-file-does-not-exist" {
+			t.Fatalf("expected second status en-file-does-not-exist, got %q", sorted[1].FileStatus)
 		}
 
-		if sorted[2].FileStatus != "waiting-for-review" {
-			t.Fatalf("expected third status waiting-for-review, got %q", sorted[2].FileStatus)
+		if sorted[2].FileStatus != "en-file-no-longer-exists" {
+			t.Fatalf("expected third status en-file-no-longer-exists, got %q", sorted[2].FileStatus)
+		}
+
+		if sorted[3].FileStatus != "en-file-updated" {
+			t.Fatalf("expected fourth status en-file-updated, got %q", sorted[3].FileStatus)
+		}
+
+		if sorted[4].FileStatus != "waiting-for-review" {
+			t.Fatalf("expected fifth status waiting-for-review, got %q", sorted[4].FileStatus)
 		}
 	})
 
@@ -152,12 +281,20 @@ func TestFilterAndSortItems(t *testing.T) {
 			},
 			{
 				FileInfo: gitseek.FileInfo{
-					LangPath: "content/pl/c.md",
+					LangPath:   "content/pl/c.md",
+					FileStatus: gitseek.StatusEnFileNoLongerExists,
 				},
 			},
 		}
 
-		params := LangDashboardParams{SortBy: SortByUpdates, SortOrder: SortOrderAsc}
+		params := LangDashboardParams{
+			ItemsTypes: []string{
+				ItemsTypeWithEnUpdates,
+				ItemsTypeEnFileNoLongerExists,
+			},
+			SortBy:    SortByUpdates,
+			SortOrder: SortOrderAsc,
+		}
 		sorted := FilterAndSortItems(itemsWithUpdates, params)
 
 		if sorted[0].LangPath != "content/pl/c.md" {
@@ -196,12 +333,20 @@ func TestFilterAndSortItems(t *testing.T) {
 			},
 			{
 				FileInfo: gitseek.FileInfo{
-					LangPath: "content/pl/c.md",
+					LangPath:   "content/pl/c.md",
+					FileStatus: gitseek.StatusEnFileNoLongerExists,
 				},
 			},
 		}
 
-		params := LangDashboardParams{SortBy: SortByUpdates, SortOrder: SortOrderDesc}
+		params := LangDashboardParams{
+			ItemsTypes: []string{
+				ItemsTypeWithEnUpdates,
+				ItemsTypeEnFileNoLongerExists,
+			},
+			SortBy:    SortByUpdates,
+			SortOrder: SortOrderDesc,
+		}
 		sorted := FilterAndSortItems(itemsWithUpdates, params)
 
 		if sorted[0].LangPath != "content/pl/a.md" {

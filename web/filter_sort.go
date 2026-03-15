@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/dkarczmarski/go-kweb-lang/dashboard"
+	"github.com/dkarczmarski/go-kweb-lang/gitseek"
 )
 
 func FilterAndSortItems(items []dashboard.Item, params LangDashboardParams) []dashboard.Item {
@@ -27,7 +28,7 @@ func filterItems(items []dashboard.Item, params LangDashboardParams) []dashboard
 			continue
 		}
 
-		if !matchesItemsType(item, params.ItemsType) {
+		if !matchesItemsTypes(item, params.ItemsTypes) {
 			continue
 		}
 
@@ -61,18 +62,32 @@ func matchesFilepath(item dashboard.Item, filepath string) bool {
 	return strings.Contains(item.LangPath, filepath)
 }
 
-func matchesItemsType(item dashboard.Item, itemsType string) bool {
+func matchesItemsTypes(item dashboard.Item, itemsTypes []string) bool {
+	for _, itemsType := range itemsTypes {
+		if matchesSingleItemsType(item, itemsType) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func matchesSingleItemsType(item dashboard.Item, itemsType string) bool {
 	switch itemsType {
-	case ItemsTypeWithUpdate:
+	case ItemsTypeWithEnUpdates:
 		return len(item.EnUpdates) > 0
-	case ItemsTypeWithUpdateOrPR:
-		return len(item.EnUpdates) > 0 || len(item.PRs) > 0
 	case ItemsTypeWithPR:
 		return len(item.PRs) > 0
-	case ItemsTypeAll:
-		return true
+	case ItemsTypeEnFileDoesNotExist:
+		return item.FileStatus == gitseek.StatusEnFileDoesNotExist
+	case ItemsTypeEnFileNoLongerExists:
+		return item.FileStatus == gitseek.StatusEnFileNoLongerExists
+	case ItemsTypeWaitingForReview:
+		return item.FileStatus == dashboard.StatusWaitingForReview
+	case ItemsTypeLangFileUpToDate:
+		return item.FileStatus == ""
 	default:
-		return true
+		return false
 	}
 }
 

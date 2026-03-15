@@ -18,13 +18,6 @@ func (builder DashboardURLBuilder) Current() string {
 	return builder.build(builder.Params)
 }
 
-func (builder DashboardURLBuilder) WithItemsType(itemsType string) string {
-	params := builder.Params
-	params.ItemsType = normalizeItemsType(itemsType)
-
-	return builder.build(params)
-}
-
 func (builder DashboardURLBuilder) WithFilename(filename string) string {
 	params := builder.Params
 	params.Filename = filename
@@ -61,25 +54,11 @@ func (builder DashboardURLBuilder) Sort(sortBy string) string {
 func (builder DashboardURLBuilder) build(params LangDashboardParams) string {
 	queryValues := url.Values{}
 
-	if params.ItemsType != "" && params.ItemsType != ItemsTypeAll {
-		queryValues.Set("itemsType", params.ItemsType)
-	}
-
-	if params.Filename != "" {
-		queryValues.Set("filename", params.Filename)
-	}
-
-	if params.Filepath != "" {
-		queryValues.Set("filepath", params.Filepath)
-	}
-
-	if params.SortBy != "" && params.SortBy != SortByFilename {
-		queryValues.Set("sort", params.SortBy)
-	}
-
-	if params.SortOrder != "" && params.SortOrder != SortOrderAsc {
-		queryValues.Set("order", params.SortOrder)
-	}
+	addItemsTypesToQuery(queryValues, params.ItemsTypes)
+	addFilenameToQuery(queryValues, params.Filename)
+	addFilepathToQuery(queryValues, params.Filepath)
+	addSortByToQuery(queryValues, params.SortBy)
+	addSortOrderToQuery(queryValues, params.SortOrder)
 
 	encodedQuery := queryValues.Encode()
 	if encodedQuery == "" {
@@ -87,6 +66,48 @@ func (builder DashboardURLBuilder) build(params LangDashboardParams) string {
 	}
 
 	return builder.Path + "?" + encodedQuery
+}
+
+func addItemsTypesToQuery(queryValues url.Values, itemsTypes []string) {
+	if len(itemsTypes) == 0 || isDefaultItemsTypes(itemsTypes) {
+		return
+	}
+
+	for _, itemsType := range itemsTypes {
+		queryValues.Add("itemsType", itemsType)
+	}
+}
+
+func addFilenameToQuery(queryValues url.Values, filename string) {
+	if filename == "" {
+		return
+	}
+
+	queryValues.Set("filename", filename)
+}
+
+func addFilepathToQuery(queryValues url.Values, filepath string) {
+	if filepath == "" {
+		return
+	}
+
+	queryValues.Set("filepath", filepath)
+}
+
+func addSortByToQuery(queryValues url.Values, sortBy string) {
+	if sortBy == "" || sortBy == SortByFilename {
+		return
+	}
+
+	queryValues.Set("sort", sortBy)
+}
+
+func addSortOrderToQuery(queryValues url.Values, sortOrder string) {
+	if sortOrder == "" || sortOrder == SortOrderAsc {
+		return
+	}
+
+	queryValues.Set("order", sortOrder)
 }
 
 func toggleSortOrder(order string) string {

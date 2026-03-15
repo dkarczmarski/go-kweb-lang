@@ -21,15 +21,17 @@ type LangDashboardPageVM struct {
 type DashboardFiltersVM struct {
 	CurrentFilepath string
 
-	AllItems            FilterLinkVM
-	ItemsWithUpdate     FilterLinkVM
-	ItemsWithUpdateOrPR FilterLinkVM
-	ItemsWithPR         FilterLinkVM
+	ItemsWithEnUpdates        FilterLinkVM
+	ItemsWithPR               FilterLinkVM
+	ItemsEnFileDoesNotExist   FilterLinkVM
+	ItemsEnFileNoLongerExists FilterLinkVM
+	ItemsWaitingForReview     FilterLinkVM
+	ItemsLangFileUpToDate     FilterLinkVM
 }
 
 type FilterLinkVM struct {
 	Label  string
-	URL    string
+	Value  string
 	Active bool
 }
 

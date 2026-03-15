@@ -42,56 +42,134 @@
           hx-target="#table"
           hx-swap="innerHTML">
 
-    <div class="row pt-3">
+    <div class="pt-3">
 
-      <div class="col-2">
+      <div class="input-group">
 
-        <select name="itemsType"
-                class="form-select"
-                hx-trigger="change"
-                hx-post="/lang/{{ .LangCode }}"
-                hx-target="#table"
-                hx-swap="innerHTML"
-                hx-include="closest form">
+        <input
+                type="text"
+                name="filepath"
+                class="form-control"
+                placeholder="Lang Path"
+                value="{{ .Filters.CurrentFilepath }}"/>
 
-          <option value="all" {{ if .Filters.AllItems.Active }}selected{{ end }}>
-            {{ .Filters.AllItems.Label }}
-          </option>
+        <button type="submit"
+                class="btn btn-outline-secondary">
 
-          <option value="with-update" {{ if .Filters.ItemsWithUpdate.Active }}selected{{ end }}>
-            {{ .Filters.ItemsWithUpdate.Label }}
-          </option>
+          <i class="bi bi-search"></i>
 
-          <option value="with-update-or-pr" {{ if .Filters.ItemsWithUpdateOrPR.Active }}selected{{ end }}>
-            {{ .Filters.ItemsWithUpdateOrPR.Label }}
-          </option>
-
-          <option value="with-pr" {{ if .Filters.ItemsWithPR.Active }}selected{{ end }}>
-            {{ .Filters.ItemsWithPR.Label }}
-          </option>
-
-        </select>
+        </button>
 
       </div>
 
-      <div class="col-10">
+      <div class="pt-3 d-flex flex-wrap gap-3">
 
-        <div class="input-group">
-
+        <div class="form-check">
           <input
-                  type="text"
-                  name="filepath"
-                  class="form-control"
-                  placeholder="Lang Path"
-                  value="{{ .Filters.CurrentFilepath }}"/>
+                  class="form-check-input"
+                  type="checkbox"
+                  name="itemsType"
+                  value="{{ .Filters.ItemsWithEnUpdates.Value }}"
+                  id="items-type-with-en-updates"
+                  {{ if .Filters.ItemsWithEnUpdates.Active }}checked{{ end }}
+                  hx-trigger="change"
+                  hx-post="/lang/{{ .LangCode }}"
+                  hx-target="#table"
+                  hx-swap="innerHTML"
+                  hx-include="closest form">
+          <label class="form-check-label" for="items-type-with-en-updates">
+            {{ .Filters.ItemsWithEnUpdates.Label }}
+          </label>
+        </div>
 
-          <button type="submit"
-                  class="btn btn-outline-secondary">
+        <div class="form-check">
+          <input
+                  class="form-check-input"
+                  type="checkbox"
+                  name="itemsType"
+                  value="{{ .Filters.ItemsWithPR.Value }}"
+                  id="items-type-with-pr"
+                  {{ if .Filters.ItemsWithPR.Active }}checked{{ end }}
+                  hx-trigger="change"
+                  hx-post="/lang/{{ .LangCode }}"
+                  hx-target="#table"
+                  hx-swap="innerHTML"
+                  hx-include="closest form">
+          <label class="form-check-label" for="items-type-with-pr">
+            {{ .Filters.ItemsWithPR.Label }}
+          </label>
+        </div>
 
-            <i class="bi bi-search"></i>
+        <div class="form-check">
+          <input
+                  class="form-check-input"
+                  type="checkbox"
+                  name="itemsType"
+                  value="{{ .Filters.ItemsEnFileDoesNotExist.Value }}"
+                  id="items-type-en-file-does-not-exist"
+                  {{ if .Filters.ItemsEnFileDoesNotExist.Active }}checked{{ end }}
+                  hx-trigger="change"
+                  hx-post="/lang/{{ .LangCode }}"
+                  hx-target="#table"
+                  hx-swap="innerHTML"
+                  hx-include="closest form">
+          <label class="form-check-label" for="items-type-en-file-does-not-exist">
+            {{ .Filters.ItemsEnFileDoesNotExist.Label }}
+          </label>
+        </div>
 
-          </button>
+        <div class="form-check">
+          <input
+                  class="form-check-input"
+                  type="checkbox"
+                  name="itemsType"
+                  value="{{ .Filters.ItemsEnFileNoLongerExists.Value }}"
+                  id="items-type-en-file-no-longer-exists"
+                  {{ if .Filters.ItemsEnFileNoLongerExists.Active }}checked{{ end }}
+                  hx-trigger="change"
+                  hx-post="/lang/{{ .LangCode }}"
+                  hx-target="#table"
+                  hx-swap="innerHTML"
+                  hx-include="closest form">
+          <label class="form-check-label" for="items-type-en-file-no-longer-exists">
+            {{ .Filters.ItemsEnFileNoLongerExists.Label }}
+          </label>
+        </div>
 
+        <div class="form-check">
+          <input
+                  class="form-check-input"
+                  type="checkbox"
+                  name="itemsType"
+                  value="{{ .Filters.ItemsWaitingForReview.Value }}"
+                  id="items-type-waiting-for-review"
+                  {{ if .Filters.ItemsWaitingForReview.Active }}checked{{ end }}
+                  hx-trigger="change"
+                  hx-post="/lang/{{ .LangCode }}"
+                  hx-target="#table"
+                  hx-swap="innerHTML"
+                  hx-include="closest form">
+          <label class="form-check-label" for="items-type-waiting-for-review">
+            {{ .Filters.ItemsWaitingForReview.Label }}
+          </label>
+        </div>
+
+        <div class="form-check">
+          <input
+                  class="form-check-input"
+                  type="checkbox"
+                  name="itemsType"
+                  value="{{ .Filters.ItemsLangFileUpToDate.Value }}"
+                  id="items-type-lang-file-up-to-date"
+                  {{ if .Filters.ItemsLangFileUpToDate.Active }}checked{{ end }}
+                  hx-trigger="change"
+                  hx-post="/lang/{{ .LangCode }}"
+                  hx-target="#table"
+                  hx-swap="innerHTML"
+                  hx-include="closest form">
+          <label class="form-check-label" for="items-type-lang-file-up-to-date">
+            {{ .Filters.ItemsLangFileUpToDate.Label }}
+          </label>
         </div>
 
       </div>

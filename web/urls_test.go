@@ -7,10 +7,10 @@ func TestDashboardURLBuilder(t *testing.T) {
 	t.Parallel()
 
 	baseParams := LangDashboardParams{
-		LangCode:  "pl",
-		ItemsType: ItemsTypeAll,
-		SortBy:    SortByFilename,
-		SortOrder: SortOrderAsc,
+		LangCode:   "pl",
+		ItemsTypes: defaultItemsTypes(),
+		SortBy:     SortByFilename,
+		SortOrder:  SortOrderAsc,
 	}
 	builder := NewDashboardURLBuilder("/lang/pl", baseParams)
 
@@ -25,11 +25,22 @@ func TestDashboardURLBuilder(t *testing.T) {
 		}
 	})
 
-	t.Run("WithItemsType", func(t *testing.T) {
+	t.Run("Current with non-default items types", func(t *testing.T) {
 		t.Parallel()
 
-		got := builder.WithItemsType(ItemsTypeWithUpdate)
-		want := "/lang/pl?itemsType=with-update"
+		params := LangDashboardParams{
+			LangCode: "pl",
+			ItemsTypes: []string{
+				ItemsTypeWithEnUpdates,
+				ItemsTypeWithPR,
+			},
+			SortBy:    SortByFilename,
+			SortOrder: SortOrderAsc,
+		}
+		customBuilder := NewDashboardURLBuilder("/lang/pl", params)
+
+		got := customBuilder.Current()
+		want := "/lang/pl?itemsType=with-en-updates&itemsType=with-pr"
 
 		if got != want {
 			t.Fatalf("expected %q, got %q", want, got)
@@ -114,15 +125,43 @@ func TestDashboardURLBuilder(t *testing.T) {
 		t.Parallel()
 
 		params := LangDashboardParams{
-			LangCode:  "pl",
-			ItemsType: ItemsTypeAll,
-			SortBy:    SortByFilename,
-			SortOrder: SortOrderAsc,
+			LangCode:   "pl",
+			ItemsTypes: defaultItemsTypes(),
+			SortBy:     SortByFilename,
+			SortOrder:  SortOrderAsc,
 		}
 		defaultBuilder := NewDashboardURLBuilder("/lang/pl", params)
 
 		got := defaultBuilder.Current()
 		want := "/lang/pl"
+
+		if got != want {
+			t.Fatalf("expected %q, got %q", want, got)
+		}
+	})
+
+	t.Run("Include items types together with other params", func(t *testing.T) {
+		t.Parallel()
+
+		params := LangDashboardParams{
+			LangCode: "pl",
+			ItemsTypes: []string{
+				ItemsTypeWithEnUpdates,
+				ItemsTypeEnFileNoLongerExists,
+			},
+			Filepath:  "content/pl/docs",
+			SortBy:    SortByUpdates,
+			SortOrder: SortOrderDesc,
+		}
+		customBuilder := NewDashboardURLBuilder("/lang/pl", params)
+
+		got := customBuilder.Current()
+		want := "/lang/pl" +
+			"?filepath=content%2Fpl%2Fdocs" +
+			"&itemsType=with-en-updates" +
+			"&itemsType=en-file-no-longer-exists" +
+			"&order=desc" +
+			"&sort=updates"
 
 		if got != want {
 			t.Fatalf("expected %q, got %q", want, got)

@@ -3,6 +3,7 @@ package web
 
 import (
 	"net/url"
+	"reflect"
 	"testing"
 )
 
@@ -13,7 +14,9 @@ func TestParseLangDashboardParams(t *testing.T) {
 		t.Parallel()
 
 		values := url.Values{}
-		values.Set("itemsType", "with-update")
+		values.Add("itemsType", "with-en-updates")
+		values.Add("itemsType", "with-pr")
+		values.Add("itemsType", "en-file-no-longer-exists")
 		values.Set("filename", "content/pl/test.md")
 		values.Set("filepath", "content/pl")
 		values.Set("sort", "status")
@@ -25,8 +28,13 @@ func TestParseLangDashboardParams(t *testing.T) {
 			t.Fatalf("expected LangCode pl, got %q", got.LangCode)
 		}
 
-		if got.ItemsType != ItemsTypeWithUpdate {
-			t.Fatalf("expected ItemsType %q, got %q", ItemsTypeWithUpdate, got.ItemsType)
+		wantItemsTypes := []string{
+			ItemsTypeWithEnUpdates,
+			ItemsTypeWithPR,
+			ItemsTypeEnFileNoLongerExists,
+		}
+		if !reflect.DeepEqual(got.ItemsTypes, wantItemsTypes) {
+			t.Fatalf("expected ItemsTypes %#v, got %#v", wantItemsTypes, got.ItemsTypes)
 		}
 
 		if got.Filename != "content/pl/test.md" {
@@ -50,7 +58,7 @@ func TestParseLangDashboardParams(t *testing.T) {
 		t.Parallel()
 
 		values := url.Values{}
-		values.Set("itemsType", "nope")
+		values.Add("itemsType", "nope")
 		values.Set("sort", "bad")
 		values.Set("order", "sideways")
 
@@ -60,8 +68,9 @@ func TestParseLangDashboardParams(t *testing.T) {
 			t.Fatalf("expected LangCode pl, got %q", got.LangCode)
 		}
 
-		if got.ItemsType != ItemsTypeAll {
-			t.Fatalf("expected ItemsType %q, got %q", ItemsTypeAll, got.ItemsType)
+		wantItemsTypes := defaultItemsTypes()
+		if !reflect.DeepEqual(got.ItemsTypes, wantItemsTypes) {
+			t.Fatalf("expected ItemsTypes %#v, got %#v", wantItemsTypes, got.ItemsTypes)
 		}
 
 		if got.Filename != "" {
@@ -81,11 +90,14 @@ func TestParseLangDashboardParams(t *testing.T) {
 		}
 	})
 
-	t.Run("trims spaces", func(t *testing.T) {
+	t.Run("trims spaces and deduplicates values", func(t *testing.T) {
 		t.Parallel()
 
 		values := url.Values{}
-		values.Set("itemsType", " with-pr ")
+		values.Add("itemsType", " with-pr ")
+		values.Add("itemsType", " with-en-updates ")
+		values.Add("itemsType", " en-file-no-longer-exists ")
+		values.Add("itemsType", " with-pr ")
 		values.Set("filename", " content/pl/test.md ")
 		values.Set("filepath", " content/pl ")
 		values.Set("sort", " updates ")
@@ -97,8 +109,13 @@ func TestParseLangDashboardParams(t *testing.T) {
 			t.Fatalf("expected LangCode pl, got %q", got.LangCode)
 		}
 
-		if got.ItemsType != ItemsTypeWithPR {
-			t.Fatalf("expected ItemsType %q, got %q", ItemsTypeWithPR, got.ItemsType)
+		wantItemsTypes := []string{
+			ItemsTypeWithPR,
+			ItemsTypeWithEnUpdates,
+			ItemsTypeEnFileNoLongerExists,
+		}
+		if !reflect.DeepEqual(got.ItemsTypes, wantItemsTypes) {
+			t.Fatalf("expected ItemsTypes %#v, got %#v", wantItemsTypes, got.ItemsTypes)
 		}
 
 		if got.Filename != "content/pl/test.md" {
@@ -115,6 +132,19 @@ func TestParseLangDashboardParams(t *testing.T) {
 
 		if got.SortOrder != SortOrderDesc {
 			t.Fatalf("expected SortOrder %q, got %q", SortOrderDesc, got.SortOrder)
+		}
+	})
+
+	t.Run("uses defaults when no items types are provided", func(t *testing.T) {
+		t.Parallel()
+
+		values := url.Values{}
+
+		got := ParseLangDashboardParams("pl", values)
+
+		wantItemsTypes := defaultItemsTypes()
+		if !reflect.DeepEqual(got.ItemsTypes, wantItemsTypes) {
+			t.Fatalf("expected ItemsTypes %#v, got %#v", wantItemsTypes, got.ItemsTypes)
 		}
 	})
 }
