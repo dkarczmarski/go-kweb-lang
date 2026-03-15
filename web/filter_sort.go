@@ -82,6 +82,8 @@ func matchesSingleItemsType(item dashboard.Item, itemsType string) bool {
 		return item.FileStatus == gitseek.StatusEnFileDoesNotExist
 	case ItemsTypeEnFileNoLongerExists:
 		return item.FileStatus == gitseek.StatusEnFileNoLongerExists
+	case ItemsTypeLangFileMissing:
+		return item.FileStatus == gitseek.StatusLangFileMissing
 	case ItemsTypeWaitingForReview:
 		return item.FileStatus == dashboard.StatusWaitingForReview
 	case ItemsTypeLangFileUpToDate:

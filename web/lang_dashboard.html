@@ -141,6 +141,24 @@
                   class="form-check-input"
                   type="checkbox"
                   name="itemsType"
+                  value="{{ .Filters.ItemsLangFileMissing.Value }}"
+                  id="items-type-lang-file-missing"
+                  {{ if .Filters.ItemsLangFileMissing.Active }}checked{{ end }}
+                  hx-trigger="change"
+                  hx-post="/lang/{{ .LangCode }}"
+                  hx-target="#table"
+                  hx-swap="innerHTML"
+                  hx-include="closest form">
+          <label class="form-check-label" for="items-type-lang-file-missing">
+            {{ .Filters.ItemsLangFileMissing.Label }}
+          </label>
+        </div>
+
+        <div class="form-check">
+          <input
+                  class="form-check-input"
+                  type="checkbox"
+                  name="itemsType"
                   value="{{ .Filters.ItemsWaitingForReview.Value }}"
                   id="items-type-waiting-for-review"
                   {{ if .Filters.ItemsWaitingForReview.Active }}checked{{ end }}
