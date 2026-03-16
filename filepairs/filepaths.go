@@ -17,6 +17,7 @@ func New() *FilePaths {
 	return &FilePaths{
 		pairMatchers: []PairMatcher{
 			ContentPairMatcher{},
+			I18NPairMatcher{},
 		},
 	}
 }

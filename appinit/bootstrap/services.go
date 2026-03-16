@@ -74,6 +74,7 @@ func buildCoreServices(cfg config.Config, services *Services) {
 
 	services.PairProviders = filepairs.NewPairProviders(
 		filepairs.NewContentPairProvider(services.GitRepo),
+		filepairs.NewI18NPairProvider(services.GitRepo),
 	)
 
 	services.GitSeek = gitseek.New(services.GitRepo, services.GitRepoHist, services.CacheStore)
