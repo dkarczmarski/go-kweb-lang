@@ -36,7 +36,7 @@ if there are any commits for the *original file*, it means (in most cases) that 
 
 to make it easier to review what changes have occurred, the detected updates include links to the corresponding commits in the GitHub repository, making it very convenient to inspect the changes.
 
-this process is performed for every language file in the `content/{lang_code}` directory, and the results are presented in a dashboard that shows information about all files that need updates or have an open and related pull request.
+this process is performed for every language file in the `content/{lang_code}` directory, and the results are presented in a dashboard that shows information about all files that need updates or have an open and related pull request. other custom file pairs can also be compared - see [custom file pairs](#custom-file-pairs).
 
 every 1 minute, GitHub is queried to check if any changes have occurred. if changes are detected, fresh data is fetched into the local repository, new commits are analyzed, and the data is recalculated.
 
@@ -116,6 +116,12 @@ to make it easier to identify *false positives* in cases of overlapping updates,
 this mechanism works correctly both when a commit is made directly to the main branch and when it is made in a separate branch. if the commit is made directly to main (not in a branch), there is no fork commit point. in that case, the last commit point is used instead.
 
 # special cases
+
+### custom file pairs
+
+besides the default `content/en/...` and `content/{lang_code}/...` mapping, this tool can also compare other custom file pairs.
+
+currently, one additional pattern is supported: `i18n/en/en.toml` is compared with `i18n/{lang_code}/{lang_code}.toml`.
 
 ### excluded files
 

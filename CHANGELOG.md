@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.1.2] - 2026-03-17
+
+### Added
+- README: added "custom file pairs" section to special cases
+
 ## [v0.1.0] - 2026-03-16
 
 ### Added
