@@ -97,14 +97,6 @@ func (task *RefreshDashboardTask) buildDashboard(
 	seekerFileInfos := make([]gitseek.FileInfo, 0, len(pairs))
 
 	for pairIndex, pair := range pairs {
-		log.Printf(
-			"[gitseek][%s][%d/%d] checking for updates for %v",
-			langCode,
-			pairIndex+1,
-			len(pairs),
-			pair.LangPath,
-		)
-
 		fileInfo, err := task.gitSeeker.CheckLang(ctx, langCode, gitseek.Pair{
 			EnPath:   pair.EnPath,
 			LangPath: pair.LangPath,
@@ -117,6 +109,15 @@ func (task *RefreshDashboardTask) buildDashboard(
 				err,
 			)
 		}
+
+		log.Printf(
+			"[refresh_dashboard][%s][%d/%d] checking for updates for %v: status=%v",
+			langCode,
+			pairIndex+1,
+			len(pairs),
+			pair.LangPath,
+			fileInfo.FileStatus,
+		)
 
 		seekerFileInfos = append(seekerFileInfos, fileInfo)
 	}
